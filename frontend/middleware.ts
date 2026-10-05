@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const host = request.headers.get('host') || '';
   const pathname = url.pathname;
 
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luma.com';
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
   const cleanHost = host.split(':')[0].toLowerCase();
 
   // 1. Explicit path development route: /tenant/[tenantId] or /tenant/[tenantId]/staff
@@ -15,7 +15,7 @@ export function middleware(request: NextRequest) {
   }
 
   // 2. Subdomain host resolution in production & local development:
-  // e.g., acme-bank.luma.com OR acme-bank.localhost:3000 -> rewrites to /tenant/acme-bank
+  // e.g., acme-bank.luna.com OR acme-bank.localhost:3000 -> rewrites to /tenant/acme-bank
   let subdomain: string | null = null;
 
   if (cleanHost.endsWith(`.${platformDomain}`)) {
@@ -34,7 +34,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(new URL(`/tenant/${subdomain}${pathname}`, request.url));
   }
 
-  // 3. Platform app resolution: app.luma.com -> rewrites to /platform/dashboard
+  // 3. Platform app resolution: app.luna.com -> rewrites to /platform/dashboard
   if (cleanHost === `app.${platformDomain}`) {
     if (pathname === '/') {
       return NextResponse.redirect(new URL('/platform/dashboard', request.url));

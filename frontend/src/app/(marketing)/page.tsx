@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { LumaLogo } from '../../components/shared/LumaMark';
+import { LunaLogo } from '../../components/shared/LumaMark';
 import { ArrowRight, Radio } from 'lucide-react';
 import { MOCK_TENANTS } from '../../mock/tenants';
 
@@ -11,7 +11,7 @@ export default function MarketingPage() {
     <div className="min-h-screen bg-[#FFF9F3] text-slate-900 flex flex-col font-sans">
       <header className="border-b border-slate-200/60 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <LumaLogo size={36} />
+          <LunaLogo size={36} />
           <div className="flex items-center gap-4">
             <Link href="/login" className="text-xs font-bold text-slate-700 hover:text-slate-900">
               Sign In
@@ -63,7 +63,7 @@ export default function MarketingPage() {
         {/* Live Tenant Directory */}
         <section className="mx-auto max-w-6xl px-6 space-y-8">
           <div className="text-center space-y-2">
-            <h2 className="font-display text-2xl font-bold text-slate-900">Organizations Live on Luma</h2>
+            <h2 className="font-display text-2xl font-bold text-slate-900">Organizations Live on Luna</h2>
             <p className="text-xs text-slate-500">Every tenant uses the same unified frontend code with custom branding & features.</p>
           </div>
 

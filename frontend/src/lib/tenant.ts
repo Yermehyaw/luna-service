@@ -28,7 +28,7 @@ export class MockTenantRepository implements TenantRepository {
 
   async createTenant(newTenantData: Partial<Tenant>): Promise<Tenant> {
     const slug = newTenantData.slug || (newTenantData.name || 'new-tenant').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luma.com';
+    const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
     const newTenant: Tenant = {
       id: `tenant_${Date.now()}`,
       slug,
@@ -128,9 +128,9 @@ export function resolveTenant(host: string | null, pathname: string | null): str
     }
   }
 
-  // 2. Subdomain host resolution: acme-bank.luma.com or acme-bank.localhost
+  // 2. Subdomain host resolution: acme-bank.luna.com or acme-bank.localhost
   const cleanHost = host.split(':')[0].toLowerCase();
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luma.com';
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
 
   if (cleanHost === 'localhost' || cleanHost === '127.0.0.1' || cleanHost === platformDomain || cleanHost === `app.${platformDomain}`) {
     return 'acme-bank';

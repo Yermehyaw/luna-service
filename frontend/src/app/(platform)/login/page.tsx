@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
-import { LumaLogo } from '../../../components/shared/LumaMark';
+import { LunaLogo } from '../../../components/shared/LumaMark';
 import { ArrowRight, Lock, Mail } from 'lucide-react';
 
 export default function LoginPage() {
@@ -23,11 +23,11 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-[#FFF9F3] p-6 font-sans">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl space-y-6 text-center">
         <div className="flex justify-center">
-          <LumaLogo size={40} />
+          <LunaLogo size={40} />
         </div>
 
         <div>
-          <h2 className="font-display text-2xl font-bold text-slate-900">Sign in to Luma Platform</h2>
+          <h2 className="font-display text-2xl font-bold text-slate-900">Sign in to Luna Platform</h2>
           <p className="text-xs text-slate-500 mt-1">Multi-Tenant Platform Staff & Customer Care Access</p>
         </div>
 

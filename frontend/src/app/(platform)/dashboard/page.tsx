@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { LumaLogo } from '../../../components/shared/LumaMark';
+import { LunaLogo } from '../../../components/shared/LumaMark';
 import { MOCK_TENANTS } from '../../../mock/tenants';
 import { Building2, Plus, Users, ArrowRight, Radio } from 'lucide-react';
 
@@ -11,7 +11,7 @@ export default function PlatformDashboardPage() {
     <div className="min-h-screen bg-slate-50 font-sans">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <LumaLogo size={36} />
+          <LunaLogo size={36} />
           <Link
             href="/register"
             className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800"
@@ -24,7 +24,7 @@ export default function PlatformDashboardPage() {
 
       <main className="mx-auto max-w-6xl px-6 py-10 space-y-8">
         <div>
-          <h1 className="font-display text-2xl font-bold text-slate-900">Luma SaaS Platform Admin Dashboard</h1>
+          <h1 className="font-display text-2xl font-bold text-slate-900">Luna SaaS Platform Admin Dashboard</h1>
           <p className="text-xs text-slate-500">Global overview of multi-tenant enterprise organizations and live system status.</p>
         </div>
 
@@ -56,7 +56,7 @@ export default function PlatformDashboardPage() {
                 </div>
                 <p className="text-[11px] text-slate-500">{t.tagline}</p>
                 <div className="pt-2 border-t border-slate-200 flex justify-between items-center">
-                  <span className="font-mono text-[10px] text-slate-400">{t.slug}.luma.com</span>
+                  <span className="font-mono text-[10px] text-slate-400">{t.slug}.luna.com</span>
                   <Link href={`/tenant/${t.slug}`} className="font-bold text-[var(--tenant-primary,#0057B8)] flex items-center gap-1">
                     Manage <ArrowRight className="h-3 w-3" />
                   </Link>

@@ -15,12 +15,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('luma_mock_user');
+    const savedUser = localStorage.getItem('luna_mock_user');
     if (savedUser) {
       try {
         setUser(JSON.parse(savedUser));
       } catch {
-        localStorage.removeItem('luma_mock_user');
+        localStorage.removeItem('luna_mock_user');
       }
     }
     setIsLoading(false);
@@ -36,13 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tenantId: 'tenant_001',
     };
     setUser(mockUser);
-    localStorage.setItem('luma_mock_user', JSON.stringify(mockUser));
+    localStorage.setItem('luna_mock_user', JSON.stringify(mockUser));
     setIsLoading(false);
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('luma_mock_user');
+    localStorage.removeItem('luna_mock_user');
   };
 
   return (

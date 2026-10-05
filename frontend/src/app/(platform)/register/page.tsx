@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../lib/auth';
 import { createTenant } from '../../../lib/tenant';
-import { LumaLogo } from '../../../components/shared/LumaMark';
+import { LunaLogo } from '../../../components/shared/LumaMark';
 import { ArrowRight, Lock, Mail, User, Building2, Globe, Sparkles } from 'lucide-react';
 import { TenantIndustry } from '../../../types/tenant';
 
@@ -28,7 +28,7 @@ export default function RegisterPage() {
     }
   };
 
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luma.com';
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
   const customSubdomainPreview = `${slug || 'your-company'}.${platformDomain}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,9 +67,9 @@ export default function RegisterPage() {
       <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl space-y-6">
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <LumaLogo size={40} />
+            <LunaLogo size={40} />
           </div>
-          <h2 className="font-display text-2xl font-bold text-slate-900">Register Your Business Subdomain</h2>
+          <h2 className="font-display text-2xl font-bold text-slate-900">Register Your Business on Luna</h2>
           <p className="text-xs text-slate-500">Get an instant custom subdomain & zero-wait digital queue platform</p>
         </div>
 
