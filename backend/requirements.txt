@@ -1,12 +1,18 @@
 fastapi
 uvicorn[standard]
-sqlalchemy
-psycopg2-binary
+sqlalchemy[asyncio]
+asyncpg
 pydantic
 pydantic-settings
 redis
+
+# AI (Social Studio sentiment + intent pipeline)
 transformers
 scikit-learn
 torch
-asyncpg
-alembic
+
+# Testing and linting
+pytest
+pytest-asyncio
+httpx
+pyflakes
