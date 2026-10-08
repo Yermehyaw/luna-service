@@ -51,7 +51,7 @@ async def session_factory(engine):
 async def client(engine):
     # Real commits here. Endpoints call db.commit() themselves, so a session that
     # pretends to save wouldn't be testing the thing that matters.
-    from app.core.database import get_db
+    from app.core.database import get_db, get_session_factory
     from app.main import app
 
     factory = async_sessionmaker(
@@ -63,6 +63,9 @@ async def client(engine):
             yield session
 
     app.dependency_overrides[get_db] = get_test_db
+    # WebSocket handlers never touch get_db; they open sessions from the factory
+    # they are given, so that factory has to be redirected too.
+    app.dependency_overrides[get_session_factory] = lambda: factory
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         yield test_client

@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.queue import TicketStatus
+from app.services.wait_time import WaitEstimate, format_countdown
 
 PageLimit = Annotated[int, Field(ge=1, le=200)]
 PageOffset = Annotated[int, Field(ge=0)]
@@ -110,3 +111,19 @@ class ServiceResponse(BaseModel):
 class ServiceListResponse(BaseModel):
     items: list[ServiceResponse]
     total: int
+
+
+def build_ticket_response(ticket, wait: WaitEstimate | None = None) -> TicketResponse:
+    # Lives here rather than in the router because the realtime layer needs the
+    # identical shape for its event payloads — two copies of this would drift
+    # and the HTTP and WebSocket clients would start disagreeing about the same
+    # ticket.
+    response = TicketResponse.model_validate(ticket)
+    if wait is not None:
+        response.wait = WaitEstimateResponse(
+            minutes=wait.minutes,
+            tickets_ahead=wait.tickets_ahead,
+            service_duration_mins=wait.service_duration_mins,
+            display=format_countdown(wait.minutes),
+        )
+    return response
