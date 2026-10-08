@@ -6,10 +6,14 @@ pydantic
 pydantic-settings
 redis
 
-# AI (Social Studio sentiment + intent pipeline)
+# AI - local classification (Social Studio sentiment + intent, trends)
 transformers
 scikit-learn
 torch
+
+# AI - hosted generation (suggested replies, content ideas). Optional: an empty
+# OPENAI_API_KEY runs the app on the local models only, see app/core/config.py.
+openai
 
 # Testing and linting
 pytest
