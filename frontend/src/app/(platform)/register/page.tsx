@@ -59,7 +59,8 @@ export default function RegisterPage() {
 
     await login(email);
     setLoading(false);
-    router.push(`/tenant/${newTenant.slug}/staff/ops-console`);
+    // Route directly to the Website Customizer & AI Studio to select from 8 free themes
+    router.push(`/tenant/${newTenant.slug}/staff/settings`);
   };
 
   return (
@@ -69,8 +70,14 @@ export default function RegisterPage() {
           <div className="flex justify-center">
             <LunaLogo size={44} showTagline />
           </div>
-          <h2 className="font-display text-2xl font-extrabold text-[#291E29]">Register Your Business on Luna</h2>
-          <p className="text-xs text-[#291E29]/70">Get an instant custom subdomain & zero-wait digital queue platform</p>
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 border border-emerald-300 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
+            <Sparkles className="h-3.5 w-3.5 text-[#FFA800]" />
+            Free Subdomain · 8 Free Themes · AI Site Studio
+          </div>
+          <h2 className="font-display text-2xl font-extrabold text-[#291E29]">Create Your Free Business Portal</h2>
+          <p className="text-xs text-[#291E29]/70">
+            Claim your free <span className="font-bold font-mono">yourname.luna.com</span> website, customize with 8 free themes, or chat with AI.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
