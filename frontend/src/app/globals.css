@@ -3,11 +3,25 @@
 @tailwind utilities;
 
 :root {
-  --tenant-primary: #0057B8;
-  --tenant-secondary: #002F6C;
-  --tenant-accent: #00A3E0;
-  --tenant-bg: #F4F8FC;
-  --tenant-text: #0B1D3A;
+  --luna-purple: #291E29;
+  --luna-purple-deep: #341539;
+  --luna-cream: #FFF6E9;
+  --luna-cream-soft: #FCFBF4;
+  --luna-tangerine: #FFA800;
+  --luna-lilac: #BA68D7;
+
+  /* Default Tenant Base CSS Fallbacks */
+  --tenant-primary: #291E29;
+  --tenant-secondary: #341539;
+  --tenant-accent: #FFA800;
+  --tenant-bg: #FFF6E9;
+  --tenant-text: #291E29;
+}
+
+body {
+  background-color: var(--luna-cream);
+  color: var(--luna-purple);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 @keyframes marquee {
@@ -17,4 +31,17 @@
 
 .animate-marquee {
   animation: marquee 35s linear infinite;
+}
+
+/* Subtle Luna Brand Gradient Utilities */
+.bg-luna-dark-gradient {
+  background: linear-gradient(135deg, #291E29 0%, #341539 50%, #52215A 100%);
+}
+
+.bg-luna-cream-gradient {
+  background: linear-gradient(180deg, #FFF6E9 0%, #FCFBF4 100%);
+}
+
+.bg-luna-tangerine-gradient {
+  background: linear-gradient(135deg, #FFA800 0%, #FFB11A 100%);
 }

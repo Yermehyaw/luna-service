@@ -1,26 +1,26 @@
-# 🚀 LUMA FRONTEND — MULTI-TENANT NEXT.JS APP ROUTER ARCHITECTURE
+# 🚀 LUNA FRONTEND — MULTI-TENANT NEXT.JS APP ROUTER ARCHITECTURE
 
-> **One Next.js App Router application capable of serving Luma's marketing website, the Luma SaaS/platform interface, multiple tenant customer portals, and multiple tenant staff portals from the same codebase.**
+> **One Next.js App Router application capable of serving Luna's marketing website, the Luna SaaS/platform interface, multiple tenant customer portals, and multiple tenant staff portals from the same codebase.**
 
 ---
 
 ## 📌 1. EXECUTIVE SUMMARY
 
-The **Luma Frontend** is a production-quality, highly scalable, multi-tenant Next.js application built using the Next.js App Router architecture. It serves diverse enterprise organizations—such as **Banks, Hospitals, Telecom Operators, Educational Institutions, Government Agencies, and Retail Businesses**—from a **single unified codebase**.
+The **Luna Frontend** is a production-quality, highly scalable, multi-tenant Next.js application built using the Next.js App Router architecture. It serves diverse enterprise organizations—such as **Banks, Hospitals, Telecom Operators, Educational Institutions, Government Agencies, and Retail Businesses**—from a **single unified codebase**.
 
 All tenants share reusable frontend feature modules, UI components, and routing patterns. Tenant-specific differences are completely driven by **dynamic configuration**, **CSS variable branding**, **feature flags**, and **role/permission matrices**.
 
 ```text
-                                  ONE LUMA FRONTEND
+                                  ONE LUNA FRONTEND
                                           │
         ┌─────────────────────────────────┼─────────────────────────────────┐
         │                                 │                                 │
-  Luma Marketing                    Luma Platform                  Tenant Applications
+  Luna Marketing                    Luna Platform                  Tenant Applications
 (app/(marketing))                  (app/(platform))              (app/tenant/[tenantId])
         │                                 │                                 │
  ├── Homepage                      ├── Login / Register              ├── Acme Bank
  ├── Company                       ├── Platform Dashboard            ├── City General Hospital
- ├── Institutions                  ├── Organizations                 ├── Luma Mobile & Fiber
+ ├── Institutions                  ├── Organizations                 ├── Luna Mobile & Fiber
  ├── Features                      ├── Billing & Subscriptions       ├── Makerere Registry
  └── Pricing                       └── Account Settings              └── National ID Center
 ```
@@ -85,7 +85,7 @@ frontend/
 │   ├── components/                           # Shared UI Components & Layouts
 │   │   ├── layouts/                          # Reusable Shells (TenantCustomerLayout, TenantStaffLayout)
 │   │   ├── navigation/                       # Navbar, Staff Sidebar, Tenant Switcher
-│   │   ├── shared/                           # Luma Brand Mark & Shared Icons
+│   │   ├── shared/                           # Luna Brand Mark & Shared Icons
 │   │   └── ui/                               # Atomic UI Components (Buttons, Modals, Cards)
 │   │
 │   ├── features/                             # Modular Business Feature Domains
@@ -131,22 +131,22 @@ frontend/
 Tenant resolution is executed transparently via Next.js Middleware (`frontend/middleware.ts`). The middleware inspects `request.headers.get("host")` and rewrites requests dynamically:
 
 1. **Production Custom Subdomains**:
-   - `acme-bank.luma.com` → rewrites internally to `/tenant/acme-bank`
-   - `acme-bank.luma.com/staff` → rewrites internally to `/tenant/acme-bank/staff`
+   - `acme-bank.luna.com` → rewrites internally to `/tenant/acme-bank`
+   - `acme-bank.luna.com/staff` → rewrites internally to `/tenant/acme-bank/staff`
 2. **Local Development Subdomains**:
    - `http://acme-bank.localhost:3000` → rewrites internally to `/tenant/acme-bank`
    - `http://acme-bank.localhost:3000/staff/ops-console` → rewrites internally to `/tenant/acme-bank/staff/ops-console`
 3. **Explicit Local Path Fallback**:
    - `http://localhost:3000/tenant/acme-bank` → renders tenant customer portal directly.
 4. **Platform App Route**:
-   - `app.luma.com` → redirects to `/platform/dashboard`.
+   - `app.luna.com` → redirects to `/platform/dashboard`.
 
 ---
 
 ## 🎨 5. DYNAMIC BRANDING ENGINE & FEATURE FLAGS
 
 ### CSS Variable Injection
-Instead of creating duplicate components for each company (e.g., `BankDashboard`, `HospitalDashboard`), Luma uses a **single component tree** driven by CSS variables:
+Instead of creating duplicate components for each company (e.g., `BankDashboard`, `HospitalDashboard`), Luna uses a **single component tree** driven by CSS variables:
 
 ```css
 :root {
@@ -194,7 +194,7 @@ The application comes pre-configured with realistic development tenants (`fronte
    - **Industry**: Healthcare & Medical Triage
    - **Primary Color**: `#12A05A` (Emerald Green)
    - **Features**: Outpatient Consultation Triage, Appointments, Document Verification.
-3. **Luma Mobile & Fiber** (`slug: luma-telecom`)
+3. **Luna Mobile & Fiber** (`slug: luna-telecom`)
    - **Industry**: Telecom & Retail
    - **Primary Color**: `#FF8A00` (Telecom Orange)
    - **Features**: Retail Queueing, SIM Swap Priority Counters, Social Broadcasts.

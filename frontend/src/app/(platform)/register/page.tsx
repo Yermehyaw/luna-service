@@ -43,12 +43,12 @@ export default function RegisterPage() {
       industry,
       tagline: `Smart ${industry} customer queue and instant arrival window pre-clearance`,
       branding: {
-        primaryColor: '#0057B8',
-        secondaryColor: '#002F6C',
-        accentColor: '#00A3E0',
-        backgroundColor: '#F4F8FC',
-        textColor: '#0B1D3A',
-        fontFamily: 'Inter',
+        primaryColor: '#291E29',
+        secondaryColor: '#341539',
+        accentColor: '#FFA800',
+        backgroundColor: '#FFF6E9',
+        textColor: '#291E29',
+        fontFamily: 'Allen Sans',
         heroTitle: `Welcome to ${orgName}`,
         heroSubtitle: `Reserve a 30-minute arrival window or pre-clear your paperwork online.`,
         announcementTicker: 'Live Customer Queue Operating · Zero Walk-in Waiting',
@@ -63,95 +63,95 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#FFF9F3] p-6 font-sans">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 shadow-xl space-y-6">
+    <div className="flex min-h-screen items-center justify-center bg-[#FFF6E9] p-6 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+      <div className="w-full max-w-lg rounded-3xl border border-[#291E29]/10 bg-white/90 p-8 shadow-2xl space-y-6 backdrop-blur-md">
         <div className="text-center space-y-2">
           <div className="flex justify-center">
-            <LunaLogo size={40} />
+            <LunaLogo size={44} showTagline />
           </div>
-          <h2 className="font-display text-2xl font-bold text-slate-900">Register Your Business on Luna</h2>
-          <p className="text-xs text-slate-500">Get an instant custom subdomain & zero-wait digital queue platform</p>
+          <h2 className="font-display text-2xl font-extrabold text-[#291E29]">Register Your Business on Luna</h2>
+          <p className="text-xs text-[#291E29]/70">Get an instant custom subdomain & zero-wait digital queue platform</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="font-semibold text-slate-700">Your Full Name</label>
+              <label className="font-bold text-[#291E29]">Your Full Name</label>
               <div className="relative mt-1">
-                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-[#702D7B]" />
                 <input
                   type="text"
                   required
                   placeholder="Dr. Temitope Adebayo"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-slate-800"
+                  className="w-full rounded-xl border border-[#291E29]/15 bg-[#FFF6E9]/40 py-2.5 pl-9 pr-3 text-[#291E29] focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
                 />
               </div>
             </div>
 
             <div>
-              <label className="font-semibold text-slate-700">Work Email</label>
+              <label className="font-bold text-[#291E29]">Work Email</label>
               <div className="relative mt-1">
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-[#702D7B]" />
                 <input
                   type="email"
                   required
                   placeholder="temitope@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-slate-800"
+                  className="w-full rounded-xl border border-[#291E29]/15 bg-[#FFF6E9]/40 py-2.5 pl-9 pr-3 text-[#291E29] focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700">Business / Organization Name</label>
+            <label className="font-bold text-[#291E29]">Business / Organization Name</label>
             <div className="relative mt-1">
-              <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Building2 className="absolute left-3 top-2.5 h-4 w-4 text-[#702D7B]" />
               <input
                 type="text"
                 required
                 placeholder="e.g. Apex Health Center"
                 value={orgName}
                 onChange={(e) => handleOrgNameChange(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-slate-800 font-medium"
+                className="w-full rounded-xl border border-[#291E29]/15 bg-[#FFF6E9]/40 py-2.5 pl-9 pr-3 text-[#291E29] font-medium focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
               />
             </div>
           </div>
 
           {/* Subdomain Input */}
           <div className="space-y-1">
-            <label className="font-semibold text-slate-700 flex items-center justify-between">
+            <label className="font-bold text-[#291E29] flex items-center justify-between">
               <span>Your Custom Subdomain</span>
-              <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> Auto-Generated
+              <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 border border-emerald-200">
+                <Sparkles className="h-3 w-3 text-[#FFA800]" /> Auto-Generated
               </span>
             </label>
-            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
-              <span className="px-3 text-xs font-bold text-slate-400 bg-slate-100 py-2.5 border-r border-slate-200">https://</span>
+            <div className="flex items-center rounded-xl border border-[#291E29]/15 bg-[#FFF6E9]/50 overflow-hidden focus-within:ring-2 focus-within:ring-[#FFA800]">
+              <span className="px-3 text-xs font-bold text-[#291E29]/60 bg-[#291E29]/5 py-2.5 border-r border-[#291E29]/10">https://</span>
               <input
                 type="text"
                 required
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                 placeholder="apex-health"
-                className="w-full bg-white px-3 py-2.5 text-xs font-bold font-mono text-slate-900 focus:outline-none"
+                className="w-full bg-transparent px-3 py-2.5 text-xs font-bold font-mono text-[#291E29] focus:outline-none"
               />
-              <span className="px-3 text-xs font-bold text-slate-500 bg-slate-100 py-2.5 border-l border-slate-200">.{platformDomain}</span>
+              <span className="px-3 text-xs font-bold text-[#702D7B] bg-[#291E29]/5 py-2.5 border-l border-[#291E29]/10">.{platformDomain}</span>
             </div>
-            <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
-              <Globe className="h-3 w-3 text-sky-600" /> Your landing page: <span className="font-bold text-slate-800 font-mono">{customSubdomainPreview}</span>
+            <p className="text-[11px] text-[#291E29]/70 flex items-center gap-1 mt-1">
+              <Globe className="h-3 w-3 text-[#FFA800]" /> Live Portal: <span className="font-bold text-[#291E29] font-mono">{customSubdomainPreview}</span>
             </p>
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700">Industry Category</label>
+            <label className="font-bold text-[#291E29]">Industry Category</label>
             <select
               value={industry}
               onChange={(e) => setIndustry(e.target.value as TenantIndustry)}
-              className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 font-medium"
+              className="mt-1 w-full rounded-xl border border-[#291E29]/15 bg-[#FFF6E9]/40 p-2.5 text-[#291E29] font-medium focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
             >
               <option value="banking">Commercial Banking</option>
               <option value="healthcare">Healthcare & Hospitals</option>
@@ -164,16 +164,16 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="font-semibold text-slate-700">Password</label>
+            <label className="font-bold text-[#291E29]">Password</label>
             <div className="relative mt-1">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-[#702D7B]" />
               <input
                 type="password"
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-slate-800"
+                className="w-full rounded-xl border border-[#291E29]/15 bg-[#FFF6E9]/40 py-2.5 pl-9 pr-3 text-[#291E29] focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
               />
             </div>
           </div>
@@ -181,16 +181,16 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3.5 text-xs font-bold text-white shadow-md hover:bg-slate-800 disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FFA800] py-3.5 text-xs font-extrabold text-[#291E29] shadow-md shadow-[#FFA800]/25 hover:bg-[#FFB11A] transition-transform hover:scale-[1.02] disabled:opacity-50"
           >
             <span>{loading ? 'Creating Subdomain...' : 'Register Business & Create Subdomain'}</span>
-            <ArrowRight className="h-4 w-4 text-sky-400" />
+            <ArrowRight className="h-4 w-4" />
           </button>
         </form>
 
-        <p className="text-xs text-slate-500 text-center">
+        <p className="text-xs text-[#291E29]/70 text-center pt-2 border-t border-[#291E29]/10">
           Already registered?{' '}
-          <Link href="/login" className="font-bold text-[#0057B8] hover:underline">
+          <Link href="/login" className="font-extrabold text-[#702D7B] hover:text-[#291E29] hover:underline">
             Sign In
           </Link>
         </p>

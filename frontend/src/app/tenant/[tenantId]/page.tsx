@@ -31,7 +31,7 @@ export default function TenantCustomerPage({
   const branches = MOCK_BRANCHES.filter((b) => b.tenantId === tenant.id);
   const services = MOCK_SERVICES.filter((s) => s.tenantId === tenant.id);
   const basePath = `/tenant/${tenant.slug}`;
-  const subdomainDisplay = `${tenant.slug}.luma.com`;
+  const subdomainDisplay = `${tenant.slug}.luna.com`;
 
   const heroTitle = tenant.branding?.heroTitle || `Welcome to ${tenant.name}`;
   const heroSubtitle = tenant.branding?.heroSubtitle || `${tenant.tagline}. Reserve a 30-minute arrival window or pre-clear your documents from home to bypass lobby queues entirely.`;
@@ -42,7 +42,7 @@ export default function TenantCustomerPage({
     <TenantCustomerLayout initialTenant={tenant}>
       <div className="space-y-16 pb-20">
         {/* Dynamic Customizable Tenant Hero Banner */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-[var(--tenant-primary,#0057B8)]/10 via-[var(--tenant-bg,#F4F8FC)] to-[var(--tenant-bg,#F4F8FC)] py-16">
+        <section className="relative overflow-hidden bg-gradient-to-b from-[var(--tenant-primary,#291E29)]/10 via-[var(--tenant-bg,#FFF6E9)] to-[var(--tenant-bg,#FFF6E9)] py-16">
           <div className="mx-auto max-w-6xl px-6 text-center space-y-6">
             
             {/* Subdomain Badge */}

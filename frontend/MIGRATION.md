@@ -6,7 +6,7 @@ This document maps legacy single-page application routes and components to the u
 ## Route & Page Mapping
 | Old SPA Route | New Next.js App Router Route | Purpose |
 |---|---|---|
-| `/` | `app/(marketing)/page.tsx` | Luma Marketing Homepage |
+| `/` | `app/(marketing)/page.tsx` | Luna Marketing Homepage |
 | `/login` | `app/(platform)/login/page.tsx` | Platform Auth Access |
 | `/register` | `app/(platform)/register/page.tsx` | Subdomain Business Signup |
 | `/console` | `app/tenant/[tenantId]/staff/ops-console/page.tsx` | Branch Staff Queue Console |
