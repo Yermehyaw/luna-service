@@ -6,29 +6,32 @@ import { TenantProvider } from '../../lib/tenant-context';
 import Link from 'next/link';
 import { LunaIcon } from '../shared/LumaMark';
 
+import { useTenant } from '../../lib/tenant-context';
+
 export function TenantCustomerLayout({
   children,
   initialTenant,
 }: {
   children: React.ReactNode;
-  initialTenant: Tenant;
+  initialTenant?: Tenant;
 }) {
-  const basePath = `/tenant/${initialTenant.slug}`;
+  const { tenant: contextTenant } = useTenant();
+  const tenant = initialTenant || contextTenant;
+  const basePath = `/tenant/${tenant.slug}`;
 
   return (
-    <TenantProvider initialTenant={initialTenant}>
-      <div className="min-h-screen bg-[var(--tenant-bg,#FFF6E9)] text-[var(--tenant-text,#291E29)] flex flex-col font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+    <div className="min-h-screen bg-[var(--tenant-bg,#FFF6E9)] text-[var(--tenant-text,#291E29)] flex flex-col font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
         <header className="border-b border-black/5 bg-white/85 backdrop-blur-md sticky top-0 z-40 shadow-xs">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
             <Link href={basePath} className="flex items-center gap-3 font-display text-lg font-extrabold text-[#291E29]">
               <span
                 className="h-9 w-9 rounded-xl flex items-center justify-center text-white font-extrabold shadow-sm transition-transform hover:scale-105"
-                style={{ backgroundColor: initialTenant.branding.primaryColor }}
+                style={{ backgroundColor: tenant.branding.primaryColor }}
               >
-                {initialTenant.name[0]}
+                {tenant.name[0]}
               </span>
               <div>
-                <span className="block leading-tight">{initialTenant.name}</span>
+                <span className="block leading-tight">{tenant.name}</span>
                 <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Digital Queue Portal</span>
               </div>
             </Link>
@@ -56,10 +59,9 @@ export function TenantCustomerLayout({
               <LunaIcon size={18} variant="purple" />
               <span>Powered by Luna Multi-Tenant Infrastructure · Beyond the Expected</span>
             </div>
-            <p className="text-[11px] text-[#291E29]/50">© 2026 {initialTenant.name}. All rights reserved.</p>
+            <p className="text-[11px] text-[#291E29]/50">© 2026 {tenant.name}. All rights reserved.</p>
           </div>
         </footer>
       </div>
-    </TenantProvider>
   );
 }

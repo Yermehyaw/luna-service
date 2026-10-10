@@ -6,14 +6,22 @@ export interface RequestOptions extends RequestInit {
 export class ApiClient {
   private baseUrl: string;
 
-  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1') {
-    this.baseUrl = baseUrl;
+  constructor(baseUrl: string = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000') {
+    this.baseUrl = baseUrl.replace(/\/$/, '');
+  }
+
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  getWsUrl(): string {
+    return this.baseUrl.replace(/^http/, 'ws');
   }
 
   async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { params, token, headers, ...restOptions } = options;
 
-    let url = `${this.baseUrl}${endpoint}`;
+    let url = `${this.baseUrl}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
     if (params) {
       const searchParams = new URLSearchParams(params);
       url += `?${searchParams.toString()}`;
@@ -36,7 +44,10 @@ export class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `API Request failed with status ${response.status}`);
+        const detailMsg = errorData.detail 
+          ? (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail))
+          : (errorData.message || `API Request failed with status ${response.status}`);
+        throw new Error(detailMsg);
       }
 
       return (await response.json()) as T;
@@ -57,6 +68,19 @@ export class ApiClient {
       body: JSON.stringify(body),
     });
   }
+
+  patch<T>(endpoint: string, body: any, options?: RequestOptions) {
+    return this.request<T>(endpoint, {
+      ...options,
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+  }
+
+  delete<T>(endpoint: string, options?: RequestOptions) {
+    return this.request<T>(endpoint, { ...options, method: 'DELETE' });
+  }
 }
 
 export const apiClient = new ApiClient();
+

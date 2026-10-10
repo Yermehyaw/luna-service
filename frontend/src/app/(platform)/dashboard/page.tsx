@@ -60,10 +60,15 @@ export default function PlatformDashboardPage() {
                   </span>
                 </div>
                 <p className="text-[11px] text-[#291E29]/70">{t.tagline}</p>
-                <div className="pt-2 border-t border-[#291E29]/10 flex justify-between items-center">
-                  <span className="font-mono text-[10px] text-[#702D7B]">{t.slug}.luna.com</span>
-                  <Link href={`/tenant/${t.slug}`} className="font-extrabold text-[#291E29] hover:text-[#702D7B] flex items-center gap-1">
-                    Manage <ArrowRight className="h-3 w-3 text-[#FFA800]" />
+                <div className="pt-2 border-t border-[#291E29]/10 flex justify-between items-center text-[11px]">
+                  <Link href={`/tenant/${t.slug}`} className="font-mono text-[#702D7B] hover:underline">
+                    {t.slug}.luna.com
+                  </Link>
+                  <Link
+                    href={`/tenant/${t.slug}/staff/ops-console`}
+                    className="font-extrabold text-[#291E29] hover:text-[#702D7B] flex items-center gap-1 bg-[#FFA800]/20 px-2 py-1 rounded-lg"
+                  >
+                    Console <ArrowRight className="h-3 w-3 text-[#FFA800]" />
                   </Link>
                 </div>
               </div>

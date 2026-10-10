@@ -44,6 +44,24 @@ export default function VerifyPage({
             <h3 className="font-bold text-slate-900 text-sm">Paperwork Pre-Cleared Successfully</h3>
             <p className="text-xs text-slate-500">Reference: <span className="font-mono font-bold text-slate-800">DOC-{Date.now().toString().slice(-6)}</span></p>
             <p className="text-xs text-emerald-700 font-semibold">Show this reference code to the desk staff for fast-track service.</p>
+            <div className="flex gap-3 pt-3">
+              <a
+                href={`/tenant/${tenant.slug}/book-queue`}
+                className="flex-1 rounded-xl bg-[#FFA800] py-2.5 text-xs font-extrabold text-[#291E29] shadow-sm hover:bg-[#FFB11A]"
+              >
+                Book Arrival Window Now
+              </a>
+              <button
+                type="button"
+                onClick={() => {
+                  setUploaded(false);
+                  setDocName('');
+                }}
+                className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Upload Another
+              </button>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleUpload} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 text-xs">

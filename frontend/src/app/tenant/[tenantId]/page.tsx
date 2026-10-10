@@ -102,15 +102,23 @@ export default function TenantCustomerPage({
 
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {services.map((s) => (
-              <div key={s.id} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+              <Link
+                key={s.id}
+                href={`${basePath}/book-queue`}
+                className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3 hover:border-[#FFA800] hover:shadow-md transition-all cursor-pointer block"
+              >
                 <div className="flex justify-between items-start">
-                  <h3 className="font-bold text-slate-900 text-sm">{s.name}</h3>
+                  <h3 className="font-bold text-slate-900 text-sm group-hover:text-[#FFA800] transition-colors">{s.name}</h3>
                   <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
                     ~{s.minutes} mins
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 leading-relaxed">{s.description}</p>
-              </div>
+                <div className="pt-2 flex items-center gap-1 text-[11px] font-bold text-[var(--tenant-primary,#291E29)] group-hover:underline">
+                  <span>Book This Service Window</span>
+                  <ArrowRight className="h-3 w-3 text-[#FFA800]" />
+                </div>
+              </Link>
             ))}
           </div>
         </section>

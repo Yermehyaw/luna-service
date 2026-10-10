@@ -35,10 +35,16 @@ export function TenantProvider({
   );
 }
 
+import { MOCK_TENANTS } from '../mock/tenants';
+
 export function useTenant() {
   const context = useContext(TenantContext);
   if (!context) {
-    throw new Error('useTenant must be used within a TenantProvider');
+    return {
+      tenant: MOCK_TENANTS[0],
+      setTenant: () => {},
+      isLoading: false,
+    };
   }
   return context;
 }
