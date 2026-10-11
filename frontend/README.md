@@ -1,19 +1,39 @@
 # 🚀 LUNA FRONTEND — MULTI-TENANT NEXT.JS APP ROUTER ARCHITECTURE
 
-> **One Next.js App Router application capable of serving Luna's marketing website, the Luna SaaS/platform interface, multiple tenant customer portals, and multiple tenant staff portals from the same codebase.**
+> **A production-ready Next.js App Router application serving Luna's marketing homepage, SaaS onboarding platform, multi-tenant customer arrival portals, and private staff operations consoles—integrated with FastAPI and real-time WebSockets.**
 
 ---
 
-## 📌 1. EXECUTIVE SUMMARY
+## 📌 1. EXECUTIVE SUMMARY & WHAT'S NEW
 
-The **Luna Frontend** is a production-quality, highly scalable, multi-tenant Next.js application built using the Next.js App Router architecture. It serves diverse enterprise organizations—such as **Banks, Hospitals, Telecom Operators, Educational Institutions, Government Agencies, and Retail Businesses**—from a **single unified codebase**.
+The **Luna Frontend** is a unified multi-tenant Next.js application built using the Next.js App Router architecture. It empowers organizations across **Banking, Healthcare, Telecom, Education, and Retail** to deliver zero-wait, appointment-driven digital customer service from a **single codebase**.
 
-All tenants share reusable frontend feature modules, UI components, and routing patterns. Tenant-specific differences are completely driven by:
-- **Free Custom Subdomain Provisioning** (`victor.luna.com`)
-- **8 Curated Free Theme Options** with full manual fine-tuning
-- **Lovable & Replit-Style AI Site Studio** powered by Groq (LLaMA 3.3)
-- **Dynamic CSS Variable Branding Engine**
-- **Feature Flags & Role Matrices**
+### 🌟 Key Features & Recent Updates
+1. **Free Custom Subdomain Provisioning (`yourname.luna.com`)**:
+   - Instant business subdomain creation with zero DNS complexity (e.g. `victor.luna.com`).
+   - Interactive claim tool on the homepage pre-populating registration.
+2. **8 Free Curated Themes & Live CSS Variable Engine**:
+   - One-click palette presets tailored for banking, healthcare, telecom, luxury, and civic organizations.
+   - Full manual hex color pickers, typography controls, and split-screen desktop/mobile preview.
+3. **Lovable & Replit-Style AI Site Studio (Powered by Groq)**:
+   - Chat-driven website personalization where users can enter their **Groq API Key** (`gsk_...`).
+   - Autonomous styling with LLaMA 3.3/3.1, plus smart fallback mode when no key is entered.
+4. **Real-Time WebSocket Queue Integration (FastAPI Backend)**:
+   - **Staff Branch WebSocket** (`/api/queue/ws/branches/{branch_id}`): Pushes new ticket arrivals, status changes, and audio call announcements.
+   - **Customer Ticket WebSocket** (`/api/queue/ws/tickets/{ticket_number}`): Pushes live wait updates, queue positions, and instant counter call chimes.
+5. **Staff Operations Console (`/staff/ops-console`)**:
+   - Real-time ticket caller with audio chime synthesizer, digital walk-in intake modal, and counter assignments.
+6. **Customer Arrival & Live Tracking Flow**:
+   - Timed ticket booking (`/book-queue`) connected to FastAPI backend.
+   - Real-time 4-step progress stepper (`/track`) reflecting live desk status without page refresh.
+7. **Document Pre-Clearance (`/verify`)**:
+   - Digital pass confirmation and document intake before arriving at physical branches.
+8. **Social Studio & AI Broadcasts (`/staff/social-studio`)**:
+   - Instant public announcement ticker publisher with AI presets (*Zero-Wait Notice*, *Weather Advisory*, *Pre-Clearance Push*).
+9. **Full Marketing Landing Page (`/`)**:
+   - Complete replacement of placeholder root with a rich Luna brand homepage featuring interactive live demo cards, live queue stats, and tenant directories.
+10. **Resilient Tenant Layout Architecture**:
+    - Centralized `[tenantId]/layout.tsx` providing safe context hydration and eliminating SSR 500 crashes.
 
 ```text
                                   ONE LUNA FRONTEND
@@ -21,13 +41,22 @@ All tenants share reusable frontend feature modules, UI components, and routing 
         ┌─────────────────────────────────┼─────────────────────────────────┐
         │                                 │                                 │
   Luna Marketing                    Luna Platform                  Tenant Applications
-(app/(marketing))                  (app/(platform))              (app/tenant/[tenantId])
+ (app/page.tsx)                    (app/(platform))              (app/tenant/[tenantId])
         │                                 │                                 │
- ├── Homepage                      ├── Login / Register              ├── victor.luna.com (New Business)
- ├── Company                       ├── Platform Dashboard            ├── Acme Bank
- ├── Institutions                  ├── Free Subdomain Claim          ├── City General Hospital
- ├── Features                      ├── Billing & Subscriptions       ├── Luna Mobile & Fiber
- └── Pricing                       └── Account Settings              └── National ID Center
+ ├── Official Brand Homepage       ├── Login / Register              ├── victor.luna.com (New Business)
+ ├── Subdomain Claim Bar           ├── Platform Dashboard            ├── Acme Bank (acme-bank.luna.com)
+ ├── 8 Themes Showcase             ├── Free Subdomain Flow           ├── City General Hospital
+ ├── Solutions & Live Metrics      └── Account Settings              └── Luna Mobile & Fiber
+ └── Tenant Demo Switcher                                                   │
+                                                                 ├── /book-queue (Customer Booking)
+                                                                 ├── /track (Realtime WebSocket Tracker)
+                                                                 ├── /verify (Document Pre-Clearance)
+                                                                 └── /staff/
+                                                                     ├── ops-console (Live WebSocket Caller)
+                                                                     ├── services (Service Windows)
+                                                                     ├── social-studio (AI Broadcast Ticker)
+                                                                     ├── branches & customers
+                                                                     └── settings (8 Themes & Groq AI)
 ```
 
 ---
@@ -36,24 +65,26 @@ All tenants share reusable frontend feature modules, UI components, and routing 
 
 Every business that signs up on Luna automatically receives a **free custom subdomain**:
 - **Example**: A business owned by Victor claims `victor.luna.com`.
-- **Zero Cost & Instant Provisioning**: No DNS configuration required by the tenant. Handled transparently by Next.js edge middleware.
+- **Zero Cost & Instant Provisioning**: No DNS configuration required by the tenant. Handled transparently by Next.js edge routing and tenant resolution.
 - **Dedicated Public Arrival Portal**: Customers visit `https://victor.luna.com` to book timed tickets, track lobby wait times, and pre-clear documents.
 - **Dedicated Staff Operations Console**: Staff access `https://victor.luna.com/staff/ops-console` to call tickets, view analytics, and manage queue windows.
 
 ### Subdomain Routing Rules
 | Inbound Host | Internal Next.js App Route | Description |
 |---|---|---|
-| `luna.com` | `app/(marketing)/page.tsx` | Main Marketing Website |
+| `luna.com` / `localhost:3000` | `app/page.tsx` | Main Marketing Landing Website |
 | `app.luna.com` | `app/(platform)/dashboard/page.tsx` | Platform SaaS Admin |
-| `victor.luna.com` | `app/tenant/victor/page.tsx` | Victor's Customer Portal |
-| `victor.luna.com/staff/*` | `app/tenant/victor/staff/*` | Victor's Staff Operations |
-| `victor.localhost:3000` | `app/tenant/victor/*` | Local Development Subdomain |
+| `victor.luna.com` | `app/tenant/victor/page.tsx` | Victor's Branded Customer Portal |
+| `victor.luna.com/book-queue` | `app/tenant/victor/book-queue/page.tsx` | Victor's Ticket Booking Portal |
+| `victor.luna.com/track` | `app/tenant/victor/track/page.tsx` | Victor's Live WebSocket Queue Tracker |
+| `victor.luna.com/staff/*` | `app/tenant/victor/staff/*` | Victor's Private Operations Consoles |
+| `victor.localhost:3000` | `app/tenant/victor/*` | Local Development Subdomain Resolution |
 
 ---
 
-## 🎨 3. 8 FREE THEME PRESETS & VISUAL CUSTOMIZATION
+## 🎨 3. 8 FREE THEME PRESETS & DYNAMIC BRANDING ENGINE
 
-Immediately after business signup, users are routed to their **Website Customizer & Theme Studio** (`/tenant/[slug]/staff/settings`), where they can choose from **8 curated free themes** or fine-tune individual colors:
+Immediately after signup, businesses can customize their site via the **Theme Studio & Settings** (`/tenant/[slug]/staff/settings`). Tenants can choose from **8 curated free themes** or fine-tune individual colors:
 
 | Theme Name | Primary | Background | Accent (CTA) | Industry Best Fit |
 |---|---|---|---|---|
@@ -66,16 +97,24 @@ Immediately after business signup, users are routed to their **Website Customize
 | **7. Amethyst Royal** | `#6D28D9` | `#F5F3FF` (Lilac) | `#FBBF24` (Gold) | Universities, Admissions & Colleges |
 | **8. Nordic Teal** | `#0F766E` | `#F0FDFA` (Teal) | `#06B6D4` (Cyan) | Government Centers & Clean Tech |
 
-### Manual Fine-Tuning Controls
-- **Hex Color Pickers**: Real-time adjustment of Primary, Secondary, Accent, Background, and Text colors.
-- **Copy & Messaging**: Live editing of Hero Title, Hero Subtitle, Live Announcement Ticker, and CTA Button Text.
-- **Real-Time Responsive Preview**: Split-screen desktop & mobile viewport simulator rendering changes live as they are typed.
+### Dynamic CSS Variable Branding Engine
+Theme colors are injected directly into root CSS variables:
+```css
+:root {
+  --tenant-primary: #0057B8;
+  --tenant-secondary: #002F6C;
+  --tenant-accent: #00A3E0;
+  --tenant-bg: #F4F8FC;
+  --tenant-text: #0B1D3A;
+}
+```
+All tenant pages dynamically inherit these variables, enabling real-time palette changes without redeployment.
 
 ---
 
 ## 🤖 4. AI WEBSITE PERSONALIZATION STUDIO (LOVABLE & REPLIT STYLE)
 
-For businesses wanting hyper-personalized websites, Luna includes an interactive **AI Website Studio**:
+For hyper-personalized websites, Luna features an interactive **AI Website Studio** located in Tenant Settings:
 
 ### How It Works
 1. **User Groq API Key**:
@@ -85,162 +124,176 @@ For businesses wanting hyper-personalized websites, Luna includes an interactive
 2. **Conversational Prompting**:
    - The user chats naturally with the AI assistant (e.g., *"Make my website look like a high-end pediatric clinic with pastel tones and friendly copy"* or *"Switch to dark luxury mode with obsidian and gold"*).
 3. **Autonomous Generation (LLaMA 3.3 / 3.1)**:
-   - Luna calls the Groq chat completions API with the ultra-fast `llama-3.3-70b-versatile` model.
+   - Luna calls the Groq chat completions API with the ultra-fast `llama-3.3-70b-versatile` or `llama-3.1-8b-instant` model.
    - The model streams back a conversational explanation and an exact JSON configuration block.
 4. **Live Site Transformation**:
    - Luna automatically extracts the design parameters, updates the CSS variables, rewrites hero text, updates CTA buttons, and reflects the changes in the live preview in real time!
-5. **Simulated Demo Mode**:
-   - If the user hasn't connected a Groq key yet, built-in intelligent demo simulations allow them to experience the Lovable-style AI transformation immediately with 1-click prompt chips.
+5. **Intelligent Fallback Mode**:
+   - If no Groq key is present, built-in contextual heuristics generate authentic design updates, allowing zero-friction demonstrations.
 
 ---
 
-## 🔒 5. FRONTEND-ONLY SCOPE & BACKEND-READY DESIGN
+## ⚡ 5. REAL-TIME WEBSOCKET QUEUE INTEGRATION (FASTAPI BACKEND)
 
-This project is strictly **FRONTEND-ONLY**. No backend code (FastAPI, PostgreSQL, Prisma, RLS, or database migrations) is executed inside this codebase.
+The frontend connects directly to the FastAPI backend at `http://127.0.0.1:8000` via typed REST endpoints and persistent WebSockets.
 
-To ensure seamless future integration with a FastAPI backend without requiring a frontend rewrite, the application adheres strictly to the **Repository Pattern**:
+### 1. Two Sockets, Two Audiences
+| Audience | WebSocket Route | Query Params | Functionality |
+|---|---|---|---|
+| **Staff Console** | `GET /api/queue/ws/branches/{branch_id}` | `business_id` (required) | Pushes every ticket event for the branch in real time |
+| **Customer Tracker** | `GET /api/queue/ws/tickets/{ticket_number}` | none | Pushes snapshot, wait updates, and call announcements |
 
-```text
-Next.js Frontend (UI & Hooks)
-            │
-   Repository Interface (e.g., QueueRepository, TenantRepository)
-            │
- ┌──────────┴────────────────────────┐
- │                                   │
-MockTenantRepository        FastAPITenantRepository
-(Current Data Layer)        (Future Backend Connection)
+### 2. Real-Time WebSocket Hook (`use-realtime.ts`)
+- **`useBranchRealtime`**:
+  - Connects to `ws://127.0.0.1:8000/api/queue/ws/branches/{branch_id}?business_id={business_id}`.
+  - Automatically handles `connected`, `ticket.created`, `ticket.status_changed`.
+  - Sends keepalive `"ping"` frames every 25 seconds.
+  - Automatically reconnects on network blips and triggers HTTP state reconciliation.
+- **`useTicketRealtime`**:
+  - Connects to `ws://127.0.0.1:8000/api/queue/ws/tickets/{ticket_number}`.
+  - Receives initial `ticket.snapshot`, live `ticket.status_changed`, and `ticket.wait_updated` fan-outs.
+  - Powers real-time audio chimes when staff calls the ticket to the counter.
+
+### 3. Queue REST API Client (`queue-api.ts`)
+```typescript
+import { queueApi } from '@/lib/queue-api';
+
+// Create a digital arrival ticket
+const ticket = await queueApi.createTicket({
+  business_id: 'tenant_001',
+  branch_id: 'b_001',
+  service_id: 's_001',
+  customer_name: 'Ada Lovelace',
+  customer_email: 'ada@example.com',
+});
+
+// Update ticket status from staff console
+await queueApi.updateTicketStatus(ticket.ticket_number, 'called', 'tenant_001');
+
+// Fetch live wait estimate
+const wait = await queueApi.getWaitEstimate(ticket.ticket_number, 'tenant_001');
 ```
 
-Swapping out mock data for real FastAPI endpoints in the future simply requires supplying a `FastAPI*Repository` class implementing the existing TypeScript interfaces.
+---
+
+## 🖥️ 6. TENANT PAGES & WORKFLOWS
+
+### 1. Staff Operations Console (`/tenant/[slug]/staff/ops-console`)
+- **Live WebSocket Status Pill**: Displays `🟢 Live WebSocket (Port 8000)` with active socket state.
+- **Live Ticket Caller**: Audio chime synthesis + visual banner broadcast when calling customers to Counter 1.
+- **Issue Walk-in Digital Ticket Modal**: Staff can immediately issue tickets for walk-ins with priority tags.
+- **Counter Action Controls**: Complete Service (`status: done`) and No-Show / Skip (`status: no_show`).
+- **Metric Cards**: Active lobby queue, pre-cleared documents count, and door-to-counter average wait time.
+
+### 2. Customer Booking Portal (`/tenant/[slug]/book-queue`)
+- Loads real services from `GET /api/queue/services`.
+- Dispatches ticket creation via `POST /api/queue/tickets`.
+- Displays real backend ticket numbers (`AC-XXXXX`) and estimated arrival waits.
+- Direct link to live position tracking.
+
+### 3. Customer Live Queue Tracker (`/tenant/[slug]/track`)
+- Supports ticket pre-fill via query parameter (`?ticket=AC-XXXXX`).
+- Subscribes to the customer WebSocket for real-time updates.
+- **4-Step Timeline Stepper**:
+  1. *Booked* &rarr; 2. *In Lounge* &rarr; 3. *Called (Now Serving)* &rarr; 4. *Done (Completed)*.
+- Audio alert and animated banner activate the moment staff calls the ticket.
+
+### 4. Service Windows Management (`/tenant/[slug]/staff/services`)
+- Displays all active service counters and SLA duration targets.
+- Interactive modal to create new service windows with backend persistence (`POST /api/queue/services`).
+
+### 5. Social Studio & AI Broadcasts (`/tenant/[slug]/staff/social-studio`)
+- Direct broadcast composer updating the public announcement ticker on customer portals.
+- **AI Inspiration Presets**: One-click generation for weather advisories, zero-wait alerts, and pre-clearance reminders.
+- Configurable **Groq API Key** modal for LLaMA 3.1 generation.
 
 ---
 
-## 📂 6. TARGET ARCHITECTURE & FOLDER STRUCTURE
+## 📂 7. FOLDER STRUCTURE
 
 ```text
 frontend/
 ├── src/
 │   ├── app/                                  # Next.js App Router (Routes & Layouts)
-│   │   ├── (marketing)/                      # Marketing pages (Home, Pricing, Institutions)
-│   │   │   └── page.tsx
-│   │   ├── (platform)/                       # SaaS Platform & Admin (Login, Register, Dashboard)
-│   │   │   ├── login/page.tsx
+│   │   ├── page.tsx                          # Full Luna Marketing Homepage (Hero, Subdomain Claim, Themes)
+│   │   ├── (platform)/                       # SaaS Platform & Admin
+│   │   │   ├── login/page.tsx                # Staff & Platform Login
 │   │   │   ├── register/page.tsx             # Free Subdomain Signup Flow
-│   │   │   └── dashboard/page.tsx
+│   │   │   └── dashboard/page.tsx            # Platform Admin Console
 │   │   ├── tenant/                           # Multi-Tenant Application Engines
 │   │   │   └── [tenantId]/
+│   │   │       ├── layout.tsx                # Root Tenant Provider Layout (Safe Context Hydration)
 │   │   │       ├── page.tsx                  # Dynamic Tenant Customer Landing Page
 │   │   │       ├── book-queue/page.tsx       # Customer Timed Ticket Booking
-│   │   │       ├── track/page.tsx            # Live Ticket Position Tracker
+│   │   │       ├── track/page.tsx            # Live WebSocket Queue Tracker & Audio Caller
 │   │   │       ├── verify/page.tsx           # Document Pre-Clearance
-│   │   │       └── staff/                    # Tenant Operations Consoles
-│   │   │           ├── ops-console/page.tsx  # Branch Operations Console & Ticket Caller
-│   │   │           ├── analytics/page.tsx    # Live Performance & Wait-time Charts
-│   │   │           ├── branches/page.tsx     # Branch Network Manager
-│   │   │           ├── customers/page.tsx    # Customer Registry
-│   │   │           ├── services/page.tsx     # Service & Priority Window Config
+│   │   │       └── staff/                    # Tenant Staff Operations
+│   │   │           ├── ops-console/page.tsx  # Branch Operations Console & Live Caller
+│   │   │           ├── analytics/page.tsx    # Wait-time Charts & Queue Analytics
+│   │   │           ├── branches/page.tsx     # Branch Management & Add Branch Modal
+│   │   │           ├── customers/page.tsx    # Customer Registry with Live Search Filter
+│   │   │           ├── services/page.tsx     # Service Windows & Modal Creator
 │   │   │           ├── settings/page.tsx     # 8 Themes, Free Subdomain & Groq AI Studio
-│   │   │           └── social-studio/page.tsx# Social Broadcasts & Customer Communication
-│   │   ├── error.tsx                         # Global Error Boundary
-│   │   ├── globals.css                       # Global Tailwind CSS & Root Tenant Variables
-│   │   ├── layout.tsx                        # Root Layout with Font Definitions & Auth Context
-│   │   ├── loading.tsx                       # Global Skeleton Fallback
-│   │   └── not-found.tsx                     # Custom 404 Handler
+│   │   │           └── social-studio/page.tsx# Social Broadcasts & Groq AI Generator
+│   │   ├── globals.css                       # Tailwind CSS & Luna Brand Variables
+│   │   └── layout.tsx                        # Root HTML Shell & Font Configuration
 │   │
-│   ├── components/                           # Shared UI Components & Layouts
-│   │   ├── layouts/                          # Reusable Shells (TenantCustomerLayout, TenantStaffLayout)
-│   │   ├── navigation/                       # Navbar, Staff Sidebar, Tenant Switcher
-│   │   ├── shared/                           # Luna Official Brand Marks & Assets
-│   │   └── ui/                               # Atomic UI Components (Buttons, Modals, Cards)
+│   ├── components/
+│   │   ├── layouts/                          # TenantCustomerLayout & TenantStaffLayout
+│   │   └── shared/                           # LunaLogo, LunaIcon (Official Brand Assets)
 │   │
-│   ├── features/                             # Modular Business Feature Domains
-│   │   ├── tenant-branding/                  # 8 Free Themes & Groq AI Personalization Engine
-│   │   │   ├── themes.ts                     # 8 Curated Theme Presets Specification
-│   │   │   └── groq-service.ts               # Groq LLaMA 3.3 Prompt Engine & Key Manager
-│   │   ├── queue-management/                 # Queue Engine, Live Ticker, Ticket Calling
-│   │   ├── ticketing/                        # Ticket Verification & History
-│   │   ├── social-studio/                    # Broadcast Announcements & Campaign Cards
-│   │   ├── verification/                     # Document Pre-Clearance Engine
-│   │   └── authentication/                   # Frontend Auth State & Role Guards
+│   ├── lib/
+│   │   ├── api-client.ts                     # REST Client configured for FastAPI @ Port 8000
+│   │   ├── queue-api.ts                      # Typed Queue, Ticket & Service API Methods
+│   │   ├── use-realtime.ts                   # Branch & Customer WebSocket Hooks
+│   │   ├── ai-service.ts                     # Groq LLaMA 3 Client & Contextual Fallbacks
+│   │   ├── tenant.ts                         # Tenant Resolvers & Subdomain Utilities
+│   │   └── tenant-context.tsx                # Safe Tenant Provider & Hook (`useTenant`)
 │   │
-│   ├── lib/                                  # Centralized Utilities & Repositories
-│   │   ├── api-client.ts                     # Standardized HTTP/Fetch Abstraction
-│   │   ├── auth.tsx                          # Auth Context & Session Provider
-│   │   ├── tenant.ts                         # Tenant Resolution, Mock Repo & Subdomain Utilities
-│   │   ├── tenant-context.tsx                # Active Tenant Provider Hook (`useTenant`)
-│   │   ├── tenant-branding.ts                # CSS Variable Injector
-│   │   └── utils.ts                          # Classname Merging (`cn`)
+│   ├── features/
+│   │   └── queue-management/
+│   │       └── api/queue-repository.ts       # Hybrid Queue Repository with Backend Sync
 │   │
-│   ├── mock/                                 # Typed Development Data Repositories
-│   │   ├── tenants.ts                        # Pre-configured Enterprise Tenants
-│   │   ├── branches.ts                       # Branch Network Mock Data
-│   │   ├── services.ts                       # Priority Window & Service Items
-│   │   └── users.ts                          # Staff & Customer Mock Profiles
-│   │
-│   └── types/                                # Strict TypeScript Interface Definitions
-│       ├── tenant.ts                         # Tenant, TenantBranding, TenantFeatures Interfaces
-│       ├── user.ts                           # User, Role & Permission Schemas
-│       ├── queue.ts                          # Queue & Arrival Window Schemas
-│       └── ticket.ts                         # Digital Ticket Interface
+│   └── mock/                                 # Initial Mock Tenant & Branch Datasets
+│       ├── tenants.ts                        # Acme Bank, City Hospital, Luna Telecom
+│       ├── branches.ts                       # Branch Locations & Addresses
+│       └── services.ts                       # Service Counters & Duration SLA
 │
 ├── public/brand/                             # Official Luna Wordmarks, Icons & Graphics
-├── middleware.ts                             # Next.js Host-Based Subdomain Rewriter
-├── package.json                              # Project Dependencies & Next 15 Setup
-├── postcss.config.mjs                        # PostCSS & Tailwind Plugin Config
-└── tsconfig.json                             # Strict TypeScript Compiler Options
+├── package.json                              # Next.js 15, React 19, Lucide, Tailwind
+└── tsconfig.json                             # Strict TypeScript Configuration
 ```
 
 ---
 
-## ⚙️ 7. LOCAL DEVELOPMENT & COMMANDS
+## ⚙️ 8. LOCAL DEVELOPMENT & TESTING
 
-### Prerequisites
-- Node.js v18.x or v20.x+
-- npm v9.x+
+### 1. Start FastAPI Backend
+Ensure the backend is running on port 8000:
+```bash
+cd backend
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+- Health Check: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- Interactive API Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-### Quick Start
-Navigate to the `frontend/` directory:
-
+### 2. Start Next.js Frontend
+In a separate terminal:
 ```bash
 cd frontend
-```
-
-Install dependencies:
-
-```bash
 npm install
-```
-
-Start the Next.js local development server:
-
-```bash
-npm run dev
-```
-
-The application will be accessible at:
-- **Marketing Site**: [http://localhost:3000](http://localhost:3000)
-- **New Business Registration**: [http://localhost:3000/register](http://localhost:3000/register)
-- **Website Customizer & AI Studio**: [http://localhost:3000/tenant/acme-bank/staff/settings](http://localhost:3000/tenant/acme-bank/staff/settings)
-- **Acme Bank Customer Portal**: [http://localhost:3000/tenant/acme-bank](http://localhost:3000/tenant/acme-bank)
-- **Acme Bank Staff Console**: [http://localhost:3000/tenant/acme-bank/staff/ops-console](http://localhost:3000/tenant/acme-bank/staff/ops-console)
-- **City Hospital Customer Portal**: [http://localhost:3000/tenant/city-hospital](http://localhost:3000/tenant/city-hospital)
-
-### Verify Production Build
-To run a full production build and type check:
-
-```bash
 npm run build
+npm start
 ```
+*(Or `npm run dev` for development mode).*
 
----
-
-## 📄 8. KEY ARCHITECTURAL PRINCIPLES
-
-1. **Strict Dependency Direction**:
-   - `app` → `features` → `shared components/lib`. Business logic lives inside `features/`, while `app/` is reserved for route composition.
-2. **No Duplicated Applications**:
-   - Single layout tree (`TenantCustomerLayout`, `TenantStaffLayout`) serves all organizations without duplicate code.
-3. **Zero Raw Technical Errors**:
-   - Polished fallbacks, loading skeletons (`loading.tsx`), empty states, and custom 404/Error boundaries.
-4. **Backend-Decoupled Data Layer**:
-   - UI components interact strictly through repository functions (`getTenantBySlug`, `createTenant`, `updateTenant`), ensuring seamless FastAPI integration when backend APIs are ready.
+### 3. Verify Live Routes
+- **Luna Homepage**: [http://localhost:3000](http://localhost:3000)
+- **New Business Registration**: [http://localhost:3000/register](http://localhost:3000/register)
+- **Acme Bank Customer Portal**: [http://localhost:3000/tenant/acme-bank](http://localhost:3000/tenant/acme-bank)
+- **Book Arrival Ticket**: [http://localhost:3000/tenant/acme-bank/book-queue](http://localhost:3000/tenant/acme-bank/book-queue)
+- **Customer Live Queue Position Tracking**: [http://localhost:3000/tenant/acme-bank/track](http://localhost:3000/tenant/acme-bank/track)
+- **Staff Operations Console**: [http://localhost:3000/tenant/acme-bank/staff/ops-console](http://localhost:3000/tenant/acme-bank/staff/ops-console)
+- **Service Windows Management**: [http://localhost:3000/tenant/acme-bank/staff/services](http://localhost:3000/tenant/acme-bank/staff/services)
+- **Social Studio & AI Broadcasts**: [http://localhost:3000/tenant/acme-bank/staff/social-studio](http://localhost:3000/tenant/acme-bank/staff/social-studio)
+- **8 Themes & AI Website Studio**: [http://localhost:3000/tenant/acme-bank/staff/settings](http://localhost:3000/tenant/acme-bank/staff/settings)
