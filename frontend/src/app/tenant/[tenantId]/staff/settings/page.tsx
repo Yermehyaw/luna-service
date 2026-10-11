@@ -6,11 +6,12 @@ import { useTenant } from '../../../../../lib/tenant-context';
 import { updateTenant } from '../../../../../lib/tenant';
 import { FREE_THEME_PRESETS, ThemePreset } from '../../../../../features/tenant-branding/themes';
 import {
-  getGroqApiKey,
-  saveGroqApiKey,
-  clearGroqApiKey,
-  generateSiteCustomizationWithGroq,
-} from '../../../../../features/tenant-branding/groq-service';
+  generateSiteCustomizationMultiAi,
+  getAllStoredAiKeys,
+  getActiveAiRouting,
+  AI_PROVIDERS,
+} from '../../../../../features/tenant-branding/multi-ai-service';
+import { MultiAiKeyModal } from '../../../../../features/tenant-branding/MultiAiKeyModal';
 import {
   Globe,
   Palette,
@@ -33,6 +34,8 @@ import {
   Ticket,
   ShieldCheck,
   Lock,
+  Layers,
+  Zap,
 } from 'lucide-react';
 
 interface ChatMessage {
@@ -41,6 +44,8 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   appliedTheme?: any;
+  providerName?: string;
+  latencyMs?: number;
 }
 
 export default function TenantBrandingSettingsPage({
@@ -75,18 +80,17 @@ export default function TenantBrandingSettingsPage({
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Groq API Key State
-  const [groqKey, setGroqKey] = useState<string>('');
-  const [isKeySaved, setIsKeySaved] = useState<boolean>(false);
-  const [showKeyModal, setShowKeyModal] = useState<boolean>(false);
-  const [keyInput, setKeyInput] = useState<string>('');
+  // Multi-Provider AI API Keys & Routing State
+  const [storedAiKeys, setStoredAiKeys] = useState<Record<string, string>>({});
+  const [activeRouting, setActiveRouting] = useState<'combined' | string>('combined');
+  const [showAiModal, setShowAiModal] = useState<boolean>(false);
 
   // AI Chat State (Lovable & Replit style)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'ai',
-      text: `👋 Hi! I am your Luna AI Site Architect (similar to Lovable & Replit). Tell me how you'd like your website styled, or describe your brand vibe, and I will redesign your colors, hero copy, and buttons instantly!`,
+      text: `👋 Hi! I am your Luna AI Site Architect (similar to Lovable & Replit). Tell me how you'd like your website styled, or describe your brand vibe, and I will redesign your colors, hero copy, and buttons instantly! Supports Groq, OpenAI, Gemini, Claude, and Kimi with AI Auto-Routing.`,
       timestamp: 'Just now',
     },
   ]);
@@ -94,13 +98,14 @@ export default function TenantBrandingSettingsPage({
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
-  // Initialize Groq Key
+  // Refresh AI configuration from localStorage
+  const refreshAiConfig = () => {
+    setStoredAiKeys(getAllStoredAiKeys());
+    setActiveRouting(getActiveAiRouting());
+  };
+
   useEffect(() => {
-    const saved = getGroqApiKey();
-    if (saved) {
-      setGroqKey(saved);
-      setIsKeySaved(true);
-    }
+    refreshAiConfig();
   }, []);
 
   // Update form fields when tenant loads
@@ -133,21 +138,6 @@ export default function TenantBrandingSettingsPage({
       setCopiedDomain(true);
       setTimeout(() => setCopiedDomain(false), 2000);
     }
-  };
-
-  const handleSaveGroqKey = () => {
-    if (!keyInput.trim()) return;
-    saveGroqApiKey(keyInput);
-    setGroqKey(keyInput.trim());
-    setIsKeySaved(true);
-    setShowKeyModal(false);
-    setKeyInput('');
-  };
-
-  const handleClearGroqKey = () => {
-    clearGroqApiKey();
-    setGroqKey('');
-    setIsKeySaved(false);
   };
 
   // Apply one of the 8 Free Theme Presets
@@ -205,12 +195,11 @@ export default function TenantBrandingSettingsPage({
         ctaButtonText,
       };
 
-      const result = await generateSiteCustomizationWithGroq(
+      const result = await generateSiteCustomizationMultiAi(
         text,
         currentBranding,
         tenant?.name || 'Our Business',
-        tenant?.industry || 'retail',
-        groqKey
+        tenant?.industry || 'retail'
       );
 
       // Apply returned branding updates to state
@@ -234,16 +223,18 @@ export default function TenantBrandingSettingsPage({
           text: result.replyMessage,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           appliedTheme: result.updatedBranding,
+          providerName: result.usedProvider,
+          latencyMs: result.latencyMs,
         },
       ]);
     } catch (err: any) {
-      setAiError(err.message || 'Failed to generate design with Groq');
+      setAiError(err.message || 'Failed to generate design with AI');
       setChatMessages((prev) => [
         ...prev,
         {
           id: `ai-err-${Date.now()}`,
           sender: 'ai',
-          text: `⚠️ Groq Error: ${err.message || 'Could not connect to Groq'}. Please check your API key or try again.`,
+          text: `⚠️ AI Studio: ${err.message || 'Could not generate design'}. Please check your API keys or network connection.`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         },
       ]);
@@ -472,7 +463,7 @@ export default function TenantBrandingSettingsPage({
           </div>
         </section>
 
-        {/* 3. AI Personalization Studio (Lovable & Replit Style) with Groq API Key */}
+        {/* 3. AI Personalization Studio (Lovable & Replit Style) with Multi-Provider Support */}
         <section className="rounded-3xl border border-[#702D7B]/20 bg-gradient-to-br from-[#291E29] via-[#341539] to-[#291E29] p-6 text-[#FFF6E9] shadow-xl space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#FFF6E9]/10 pb-4">
             <div className="flex items-center gap-3">
@@ -480,90 +471,60 @@ export default function TenantBrandingSettingsPage({
                 <Sparkles className="h-6 w-6" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-display text-base font-extrabold text-white">
                     Luna AI Site Studio (Lovable & Replit Experience)
                   </h3>
                   <span className="rounded-full bg-[#FFA800]/20 text-[#FFA800] border border-[#FFA800]/30 text-[10px] font-bold px-2 py-0.5">
-                    LLaMA 3.3
+                    Multi-Model Engine
                   </span>
                 </div>
                 <p className="text-xs text-[#FFF6E9]/75">
-                  Chat with AI to personalize your site with any design vision, color aesthetic, or high-converting copy.
+                  Chat with AI to personalize your site. Accepts Groq, OpenAI, Gemini, Claude &amp; Kimi with test keys &amp; Smart Auto-Routing.
                 </p>
               </div>
             </div>
 
-            {/* Groq Key Status & Setup */}
+            {/* AI Key Status & Multi-Provider Setup */}
             <div className="flex items-center gap-2">
-              {isKeySaved ? (
-                <div className="flex items-center gap-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 px-3 py-2 text-xs">
+              {Object.keys(storedAiKeys).some((k) => !!storedAiKeys[k]) ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAiModal(true)}
+                  className="flex items-center gap-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 px-3.5 py-2 text-xs transition-colors hover:bg-emerald-900/90"
+                >
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-emerald-300 font-bold">Groq Key Connected</span>
-                  <button
-                    onClick={handleClearGroqKey}
-                    className="text-[11px] text-emerald-400 hover:text-white underline ml-1"
-                  >
-                    Change
-                  </button>
-                </div>
+                  <span className="text-emerald-300 font-bold">
+                    {Object.values(storedAiKeys).filter(Boolean).length} Key(s) ·{' '}
+                    {activeRouting === 'combined'
+                      ? 'Auto-Routing Cascade'
+                      : AI_PROVIDERS.find((p) => p.id === activeRouting)?.name || activeRouting.toUpperCase()}
+                  </span>
+                  <span className="text-[10px] bg-white/10 text-emerald-200 px-1.5 py-0.5 rounded font-mono ml-1">
+                    Manage
+                  </span>
+                </button>
               ) : (
                 <button
-                  onClick={() => setShowKeyModal(true)}
+                  type="button"
+                  onClick={() => setShowAiModal(true)}
                   className="flex items-center gap-1.5 rounded-xl bg-[#FFA800] px-3.5 py-2 text-xs font-bold text-[#291E29] shadow-md hover:bg-[#FFB11A]"
                 >
                   <Key className="h-3.5 w-3.5" />
-                  <span>Enter Groq API Key</span>
+                  <span>Configure AI Keys &amp; Routing</span>
                 </button>
               )}
             </div>
           </div>
 
-          {/* Key Input Modal / Inline Prompt */}
-          {showKeyModal && (
-            <div className="rounded-2xl border border-[#FFA800]/30 bg-black/40 p-4 space-y-3 backdrop-blur-md">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-bold text-xs text-[#FFA800] flex items-center gap-1.5">
-                    <Key className="h-3.5 w-3.5" /> Configure Your Free Groq API Key
-                  </h4>
-                  <p className="text-[11px] text-[#FFF6E9]/70 mt-0.5">
-                    We use Groq's lightning-fast LLaMA 3.3 model for AI website personalization. You can get a free key in 30 seconds from{' '}
-                    <a
-                      href="https://console.groq.com/keys"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[#FFA800] underline font-bold"
-                    >
-                      console.groq.com/keys
-                    </a>.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowKeyModal(false)}
-                  className="text-xs text-[#FFF6E9]/60 hover:text-white"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  placeholder="gsk_..."
-                  value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
-                  className="flex-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
-                />
-                <button
-                  onClick={handleSaveGroqKey}
-                  className="rounded-xl bg-[#FFA800] px-4 py-2 text-xs font-bold text-[#291E29] hover:bg-[#FFB11A]"
-                >
-                  Save Key
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Multi-Provider Key & Routing Modal */}
+          <MultiAiKeyModal
+            isOpen={showAiModal}
+            onClose={() => {
+              setShowAiModal(false);
+              refreshAiConfig();
+            }}
+          />
 
           {/* Quick Prompt Ideas */}
           <div className="space-y-1.5">
@@ -609,13 +570,22 @@ export default function TenantBrandingSettingsPage({
                   }`}
                 >
                   <p>{msg.text}</p>
-                  <span
-                    className={`block text-[9px] mt-1 ${
-                      msg.sender === 'user' ? 'text-[#291E29]/70 text-right' : 'text-white/50'
-                    }`}
-                  >
-                    {msg.timestamp}
-                  </span>
+                  <div className="flex items-center justify-between gap-3 mt-1.5">
+                    {msg.providerName ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-[#FFA800]/20 border border-[#FFA800]/30 px-1.5 py-0.5 text-[9px] font-mono text-[#FFA800]">
+                        <Zap className="h-2.5 w-2.5" /> {msg.providerName} {msg.latencyMs ? `(${msg.latencyMs}ms)` : ''}
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span
+                      className={`text-[9px] ${
+                        msg.sender === 'user' ? 'text-[#291E29]/70 text-right' : 'text-white/50'
+                      }`}
+                    >
+                      {msg.timestamp}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -623,7 +593,13 @@ export default function TenantBrandingSettingsPage({
             {aiLoading && (
               <div className="flex items-center gap-2 text-xs text-[#FFA800] font-bold animate-pulse">
                 <Sparkles className="h-4 w-4 animate-spin" />
-                <span>Luna AI is designing your custom theme with Groq LLaMA 3.3...</span>
+                <span>
+                  Luna AI Site Architect is generating design via{' '}
+                  {activeRouting === 'combined'
+                    ? 'AI Auto-Routing Cascade'
+                    : AI_PROVIDERS.find((p) => p.id === activeRouting)?.name || activeRouting.toUpperCase()}
+                  ...
+                </span>
               </div>
             )}
           </div>

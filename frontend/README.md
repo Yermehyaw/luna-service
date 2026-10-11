@@ -15,9 +15,10 @@ The **Luna Frontend** is a unified multi-tenant Next.js application built using 
 2. **8 Free Curated Themes & Live CSS Variable Engine**:
    - One-click palette presets tailored for banking, healthcare, telecom, luxury, and civic organizations.
    - Full manual hex color pickers, typography controls, and split-screen desktop/mobile preview.
-3. **Lovable & Replit-Style AI Site Studio (Powered by Groq)**:
-   - Chat-driven website personalization where users can enter their **Groq API Key** (`gsk_...`).
-   - Autonomous styling with LLaMA 3.3/3.1, plus smart fallback mode when no key is entered.
+3. **Lovable & Replit-Style Multi-Provider AI Site Studio (Groq, OpenAI, Gemini, Claude, Kimi)**:
+   - Chat-driven website personalization accepting user API keys for **Groq**, **OpenAI**, **Google Gemini**, **Anthropic Claude**, and **Moonshot Kimi**.
+   - Live Key Testing (latency ping), client-side secure localStorage, and **Smart AI Auto-Routing** cascade to combine multiple keys.
+   - Autonomous styling with LLaMA 3.3, GPT-4o, Gemini 1.5, Claude 3.5, and Kimi 8k, plus zero-key smart local simulation.
 4. **Real-Time WebSocket Queue Integration (FastAPI Backend)**:
    - **Staff Branch WebSocket** (`/api/queue/ws/branches/{branch_id}`): Pushes new ticket arrivals, status changes, and audio call announcements.
    - **Customer Ticket WebSocket** (`/api/queue/ws/tickets/{ticket_number}`): Pushes live wait updates, queue positions, and instant counter call chimes.
@@ -112,24 +113,91 @@ All tenant pages dynamically inherit these variables, enabling real-time palette
 
 ---
 
-## 🤖 4. AI WEBSITE PERSONALIZATION STUDIO (LOVABLE & REPLIT STYLE)
+## 🤖 4. MULTI-PROVIDER AI SITE STUDIO & SMART AI AUTO-ROUTING (LOVABLE & REPLIT STYLE)
 
-For hyper-personalized websites, Luna features an interactive **AI Website Studio** located in Tenant Settings:
+For hyper-personalized websites, Luna includes an interactive **AI Website Studio** located in Tenant Settings (`/tenant/[slug]/staff/settings`). Tenants can build and customize themes using industry-leading AI models, test their keys live, save them securely in their browser, and **combine keys using Smart AI Auto-Routing**.
 
-### How It Works
-1. **User Groq API Key**:
-   - The user is prompted to enter their free **Groq API Key** (`gsk_...`).
-   - Free keys can be created in seconds from [console.groq.com/keys](https://console.groq.com/keys).
-   - Keys are stored securely in browser `localStorage` (`luna_groq_api_key`) and never sent to any intermediary server.
-2. **Conversational Prompting**:
-   - The user chats naturally with the AI assistant (e.g., *"Make my website look like a high-end pediatric clinic with pastel tones and friendly copy"* or *"Switch to dark luxury mode with obsidian and gold"*).
-3. **Autonomous Generation (LLaMA 3.3 / 3.1)**:
-   - Luna calls the Groq chat completions API with the ultra-fast `llama-3.3-70b-versatile` or `llama-3.1-8b-instant` model.
-   - The model streams back a conversational explanation and an exact JSON configuration block.
-4. **Live Site Transformation**:
-   - Luna automatically extracts the design parameters, updates the CSS variables, rewrites hero text, updates CTA buttons, and reflects the changes in the live preview in real time!
-5. **Intelligent Fallback Mode**:
-   - If no Groq key is present, built-in contextual heuristics generate authentic design updates, allowing zero-friction demonstrations.
+### 🛠️ Supported AI Providers & Models
+| Provider | Default Model | Typical Latency | Key Prefix / Format | Documentation Link |
+|---|---|---|---|---|
+| **⚡ Groq** | `llama-3.3-70b-versatile` | ~250ms – 400ms (Blazing fast) | `gsk_...` | [console.groq.com/keys](https://console.groq.com/keys) |
+| **🟢 OpenAI** | `gpt-4o-mini` | ~800ms – 1400ms (High fidelity) | `sk-...` | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| **🔷 Google Gemini** | `gemini-1.5-flash` | ~600ms – 1100ms (Generous free tier) | `AIzaSy...` | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
+| **🟣 Anthropic Claude** | `claude-3-5-haiku-20241022` | ~700ms – 1200ms (Creative copy) | `sk-ant-api03-...` | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
+| **🌙 Moonshot Kimi** | `moonshot-v1-8k` | ~900ms – 1500ms (Long context & styles) | `sk-...` | [platform.moonshot.cn/console/api-keys](https://platform.moonshot.cn/console/api-keys) |
+
+---
+
+### 🔑 1. Live Key Testing ("Test Key")
+Before using an API key in design workflows, users can verify their credentials with a single click:
+- **Instant Latency Check**: Luna executes a lightweight test probe directly against the provider's API.
+- **Latency Meter**: Displays the exact response round-trip time in milliseconds (e.g. `⚡ Key Valid (320ms)`).
+- **Error Diagnostics**: If a key is revoked, quota-exhausted, or formatted incorrectly, the modal displays the exact upstream error message immediately.
+
+---
+
+### 💾 2. Secure Client-Side Key Storage ("Save Key")
+- **100% Client-Side Privacy**: All API keys are stored solely in the tenant's browser `localStorage` (`luna_ai_key_groq`, `luna_ai_key_openai`, `luna_ai_key_gemini`, `luna_ai_key_anthropic`, `luna_ai_key_kimi`).
+- **Zero Server Exposure**: Keys are **never** logged, sent to, or stored on the Luna FastAPI backend or any third-party telemetry server.
+- **One-Click Deletion**: Users can remove any saved key at any time, instantly wiping it from storage.
+
+---
+
+### 🔀 3. Smart AI Auto-Routing & Combining Keys
+Tenants can combine multiple AI keys to create an ultra-reliable, high-performance personalization pipeline:
+
+```text
+               USER PROMPT: "Design a high-energy electric sports clinic"
+                                      │
+                                      ▼
+                      ┌────────────────────────────────┐
+                      │    SMART AI AUTO-ROUTING       │
+                      │           CASCADE              │
+                      └────────────────────────────────┘
+                                      │
+                 ┌────────────────────┼────────────────────┐
+                 ▼                    ▼                    ▼
+           1. GROQ LLaMA 3.3    2. OPENAI GPT-4o    3. GEMINI 1.5 FLASH
+           (Fastest ~300ms)    (If Groq Busy)      (If OpenAI Limit)
+                 │                    │                    │
+                 └───────────┬────────┴────────────────────┘
+                             │ (Fallback Cascade)
+                 ┌───────────┴─────────────────────────────┐
+                 ▼                                         ▼
+         4. CLAUDE 3.5 HAIKU                       5. MOONSHOT KIMI
+          (Creative Redesign)                    (Long Context Fallback)
+                             │
+                             ▼ (If all keys fail or none entered)
+             ┌─────────────────────────────────────────────────────┐
+             │       6. BUILT-IN SMART HEURISTIC ENGINE            │
+             │         (Zero-latency local simulation)             │
+             └─────────────────────────────────────────────────────┘
+                                      │
+                                      ▼
+               LIVE SITE RE-THEMED IN REAL TIME (CSS Variables + Copy)
+```
+
+1. **Combined AI Auto-Routing (Default & Recommended)**:
+   - When multiple keys are configured, Luna cascades requests in order of lowest latency: **Groq $\to$ OpenAI $\to$ Google Gemini $\to$ Anthropic Claude $\to$ Moonshot Kimi**.
+   - If a provider encounters a rate limit (`429`), network timeout, or service downtime, the router automatically fails over to the next available provider within milliseconds—ensuring zero downtime.
+2. **Dedicated Single Provider Routing**:
+   - Users can lock execution to a specific provider of choice (e.g. exclusively using *Anthropic Claude* or *Google Gemini*).
+3. **Smart Local Fallback (Zero Keys Required)**:
+   - If a user has not entered any API keys yet, Luna's local heuristic engine parses their aesthetic request and applies authentic color palettes and high-converting marketing copy—enabling instant interactive onboarding without requiring an API key.
+
+---
+
+### 💻 4. Code Architecture (`frontend/src/features/tenant-branding/`)
+- [`multi-ai-service.ts`](file:///frontend/src/features/tenant-branding/multi-ai-service.ts):
+  - `testAiKey(provider, key)`: Ping function returning `{ success: boolean, latencyMs: number, error?: string }`.
+  - `generateSiteCustomizationMultiAi(prompt, currentBranding, tenantName, industry)`: Master dispatcher handling key retrieval, active routing strategies, and automatic cascade fallback.
+  - Provider-specific parsers formatting prompts for OpenAI chat completion format, Anthropic messages format, and Google Gemini contents format.
+- [`MultiAiKeyModal.tsx`](file:///frontend/src/features/tenant-branding/MultiAiKeyModal.tsx):
+  - Accessible tabbed modal for managing keys across all 5 providers.
+  - Interactive "Test Key" buttons with real-time spinners and response badges.
+  - Strategy selector: *Combined AI Auto-Routing* vs *Dedicated Single Provider*.
+- [`settings/page.tsx`](file:///frontend/src/app/tenant/[tenantId]/staff/settings/page.tsx):
+  - Live AI chat studio displaying the active routing badge, connected key count, response provider pill (e.g. `⚡ Groq LLaMA 3.3 (290ms)`), and real-time site preview.
 
 ---
 
