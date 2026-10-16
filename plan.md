@@ -621,6 +621,50 @@ tests and it's tedious. Cheap to build, high demo value.
 unauthenticated booking endpoint is exactly the thing that gets hammered. Flagging it
 so it's a decision rather than an oversight.
 
+### README reconciliation (BLOCKING some of the work)
+
+These came from reading `README.md` against the actual repo. The README is a pitch
+document and describes six modules; roughly 80% of it doesn't exist yet. Three things
+it promises are not in any phase of this plan.
+
+**Q27. Who owns the `ai/` directory?** The README documents `ai/` at the top level
+(line 134) with `notebooks/`, `models/` and `scripts/`. **The folder does not exist.**
+Meanwhile `requirements.txt` already carries `transformers`, `scikit-learn` and
+`torch`, so the heavy dependencies are declared with nothing using them. Same
+merge-hazard reasoning as `models/`: if I'm scaffolding it while someone else is too,
+we conflict. My default is to take it, since the Social Studio sentiment pipeline is
+the main consumer and I own the queue — but say so now, not later.
+
+**Q28. Is Row-Level Security real or aspirational?** README line 111 says PostgreSQL
+enforces multi-tenancy "via Tenant IDs **and Row-Level Security**." We did tenant IDs
+only. RLS is a genuine second enforcement layer under the app filters, and it's the
+honest structural fix for the `business_id`-from-body gap in §9 — a policy on `ticket`
+means a forged body value stops mattering. Cost: real work, PostgreSQL-specific, and it
+has to compose with the integration-test fixture that drops every table. My read: if
+it stays aspirational, amend the README rather than leave a claim we can't back.
+
+**Q29. Are QR check-ins in the MVP?** README line 85 promises them and nothing has
+claimed them. Needs an `arrived` status (or similar), a staff-facing scan endpoint, and
+a decision on whether scanning changes queue ordering. Small feature, real pitch
+content.
+
+**Q30. Scaffold `ai/` now, or write working sentiment code?** Scaffolding is safe and
+gets the folder existing. Working code needs model downloads and a real-vs-simulated
+decision (Q13). I'd scaffold with lazy-loading and a graceful fallback so a missing
+model degrades instead of crashing, and defer the pipeline to Phase 4.
+
+**Q31. RLS or Alembic first?** `main` now has Alembic back, added by a teammate
+(commits `4610b2c`, `339c695`), which contradicts §9's "no Alembic" — you instructed me
+to delete it and I did. I read the new `migrations/env.py` and it's correct for our
+async setup (`async_engine_from_config` + `run_sync` + `import app.models`, so
+`target_metadata` sees all 11 tables). But RLS and Alembic are both schema-level changes
+landing in the same window, and doing both at once makes review hard. Which first?
+
+**Q32. Does the models README get rewritten, or deleted?** `backend/app/models/README.md`
+is 9 stale lines — it lists three model groups when there are now eleven, and ends "I'm
+still updating it as we go." The content belongs in `plan.md` anyway. I'd rewrite it to
+match reality; deleting it is also defensible.
+
 ### §10.1 — The account wall, in full
 
 Ansee confirmed accounts are required, but left placement open ("probably before or
@@ -656,6 +700,69 @@ tickets in the table.
 
 ---
 
+## 11. README reconciliation
+
+What the README promises versus what exists, per module. Kept honest on purpose — the
+gap is large and pretending otherwise costs us time.
+
+| # | Module | Built | Promised, not built |
+|---|---|---|---|
+| 2 | Smart Queue | ~60% | WebSockets, QR check-ins, SMS/WhatsApp, priority lanes |
+| 1 | Social Studio | models only | inbox, sentiment, content credits, reply suggestions |
+| 4 | Payments | model only | ALATPay routing, ticket linkage |
+| 3 | Document Verification | nothing | uploads, OCR, four-state status |
+| 5 | BranchConnect | nothing | collaboration feed, fraud alerts |
+| 6 | Intelligence Dashboard | nothing | cross-branch analytics, NLP complaint trends |
+
+Three README claims with no corresponding work anywhere in the plan:
+
+- **QR check-ins** (line 85) — Q29
+- **Row-Level Security** (line 111) — Q28
+- **`ai/` directory** (line 134) — Q27, Q30
+
+The README also describes three SaaS tiers (Basic/Pro/Enterprise) with feature gating.
+Q18 asks whether that gating is enforced in the API or the frontend, which determines
+whether it's real or a pitch detail.
+
+**On using the README as a build order:** it isn't one. It's written to describe the
+finished product. `plan.md` is closer to a build order, and §9 is the status. Keeping
+them distinct is deliberate — if `README.md` starts carrying "what's done" it'll rot
+within a week, and it's the first thing a judge or a new team member reads.
+
+---
+
+## 12. Working with two other backend engineers
+
+Ansee confirmed two more people are writing backend in parallel. This changes how work
+gets divided, so the constraints are written down rather than held in my head.
+
+**The real risk is not file conflicts — it's building on an unenforced tenant boundary.**
+Auth changes how every router function receives its tenant. Any endpoint written against
+the current signature (`business_id` from the request body) gets reworked when it lands.
+So Q2 isn't just a Phase 3 blocker, it's a blocker for the whole team's throughput.
+
+**Suggested division**, each person owning a module end to end:
+
+| Who | Owns | Blocked by |
+|---|---|---|
+| Me | Smart Queue realtime, WebSockets, `ai/` scaffold, seed script | Q9, Q10, Q27 |
+| Teammate 1 | Social Studio | Q12, Q13 |
+| Teammate 2 | Payments | Q5, Q7 |
+
+**`backend/app/models/` is the merge hazard.** Three people editing
+`models/__init__.py` in the same week will conflict in ways git can't cleanly resolve,
+because `__init__.py` re-exports everything. I'd own it: teammates request the columns
+they need and I add them. Slower per commit, much faster overall.
+
+**Before anyone starts:** read §9 so nobody rebuilds what exists, get their BLOCKING
+questions answered, and branch off `Asher` rather than `main`.
+
+**What I'd hand out immediately:** the demo seed script (Q25). Zero dependencies, no
+collision risk, and it makes everyone's endpoints testable without clicking through
+forms to create a business first.
+
+---
+
 _Last updated: Phase 0 and Phase 1 done, Phase 2 endpoints working and verified
-end-to-end. 103 tests passing. Alembic removed per instruction; `create_tables.py` in
-its place. Branch: `Asher`, merging to `main` later._
+end-to-end. 103 tests passing. Branch: `Asher`, merging to `main` later. Open questions
+in section 10, README reconciliation in section 11, team constraints in section 12._
