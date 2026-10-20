@@ -3,6 +3,8 @@ from functools import lru_cache
 from fastapi import APIRouter, HTTPException, status
 
 from app.ai.client import LunaModelClient
+from app.ai.models.intent import IntentClassifier
+from app.ai.models.sentiment import SentimentClassifier
 from app.ai.pipelines.keyword_trends import TrendExtractor
 from app.ai.pipelines.queue_analytics import QueueAnalyticsEngine
 from app.schemas.ai import (
@@ -24,6 +26,16 @@ router = APIRouter(prefix="/api/ai", tags=["AI & Intelligence"])
 
 
 @lru_cache(maxsize=1)
+def get_sentiment_classifier() -> SentimentClassifier:
+    return SentimentClassifier()
+
+
+@lru_cache(maxsize=1)
+def get_intent_classifier() -> IntentClassifier:
+    return IntentClassifier()
+
+
+@lru_cache(maxsize=1)
 def get_luna_client() -> LunaModelClient:
     return LunaModelClient()
 
@@ -31,7 +43,7 @@ def get_luna_client() -> LunaModelClient:
 @router.post("/sentiment", response_model=SentimentResponse)
 def analyze_sentiment(payload: TextPayload) -> SentimentResponse:
     try:
-        result = get_luna_client().sentiment(payload.text)
+        result = get_sentiment_classifier().analyze(payload.text)
     except Exception as error:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -43,7 +55,7 @@ def analyze_sentiment(payload: TextPayload) -> SentimentResponse:
 @router.post("/intent", response_model=IntentResponse)
 def classify_intent(payload: TextPayload) -> IntentResponse:
     try:
-        result = get_luna_client().intent(payload.text)
+        result = get_intent_classifier().classify(payload.text)
     except Exception as error:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,

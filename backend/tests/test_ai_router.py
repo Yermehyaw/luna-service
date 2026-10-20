@@ -2,30 +2,31 @@ from unittest.mock import MagicMock, patch
 
 from httpx import AsyncClient
 
-from app.ai.client import IntentResult, LunaModelClient, LunaModelError, SentimentResult
+from app.ai.client import LunaModelClient, LunaModelError
+from app.ai.models.intent import IntentClassifier, IntentResult
+from app.ai.models.sentiment import SentimentClassifier, SentimentResult
 
+SENTIMENT_GETTER = "app.routers.ai.get_sentiment_classifier"
+INTENT_GETTER = "app.routers.ai.get_intent_classifier"
 LUNA_CLIENT_GETTER = "app.routers.ai.get_luna_client"
 
 
 async def test_sentiment_endpoint_returns_model_output(client: AsyncClient):
-    model = MagicMock(spec=LunaModelClient)
-    model.sentiment.return_value = SentimentResult(label="POSITIVE", score=1.0)
+    model = MagicMock(spec=SentimentClassifier)
+    model.analyze.return_value = SentimentResult(label="POSITIVE", score=0.9876)
 
-    with patch(LUNA_CLIENT_GETTER, return_value=model):
+    with patch(SENTIMENT_GETTER, return_value=model):
         response = await client.post(
             "/api/ai/sentiment", json={"text": "The service was excellent!"}
         )
 
     assert response.status_code == 200
-    assert response.json() == {"label": "POSITIVE", "score": 1.0}
-    model.sentiment.assert_called_once_with("The service was excellent!")
+    assert response.json() == {"label": "POSITIVE", "score": 0.9876}
+    model.analyze.assert_called_once_with("The service was excellent!")
 
 
 async def test_sentiment_endpoint_returns_503_when_model_is_down(client: AsyncClient):
-    model = MagicMock(spec=LunaModelClient)
-    model.sentiment.side_effect = LunaModelError("space is asleep")
-
-    with patch(LUNA_CLIENT_GETTER, return_value=model):
+    with patch(SENTIMENT_GETTER, side_effect=RuntimeError("weights missing")):
         response = await client.post("/api/ai/sentiment", json={"text": "hello"})
 
     assert response.status_code == 503
@@ -39,12 +40,12 @@ async def test_sentiment_endpoint_rejects_empty_text(client: AsyncClient):
 
 
 async def test_intent_endpoint_returns_model_output(client: AsyncClient):
-    model = MagicMock(spec=LunaModelClient)
-    model.intent.return_value = IntentResult(
-        intent="Queue Booking and Delay", confidence=1.0
+    model = MagicMock(spec=IntentClassifier)
+    model.classify.return_value = IntentResult(
+        intent="Queue Booking and Delay", confidence=0.9321
     )
 
-    with patch(LUNA_CLIENT_GETTER, return_value=model):
+    with patch(INTENT_GETTER, return_value=model):
         response = await client.post(
             "/api/ai/intent", json={"text": "I have been waiting for 40 minutes"}
         )
@@ -52,16 +53,13 @@ async def test_intent_endpoint_returns_model_output(client: AsyncClient):
     assert response.status_code == 200
     assert response.json() == {
         "intent": "Queue Booking and Delay",
-        "confidence": 1.0,
+        "confidence": 0.9321,
     }
-    model.intent.assert_called_once_with("I have been waiting for 40 minutes")
+    model.classify.assert_called_once_with("I have been waiting for 40 minutes")
 
 
 async def test_intent_endpoint_returns_503_when_model_is_down(client: AsyncClient):
-    model = MagicMock(spec=LunaModelClient)
-    model.intent.side_effect = LunaModelError("space is asleep")
-
-    with patch(LUNA_CLIENT_GETTER, return_value=model):
+    with patch(INTENT_GETTER, side_effect=RuntimeError("weights missing")):
         response = await client.post("/api/ai/intent", json={"text": "hello"})
 
     assert response.status_code == 503
@@ -118,6 +116,20 @@ async def test_suggested_reply_endpoint_passes_context(client: AsyncClient):
         sentiment="NEGATIVE",
         intent="Queue Booking and Delay",
     )
+
+
+async def test_suggested_reply_endpoint_returns_503_when_model_is_down(
+    client: AsyncClient,
+):
+    model = MagicMock(spec=LunaModelClient)
+    model.suggest_reply.side_effect = LunaModelError("provider down")
+
+    with patch(LUNA_CLIENT_GETTER, return_value=model):
+        response = await client.post(
+            "/api/ai/suggested-reply", json={"text": "Still waiting"}
+        )
+
+    assert response.status_code == 503
 
 
 async def test_content_ideas_endpoint_respects_count(client: AsyncClient):

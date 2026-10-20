@@ -6,7 +6,9 @@ pydantic
 pydantic-settings
 redis
 
-# AI (remote OpenAI-compatible model + local analytics)
+# AI (local classifiers: DistilBERT + BART; generation via third-party API)
+transformers
+torch
 httpx
 scikit-learn
 pandas

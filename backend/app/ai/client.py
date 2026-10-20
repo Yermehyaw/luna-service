@@ -1,17 +1,8 @@
 import re
 
 import httpx
-from pydantic import BaseModel
 
 from app.core.config import settings
-
-INTENT_LABELS = [
-    "Billing and Payment",
-    "Queue Booking and Delay",
-    "Document Verification Issue",
-    "General Inquiry",
-    "Technical Bug",
-]
 
 IDEA_FALLBACKS = [
     "Customer success story: how {topic} improved our service",
@@ -24,16 +15,6 @@ IDEA_FALLBACKS = [
 
 class LunaModelError(Exception):
     pass
-
-
-class SentimentResult(BaseModel):
-    label: str
-    score: float
-
-
-class IntentResult(BaseModel):
-    intent: str
-    confidence: float
 
 
 class LunaModelClient:
@@ -51,7 +32,9 @@ class LunaModelClient:
 
     def _chat(self, system: str, user: str, max_tokens: int = 160) -> str:
         if not self._base_url or not self._api_key:
-            raise LunaModelError("LUNA_MODEL_URL or LUNA_MODEL_API_KEY is not configured")
+            raise LunaModelError(
+                "LUNA_MODEL_URL or LUNA_MODEL_API_KEY is not configured"
+            )
 
         payload = {
             "model": self._model,
@@ -78,41 +61,6 @@ class LunaModelClient:
         if not text:
             raise LunaModelError("Luna light model returned an empty response")
         return text
-
-    def sentiment(self, text: str) -> SentimentResult:
-        raw = self._chat(
-            system=(
-                "You are a strict sentiment classifier for customer messages. "
-                "Respond with exactly one word: POSITIVE or NEGATIVE."
-            ),
-            user=text,
-            max_tokens=5,
-        ).upper()
-        if "NEGATIVE" in raw:
-            return SentimentResult(label="NEGATIVE", score=1.0)
-        if "POSITIVE" in raw:
-            return SentimentResult(label="POSITIVE", score=1.0)
-        raise LunaModelError("Could not parse a sentiment label")
-
-    def intent(self, text: str) -> IntentResult:
-        labels = " | ".join(INTENT_LABELS)
-        raw = self._chat(
-            system=(
-                "You are a strict intent classifier. Respond with only one exact "
-                f"label from this list: {labels}"
-            ),
-            user=text,
-            max_tokens=12,
-        )
-        lowered = raw.lower()
-        matches = [label for label in INTENT_LABELS if label.lower() in lowered]
-        if not matches:
-            raise LunaModelError("Could not parse an intent label")
-
-        best = max(matches, key=len)
-        first_word = raw.split()[0].strip(",.:!?").lower() if raw.split() else ""
-        score = 1.0 if first_word == best.split()[0].lower() else 0.6
-        return IntentResult(intent=best, confidence=score)
 
     def suggest_reply(
         self, customer_msg: str, sentiment: str = "", intent: str = ""
