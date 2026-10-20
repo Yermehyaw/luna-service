@@ -11,8 +11,10 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: LUNA_MODEL_URL
-        value: https://api.groq.com/openai/v1
+        value: https://router.huggingface.co/v1
       - key: LUNA_MODEL_NAME
-        value: llama-3.1-8b-instant
+        value: Qwen/Qwen2.5-7B-Instruct
       - key: LUNA_MODEL_API_KEY
+        sync: false
+      - key: LUNA_CLASSIFIER_URL
         sync: false

@@ -2,31 +2,37 @@ from unittest.mock import MagicMock, patch
 
 from httpx import AsyncClient
 
+from app.ai.classifier_client import (
+    ClassifierClient,
+    ClassifierServiceError,
+    IntentResult,
+    SentimentResult,
+)
 from app.ai.client import LunaModelClient, LunaModelError
-from app.ai.models.intent import IntentClassifier, IntentResult
-from app.ai.models.sentiment import SentimentClassifier, SentimentResult
 
-SENTIMENT_GETTER = "app.routers.ai.get_sentiment_classifier"
-INTENT_GETTER = "app.routers.ai.get_intent_classifier"
+CLASSIFIER_GETTER = "app.routers.ai.get_classifier_client"
 LUNA_CLIENT_GETTER = "app.routers.ai.get_luna_client"
 
 
 async def test_sentiment_endpoint_returns_model_output(client: AsyncClient):
-    model = MagicMock(spec=SentimentClassifier)
-    model.analyze.return_value = SentimentResult(label="POSITIVE", score=0.9876)
+    classifier = MagicMock(spec=ClassifierClient)
+    classifier.sentiment.return_value = SentimentResult(label="POSITIVE", score=0.9876)
 
-    with patch(SENTIMENT_GETTER, return_value=model):
+    with patch(CLASSIFIER_GETTER, return_value=classifier):
         response = await client.post(
             "/api/ai/sentiment", json={"text": "The service was excellent!"}
         )
 
     assert response.status_code == 200
     assert response.json() == {"label": "POSITIVE", "score": 0.9876}
-    model.analyze.assert_called_once_with("The service was excellent!")
+    classifier.sentiment.assert_called_once_with("The service was excellent!")
 
 
-async def test_sentiment_endpoint_returns_503_when_model_is_down(client: AsyncClient):
-    with patch(SENTIMENT_GETTER, side_effect=RuntimeError("weights missing")):
+async def test_sentiment_endpoint_returns_503_when_vm_is_down(client: AsyncClient):
+    classifier = MagicMock(spec=ClassifierClient)
+    classifier.sentiment.side_effect = ClassifierServiceError("vm asleep")
+
+    with patch(CLASSIFIER_GETTER, return_value=classifier):
         response = await client.post("/api/ai/sentiment", json={"text": "hello"})
 
     assert response.status_code == 503
@@ -40,12 +46,12 @@ async def test_sentiment_endpoint_rejects_empty_text(client: AsyncClient):
 
 
 async def test_intent_endpoint_returns_model_output(client: AsyncClient):
-    model = MagicMock(spec=IntentClassifier)
-    model.classify.return_value = IntentResult(
+    classifier = MagicMock(spec=ClassifierClient)
+    classifier.intent.return_value = IntentResult(
         intent="Queue Booking and Delay", confidence=0.9321
     )
 
-    with patch(INTENT_GETTER, return_value=model):
+    with patch(CLASSIFIER_GETTER, return_value=classifier):
         response = await client.post(
             "/api/ai/intent", json={"text": "I have been waiting for 40 minutes"}
         )
@@ -55,11 +61,14 @@ async def test_intent_endpoint_returns_model_output(client: AsyncClient):
         "intent": "Queue Booking and Delay",
         "confidence": 0.9321,
     }
-    model.classify.assert_called_once_with("I have been waiting for 40 minutes")
+    classifier.intent.assert_called_once_with("I have been waiting for 40 minutes")
 
 
-async def test_intent_endpoint_returns_503_when_model_is_down(client: AsyncClient):
-    with patch(INTENT_GETTER, side_effect=RuntimeError("weights missing")):
+async def test_intent_endpoint_returns_503_when_vm_is_down(client: AsyncClient):
+    classifier = MagicMock(spec=ClassifierClient)
+    classifier.intent.side_effect = ClassifierServiceError("vm asleep")
+
+    with patch(CLASSIFIER_GETTER, return_value=classifier):
         response = await client.post("/api/ai/intent", json={"text": "hello"})
 
     assert response.status_code == 503

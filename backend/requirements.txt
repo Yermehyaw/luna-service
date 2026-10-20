@@ -6,9 +6,7 @@ pydantic
 pydantic-settings
 redis
 
-# AI (local classifiers: DistilBERT + BART; generation via third-party API)
-transformers
-torch
+# AI (classifier VM on HuggingFace + local analytics)
 httpx
 scikit-learn
 pandas
