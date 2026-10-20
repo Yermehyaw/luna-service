@@ -6,8 +6,8 @@ pydantic
 pydantic-settings
 redis
 
-# AI (remote light model on HuggingFace + local analytics)
-gradio-client
+# AI (remote OpenAI-compatible model + local analytics)
+httpx
 scikit-learn
 pandas
 numpy

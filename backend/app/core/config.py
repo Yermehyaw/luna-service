@@ -26,9 +26,11 @@ class Settings(BaseSettings):
     CLERK_PEM_PUBLIC_KEY: str = ""
     CLERK_ISSUER: str = ""
 
-    # Base URL of the light model hosted as a HuggingFace Space, e.g.
-    # https://user-luna-light.hf.space
-    LUNA_MODEL_URL: str = ""
+    # OpenAI-compatible model endpoint (Groq by default). Any provider that
+    # speaks the chat completions protocol can be swapped in here.
+    LUNA_MODEL_URL: str = "https://api.groq.com/openai/v1"
+    LUNA_MODEL_API_KEY: str = ""
+    LUNA_MODEL_NAME: str = "llama-3.1-8b-instant"
 
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.

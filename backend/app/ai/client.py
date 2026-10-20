@@ -1,5 +1,6 @@
 import re
 
+import httpx
 from pydantic import BaseModel
 
 from app.core.config import settings
@@ -36,37 +37,57 @@ class IntentResult(BaseModel):
 
 
 class LunaModelClient:
-    def __init__(self, space_url: str | None = None, timeout: int = 90) -> None:
-        self._space_url = (
-            space_url if space_url is not None else settings.LUNA_MODEL_URL
-        )
+    def __init__(
+        self,
+        base_url: str | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
+        timeout: float = 60.0,
+    ) -> None:
+        self._base_url = (base_url or settings.LUNA_MODEL_URL).rstrip("/")
+        self._api_key = api_key if api_key is not None else settings.LUNA_MODEL_API_KEY
+        self._model = model or settings.LUNA_MODEL_NAME
         self._timeout = timeout
 
-    def _generate(self, prompt: str) -> str:
-        if not self._space_url:
-            raise LunaModelError("LUNA_MODEL_URL is not configured")
+    def _chat(self, system: str, user: str, max_tokens: int = 160) -> str:
+        if not self._base_url or not self._api_key:
+            raise LunaModelError("LUNA_MODEL_URL or LUNA_MODEL_API_KEY is not configured")
 
+        payload = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0.7,
+        }
         try:
-            from gradio_client import Client
-
-            client = Client(self._space_url, verbose=False, timeout=self._timeout)
-            raw = client.predict(prompt, api_name="/generate")
+            response = httpx.post(
+                f"{self._base_url}/chat/completions",
+                json=payload,
+                headers={"Authorization": f"Bearer {self._api_key}"},
+                timeout=self._timeout,
+            )
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
         except Exception as error:
             raise LunaModelError("Luna light model is unreachable") from error
 
-        text = str(raw).strip()
+        text = str(content).strip()
         if not text:
             raise LunaModelError("Luna light model returned an empty response")
         return text
 
     def sentiment(self, text: str) -> SentimentResult:
-        prompt = (
-            "You are a strict sentiment classifier for customer messages.\n"
-            "Classify the message below. Respond with exactly one word: "
-            "POSITIVE or NEGATIVE.\n\n"
-            f"Message: {text}\nLabel:"
-        )
-        raw = self._generate(prompt).upper()
+        raw = self._chat(
+            system=(
+                "You are a strict sentiment classifier for customer messages. "
+                "Respond with exactly one word: POSITIVE or NEGATIVE."
+            ),
+            user=text,
+            max_tokens=5,
+        ).upper()
         if "NEGATIVE" in raw:
             return SentimentResult(label="NEGATIVE", score=1.0)
         if "POSITIVE" in raw:
@@ -75,13 +96,14 @@ class LunaModelClient:
 
     def intent(self, text: str) -> IntentResult:
         labels = " | ".join(INTENT_LABELS)
-        prompt = (
-            "You are a strict intent classifier for customer messages.\n"
-            "Choose the best label from this list and respond with only that "
-            f"exact label:\n{labels}\n\n"
-            f"Message: {text}\nLabel:"
+        raw = self._chat(
+            system=(
+                "You are a strict intent classifier. Respond with only one exact "
+                f"label from this list: {labels}"
+            ),
+            user=text,
+            max_tokens=12,
         )
-        raw = self._generate(prompt)
         lowered = raw.lower()
         matches = [label for label in INTENT_LABELS if label.lower() in lowered]
         if not matches:
@@ -95,24 +117,27 @@ class LunaModelClient:
     def suggest_reply(
         self, customer_msg: str, sentiment: str = "", intent: str = ""
     ) -> str:
-        prompt = (
-            "You are a polite customer support assistant for Luna.\n"
-            f"Customer Sentiment: {sentiment or 'unknown'}\n"
-            f"Customer Intent: {intent or 'General Inquiry'}\n"
-            f"Customer Message: '{customer_msg}'\n"
-            "Draft a short, helpful, 2-sentence response for the agent to send.\n"
-            "Response:"
+        return self._chat(
+            system=(
+                "You are a polite customer support assistant for Luna. Draft a "
+                "short, helpful, 2-sentence response for the agent to send."
+            ),
+            user=(
+                f"Customer Sentiment: {sentiment or 'unknown'}\n"
+                f"Customer Intent: {intent or 'General Inquiry'}\n"
+                f"Customer Message: '{customer_msg}'"
+            ),
         )
-        return self._generate(prompt)
 
     def content_ideas(self, topic: str, count: int = 3) -> list[str]:
-        prompt = (
-            "You are a social media content strategist for Luna.\n"
-            f"Topic: {topic}\n"
-            f"Write {count} short, engaging social media post ideas for this topic. "
-            "Return one idea per line with no numbering.\nIdeas:"
+        raw = self._chat(
+            system=(
+                "You are a social media content strategist for Luna. Return one "
+                "idea per line with no numbering."
+            ),
+            user=f"Topic: {topic}\nWrite {count} short, engaging post ideas.",
+            max_tokens=256,
         )
-        raw = self._generate(prompt)
         ideas = [
             re.sub(r"^\s*(?:[-*o]|\d+[.)])\s*", "", line).strip()
             for line in raw.splitlines()
