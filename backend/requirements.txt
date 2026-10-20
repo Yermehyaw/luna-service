@@ -6,10 +6,11 @@ pydantic
 pydantic-settings
 redis
 
-# AI (Social Studio sentiment + intent pipeline)
-transformers
+# AI (remote light model on HuggingFace + local analytics)
+gradio-client
 scikit-learn
-torch
+pandas
+numpy
 
 # Testing and linting
 pytest

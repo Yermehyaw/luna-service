@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     CLERK_PEM_PUBLIC_KEY: str = ""
     CLERK_ISSUER: str = ""
 
+    # Base URL of the light model hosted as a HuggingFace Space, e.g.
+    # https://user-luna-light.hf.space
+    LUNA_MODEL_URL: str = ""
+
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
