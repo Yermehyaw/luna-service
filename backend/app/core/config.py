@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     CLERK_PEM_PUBLIC_KEY: str = ""
     CLERK_ISSUER: str = ""
 
+    # HuggingFace-hosted classifier VM (DistilBERT sentiment + BART intent)
+    LUNA_CLASSIFIER_URL: str = ""
+
+    # HuggingFace Inference Providers (OpenAI-compatible) for generation
+    LUNA_MODEL_URL: str = "https://router.huggingface.co/v1"
+    LUNA_MODEL_API_KEY: str = ""
+    LUNA_MODEL_NAME: str = "Qwen/Qwen2.5-7B-Instruct"
+
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
