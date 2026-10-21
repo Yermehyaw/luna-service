@@ -98,7 +98,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setMobileMenuOpen(!mobileMenuOpen);
     } else {
-      setSidebarOpen(!sidebarOpen);
+      setIsSlim((prev) => !prev);
     }
   };
 
@@ -289,11 +289,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
         {/* Desktop Collapsible Sidebar */}
         <aside
           className={`hidden md:flex flex-col border-r border-[#341539] bg-[#291E29] text-[#FFF6E9] shadow-xl shrink-0 transition-all duration-300 ease-in-out ${
-            !sidebarOpen
-              ? 'w-0 -ml-64 opacity-0 pointer-events-none p-0 overflow-hidden border-none'
-              : isSlim
-              ? 'w-20 p-3 items-center'
-              : 'w-64 p-4'
+            isSlim ? 'w-20 p-3 items-center' : 'w-64 p-4'
           }`}
         >
           {/* Sidebar Top Header & Collapse Controls */}
@@ -306,46 +302,36 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                   </span>
                   <h2 className="text-sm font-extrabold text-white truncate mt-0.5">{tenant.name}</h2>
                 </div>
-                <div className="flex items-center gap-1">
-                  {/* Slim rail toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setIsSlim(true)}
-                    className="p-1.5 rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-                    title="Compact to slim icon rail"
-                    aria-label="Compact to slim icon rail"
-                  >
-                    <PanelLeftClose className="h-4 w-4" />
-                  </button>
-                  {/* Full collapse into hamburger toggle */}
-                  <button
-                    type="button"
-                    onClick={() => setSidebarOpen(false)}
-                    className="p-1.5 rounded-lg text-white/60 hover:text-[#FFA800] hover:bg-white/10 transition-colors"
-                    title="Collapse sidebar into hamburger menu"
-                    aria-label="Collapse sidebar into hamburger menu"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsSlim(true)}
+                  className="p-1.5 rounded-lg text-white/60 hover:text-[#FFA800] hover:bg-white/10 transition-colors"
+                  title="Collapse sidebar to icon rail"
+                  aria-label="Collapse sidebar to icon rail"
+                >
+                  <PanelLeftClose className="h-4 w-4" />
+                </button>
               </>
             ) : (
-              <div className="w-full flex flex-col items-center gap-2">
+              <div className="w-full flex flex-col items-center gap-1">
                 <button
                   type="button"
                   onClick={() => setIsSlim(false)}
-                  className="p-1.5 rounded-lg text-[#FFA800] hover:bg-white/10 transition-colors"
-                  title="Expand sidebar full width"
-                  aria-label="Expand sidebar full width"
+                  className="p-2 rounded-xl bg-white/10 text-[#FFA800] hover:bg-[#FFA800] hover:text-[#291E29] transition-all group relative shadow-xs"
+                  title="Expand sidebar"
+                  aria-label="Expand sidebar"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <PanelLeftOpen className="h-4 w-4" />
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-[#291E29] text-white text-xs font-bold rounded-lg shadow-2xl border border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    Expand Sidebar
+                  </div>
                 </button>
               </div>
             )}
           </div>
 
           {/* User Account Role Card inside Sidebar */}
-          {!isSlim && (
+          {!isSlim ? (
             <div className="mt-3 w-full p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <div
@@ -370,6 +356,21 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 <ArrowRightLeft className="h-3.5 w-3.5" />
               </button>
             </div>
+          ) : (
+            <div className="mt-3 w-full flex justify-center">
+              <button
+                type="button"
+                onClick={() => setSwitchAccountOpen(true)}
+                className="group relative h-9 w-9 rounded-xl flex items-center justify-center text-white text-xs font-extrabold shadow-xs transition hover:scale-105 active:scale-95"
+                style={{ backgroundColor: user?.avatarColor || (isOwner ? '#831843' : '#D97706') }}
+                title={`Switch User (${user?.name})`}
+              >
+                <span>{isOwner ? '👑' : '👔'}</span>
+                <div className="absolute left-full ml-3 px-2.5 py-1 bg-[#291E29] text-white text-xs font-bold rounded-lg shadow-2xl border border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  <span>{user?.name} ({isOwner ? 'Owner' : 'Staff'})</span>
+                </div>
+              </button>
+            </div>
           )}
 
           {/* Nav Items */}
@@ -383,9 +384,8 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.name}
                   href={item.href}
-                  title={item.name}
-                  className={`flex items-center justify-between transition-all ${
-                    isSlim ? 'justify-center p-2.5 rounded-xl' : 'px-3 py-2.5 rounded-xl'
+                  className={`group relative flex items-center transition-all ${
+                    isSlim ? 'justify-center p-2.5 rounded-xl' : 'justify-between px-3 py-2.5 rounded-xl'
                   } ${
                     isActive
                       ? 'bg-[#FFA800] text-[#291E29] font-extrabold shadow-md shadow-[#FFA800]/25'
@@ -401,6 +401,18 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                       <Lock className="h-2.5 w-2.5" />
                       <span>{item.adminOnly ? 'Admin' : 'Lock'}</span>
                     </span>
+                  )}
+
+                  {/* Floating Tooltip in Slim Mode */}
+                  {isSlim && (
+                    <div className="absolute left-full ml-3 px-2.5 py-1 bg-[#291E29] text-white text-xs font-bold rounded-lg shadow-2xl border border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 flex items-center gap-1.5">
+                      <span>{item.name}</span>
+                      {!hasAccess && (
+                        <span className="text-[9px] text-[#FFA800] bg-white/10 px-1 py-0.2 rounded border border-white/10">
+                          {item.adminOnly ? 'Admin' : 'Locked'}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </Link>
               );
@@ -421,11 +433,11 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => setSidebarOpen(false)}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] text-white/50 hover:text-white transition-colors"
+                  onClick={() => setIsSlim(true)}
+                  className="w-full flex items-center justify-center gap-2 py-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-[#FFA800] transition text-xs font-bold"
                 >
-                  <ChevronLeft className="h-3 w-3" />
-                  <span>Collapse into Menu</span>
+                  <PanelLeftClose className="h-3.5 w-3.5 text-[#FFA800]" />
+                  <span>Collapse Sidebar</span>
                 </button>
               </>
             ) : (
@@ -433,18 +445,23 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   href={`/tenant/${tenant.slug}`}
                   target="_blank"
-                  title="Customer Portal"
-                  className="p-2.5 rounded-xl bg-[#341539] text-[#FFA800] hover:bg-[#52215A] transition-colors"
+                  className="group relative p-2.5 rounded-xl bg-[#341539] text-[#FFA800] hover:bg-[#52215A] transition-colors"
                 >
                   <ExternalLink className="h-4 w-4" />
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-[#291E29] text-white text-xs font-bold rounded-lg shadow-2xl border border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    Storefront Preview
+                  </div>
                 </Link>
                 <button
                   type="button"
-                  onClick={() => setSidebarOpen(false)}
-                  title="Collapse sidebar into hamburger menu"
-                  className="p-2 text-white/50 hover:text-white transition-colors"
+                  onClick={() => setIsSlim(false)}
+                  className="group relative p-2 text-white/50 hover:text-[#FFA800] transition-colors"
+                  title="Expand Sidebar"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronRight className="h-4 w-4" />
+                  <div className="absolute left-full ml-3 px-2.5 py-1 bg-[#291E29] text-white text-xs font-bold rounded-lg shadow-2xl border border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    Expand Sidebar
+                  </div>
                 </button>
               </div>
             )}

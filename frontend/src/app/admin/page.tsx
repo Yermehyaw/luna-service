@@ -584,7 +584,7 @@ export default function AdminDashboardPage() {
         <aside
           className={`hidden md:flex flex-col border-r border-[#341539] bg-[#291E29] text-[#FFF6E9] shadow-xl shrink-0 transition-all duration-300 ease-in-out ${
             !sidebarOpen
-              ? 'w-0 -ml-64 opacity-0 pointer-events-none p-0 overflow-hidden border-none'
+              ? 'w-0 opacity-0 pointer-events-none p-0 overflow-hidden border-none'
               : isSlim
               ? 'w-20 p-3 items-center'
               : 'w-64 p-4'

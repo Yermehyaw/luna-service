@@ -215,7 +215,7 @@ export default function PlatformDashboardPage() {
         <aside
           className={`hidden md:flex flex-col border-r border-[#291E29]/10 bg-white/80 text-[#291E29] shadow-sm shrink-0 transition-all duration-300 ease-in-out backdrop-blur-md ${
             !sidebarOpen
-              ? 'w-0 -ml-64 opacity-0 pointer-events-none p-0 overflow-hidden border-none'
+              ? 'w-0 opacity-0 pointer-events-none p-0 overflow-hidden border-none'
               : 'w-64 p-4'
           }`}
         >
