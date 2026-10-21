@@ -73,6 +73,7 @@ The frontend must support seamless B2B2C multi-tenancy and the PWA Reminder Mode
 
 ## 5. POST-MVP MIGRATION PATH (THE FUTURE)
 Antigravity, design the codebase knowing that Phase 2 will occur within 6-12 months:
+*   Paid customers will allow us to fully migrate to paid tiers of third-party API platforms
 *   We will pass Meta and TikTok App Reviews.
 *   We will likely deploy Mixpost Pro via Docker.
 *   **Execution:** We will simply write new adapter files (`native_meta_adapter.py`, `mixpost_client.py`), implement the `ISocialProvider` interface, and update the PostgreSQL database's `active_social_provider` string for our tenants. 
