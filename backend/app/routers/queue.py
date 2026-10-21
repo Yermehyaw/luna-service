@@ -5,6 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.models.queue import Service
+from app.realtime import broker
+from app.realtime import events
 from app.schemas.queue import (
     PageLimit,
     PageOffset,
@@ -16,6 +18,7 @@ from app.schemas.queue import (
     TicketResponse,
     TicketStatusUpdate,
     WaitEstimateResponse,
+    build_ticket_response,
 )
 from app.services import queue_service
 from app.services.queue_service import NotFound, QueueError
@@ -25,18 +28,6 @@ from app.services.wait_time import format_countdown
 router = APIRouter(prefix="/api/queue", tags=["Queue"])
 
 DbSession = Annotated[AsyncSession, Depends(get_db)]
-
-
-def _to_response(ticket, wait_estimate=None) -> TicketResponse:
-    response = TicketResponse.model_validate(ticket)
-    if wait_estimate is not None:
-        response.wait = WaitEstimateResponse(
-            minutes=wait_estimate.minutes,
-            tickets_ahead=wait_estimate.tickets_ahead,
-            service_duration_mins=wait_estimate.service_duration_mins,
-            display=format_countdown(wait_estimate.minutes),
-        )
-    return response
 
 
 @router.post(
@@ -66,7 +57,13 @@ async def create_ticket(payload: TicketCreate, db: DbSession) -> TicketResponse:
     estimate = await queue_service.estimate_wait_for_ticket(
         db, business_id=payload.business_id, ticket_number=ticket.ticket_number
     )
-    return _to_response(ticket, estimate)
+    response = build_ticket_response(ticket, estimate)
+
+    # After commit: the fan-out reads committed state, so a subscriber is never
+    # shown a position computed from a queue the database has not accepted yet.
+    await events.publish_ticket_created(db, broker, ticket=ticket, wait=estimate)
+
+    return response
 
 
 @router.get("/tickets", response_model=TicketListResponse)
@@ -91,7 +88,7 @@ async def list_tickets(
         offset=offset,
     )
     return TicketListResponse(
-        items=[_to_response(ticket) for ticket in tickets],
+        items=[build_ticket_response(ticket) for ticket in tickets],
         total=total,
         limit=limit,
         offset=offset,
@@ -112,7 +109,7 @@ async def get_ticket(
     except NotFound as error:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(error)) from error
 
-    return _to_response(ticket, estimate)
+    return build_ticket_response(ticket, estimate)
 
 
 @router.patch("/tickets/{ticket_number}/status", response_model=TicketResponse)
@@ -123,6 +120,14 @@ async def update_ticket_status(
     business_id: str = Query(min_length=1),
 ) -> TicketResponse:
     try:
+        # Read before transitioning. transition_ticket mutates the same session,
+        # and this session's identity map hands back the very same object, so
+        # reading `.status` afterwards would already show the new value.
+        current = await queue_service.get_ticket(
+            db, business_id=business_id, ticket_number=ticket_number
+        )
+        previous_status = current.status
+
         ticket = await queue_service.transition_ticket(
             db,
             business_id=business_id,
@@ -136,7 +141,17 @@ async def update_ticket_status(
 
     await db.commit()
     await db.refresh(ticket)
-    return _to_response(ticket)
+
+    # Recomputed after commit because this transition moves everyone behind this
+    # ticket, and the fan-out publishes those new estimates to their sockets.
+    estimate = await queue_service.estimate_wait_for_ticket(
+        db, business_id=business_id, ticket_number=ticket.ticket_number
+    )
+    await events.publish_ticket_status_changed(
+        db, broker, ticket=ticket, previous_status=previous_status, wait=estimate
+    )
+
+    return build_ticket_response(ticket, estimate)
 
 
 @router.get("/tickets/{ticket_number}/wait", response_model=WaitEstimateResponse)

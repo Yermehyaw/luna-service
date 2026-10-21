@@ -26,6 +26,24 @@ class Settings(BaseSettings):
     CLERK_PEM_PUBLIC_KEY: str = ""
     CLERK_ISSUER: str = ""
 
+    # --- AI ---
+    # Which AI backend to use. "auto" means: use OpenAI when a key is configured,
+    # otherwise fall back to the local HuggingFace models, otherwise degrade to no
+    # suggestion. This keeps the app runnable on a laptop and in CI with no key.
+    AI_PROVIDER: str = "auto"
+
+    # An empty key means "AI generation is unavailable", not "misconfigured". Callers
+    # check availability up front instead of catching an auth error on first request.
+    OPENAI_API_KEY: str = ""
+    # Cost-first default, matching docs/AI.md. Larger models are a per-tenant upgrade,
+    # never the global default, because generation is billed per token.
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    # Generation is user-facing; a stalled request should fail over to "no suggestion"
+    # rather than hold the connection open.
+    OPENAI_TIMEOUT: float = 20.0
+    # Bounded SDK-level retries for transient network/5xx errors, with backoff.
+    OPENAI_MAX_RETRIES: int = 2
+
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
@@ -43,6 +61,12 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.lower() in {"production", "prod"}
+
+    @property
+    def openai_configured(self) -> bool:
+        # Single place to ask "is hosted generation possible?". Keeps provider selection
+        # from scattering `if settings.OPENAI_API_KEY` across the AI module.
+        return bool(self.OPENAI_API_KEY)
 
 
 @lru_cache
