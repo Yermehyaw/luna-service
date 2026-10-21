@@ -29,6 +29,9 @@ import {
   RefreshCw,
   ExternalLink,
   Megaphone,
+  Smartphone,
+  Tv,
+  MessageSquare,
   Share2,
   Sparkles,
   Key,
@@ -47,6 +50,14 @@ import {
 } from 'lucide-react';
 import { ClientDetailModal, ClientData } from '../../../../../components/shared/ClientDetailModal';
 import Link from 'next/link';
+
+export interface BroadcastHistoryItem {
+  id: string;
+  text: string;
+  time: string;
+  channel?: string;
+  severity?: 'normal' | 'rush' | 'urgent';
+}
 
 export type QueueStatus =
   | 'BOOKED'
@@ -83,6 +94,7 @@ function StaffOpsConsoleContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const branchId = 'b_001';
+  const basePath = `/tenant/${tenant.slug}/staff`;
 
   // Read initial tab if broadcast tab requested via query param
   const initialTab = searchParams.get('tab') || searchParams.get('section');
@@ -94,6 +106,8 @@ function StaffOpsConsoleContent() {
     const t = searchParams.get('tab') || searchParams.get('section');
     if (t === 'broadcast') {
       setActiveTab('broadcast');
+    } else {
+      setActiveTab('console');
     }
   }, [searchParams]);
 
@@ -231,12 +245,69 @@ function StaffOpsConsoleContent() {
   const [groqKeyInput, setGroqKeyInput] = useState('');
   const [hasGroqKey, setHasGroqKey] = useState(false);
 
-  // Broadcast History state
-  const [broadcastHistory, setBroadcastHistory] = useState([
-    { id: 'bh-1', text: 'Counters 4–6 now open for SME deposits', time: '42m ago' },
-    { id: 'bh-2', text: 'Lunch hour rush: Door wait time under 5 minutes', time: '2h ago' },
-    { id: 'bh-3', text: 'Pre-clear KYC documents on phone to skip intake queue', time: 'Yesterday' },
+  // Broadcast Studio State
+  const [broadcastHistory, setBroadcastHistory] = useState<BroadcastHistoryItem[]>([
+
+    { id: 'bh-1', text: 'Counters 4–6 now open for commercial accounts & SME deposits', time: '42m ago', channel: 'Displays + Trackers', severity: 'normal' },
+    { id: 'bh-2', text: 'Lunch hour rush: Door wait time under 4 minutes across all windows', time: '2h ago', channel: 'All Channels', severity: 'rush' },
+    { id: 'bh-3', text: 'Fast-track KYC: Upload ID on phone while seated to skip intake queue', time: 'Yesterday', channel: 'Trackers + TV', severity: 'normal' },
   ]);
+
+  const [broadcastInput, setBroadcastInput] = useState('');
+  const [broadcastSeverity, setBroadcastSeverity] = useState<'normal' | 'rush' | 'urgent'>('normal');
+  const [targetChannels, setTargetChannels] = useState({
+    trackers: true,
+    lobbyTv: true,
+    sms: false,
+  });
+  const [playChimeOnBroadcast, setPlayChimeOnBroadcast] = useState(true);
+  const [voiceOnBroadcast, setVoiceOnBroadcast] = useState(false);
+
+  const handlePublishStudioBroadcast = (textToPublish?: string) => {
+    const cleanText = (textToPublish || broadcastInput).trim();
+    if (!cleanText) return;
+
+    setActiveBroadcastNotice(cleanText);
+    setBroadcastMeta(`Broadcast Just now · ${targetChannels.lobbyTv ? 'TV ' : ''}${targetChannels.trackers ? '+ Trackers ' : ''}${targetChannels.sms ? '+ SMS' : ''}`.trim());
+    setBroadcastHistory((prev) => [
+      {
+        id: `bh-${Date.now()}`,
+        text: cleanText,
+        time: 'Just now',
+        channel: `${targetChannels.lobbyTv ? 'TV ' : ''}${targetChannels.trackers ? '+ Trackers' : ''}`,
+        severity: broadcastSeverity,
+      },
+      ...prev,
+    ]);
+    setBroadcastInput('');
+
+    if (setTenant) {
+      setTenant({
+        ...tenant,
+        branding: {
+          ...tenant.branding,
+          announcementTicker: cleanText,
+        },
+      });
+    }
+
+    if (playChimeOnBroadcast) {
+      playChime();
+    }
+    if (voiceOnBroadcast && voiceEnabled) {
+      speakAnnouncement(`Announcement: ${cleanText}`);
+    }
+
+    setCallAnnouncement(`📢 Broadcast live on customer trackers and lobby displays!`);
+    setTimeout(() => setCallAnnouncement(null), 4000);
+  };
+
+  const handleClearBroadcast = () => {
+    setActiveBroadcastNotice('Welcome! Please take a seat, your ticket will be called shortly.');
+    setBroadcastMeta('Default Lobby Welcome Notice');
+    setCallAnnouncement('Cleared active ticker broadcast');
+    setTimeout(() => setCallAnnouncement(null), 3000);
+  };
 
   useEffect(() => {
     const k = getStoredGroqKey();
@@ -465,7 +536,7 @@ function StaffOpsConsoleContent() {
     const text = quickAnnouncementInput.trim();
     setActiveBroadcastNotice(text);
     setBroadcastMeta('Broadcast Just now · displays + SMS');
-    setBroadcastHistory((prev) => [{ id: `bh-${Date.now()}`, text, time: 'Just now' }, ...prev]);
+    setBroadcastHistory((prev) => [{ id: `bh-${Date.now()}`, text, time: 'Just now', channel: 'Displays + SMS', severity: 'normal' }, ...prev]);
     setQuickAnnouncementInput('');
 
     playChime();
@@ -658,8 +729,81 @@ function StaffOpsConsoleContent() {
         )}
 
         {/* ========================================================= */}
-        {/* TOP METRICS KPI BAR (6 TILES)                             */}
+        {/* TOP TAB SWITCHER: CONSOLE VS LIVE BROADCASTS              */}
         {/* ========================================================= */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+          <div className="inline-flex rounded-2xl bg-slate-200/60 p-1 border border-slate-200/80">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('console');
+                router.push(`${basePath}/ops-console`);
+              }}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition-all ${
+                activeTab === 'console'
+                  ? 'bg-[#291E29] text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <LayoutDashboard className="h-4 w-4 text-[#FFA800]" />
+              <span>Queue Operations</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('broadcast');
+                router.push(`${basePath}/ops-console?tab=broadcast`);
+              }}
+              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition-all relative ${
+                activeTab === 'broadcast'
+                  ? 'bg-[#FFA800] text-[#291E29] shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+              }`}
+            >
+              <Share2 className="h-4 w-4" />
+              <span>Live Broadcasts & Tickers</span>
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {activeTab === 'console' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('broadcast');
+                  router.push(`${basePath}/ops-console?tab=broadcast`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold hover:bg-amber-100 transition shadow-2xs"
+              >
+                <Megaphone className="h-3.5 w-3.5 text-[#FFA800]" />
+                <span>Open Full Broadcast Studio &rarr;</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('console');
+                  router.push(`${basePath}/ops-console`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition shadow-2xs"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5 text-slate-600" />
+                <span>&larr; Back to Queue Operations</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Render Queue Operations Tab */}
+        {activeTab === 'console' ? (
+          <>
+            {/* ========================================================= */}
+            {/* TOP METRICS KPI BAR (6 TILES)                             */}
+            {/* ========================================================= */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
@@ -1195,6 +1339,378 @@ function StaffOpsConsoleContent() {
             </div>
           </div>
         </div>
+        </>
+        ) : (
+          /* ========================================================= */
+          /* DEDICATED LIVE BROADCASTS & TICKER CONTROL STUDIO VIEW    */
+          /* ========================================================= */
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Hero Banner */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#291E29] via-[#341539] to-[#291E29] p-6 sm:p-8 text-white shadow-xl">
+              <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-96 h-96 bg-[#FFA800]/10 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="relative z-10 space-y-3 max-w-3xl">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#FFA800] border border-white/10 text-xs font-extrabold uppercase tracking-widest">
+                  <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+                  <span>Omnichannel Live Broadcast Center</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                  Reach Every Customer Screen Instantly.
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Publish real-time announcements, branch delay advisories, and queue promotions. Messages broadcast instantaneously across customer mobile web trackers, lobby wall displays, and SMS feeds.
+                </p>
+
+                {/* Quick stats strip */}
+                <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
+                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
+                    <Tv className="h-4 w-4 text-[#FFA800]" />
+                    <span className="font-bold text-white">3 Lobby Displays Connected</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-emerald-400" />
+                    <span className="font-bold text-white">24 Active Mobile Trackers</span>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-blue-300" />
+                    <span className="font-bold text-white">&lt; 1s Real-time WebSocket Latency</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dual Grid: Interactive Preview & Broadcast Composer */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Interactive Screen Previews (5 cols) */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                      <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                        <Smartphone className="h-4 w-4 text-[#FFA800]" />
+                        <span>Live Customer Screen Preview</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Real-time mock of the customer mobile web tracker</p>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-300 flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
+                      Live Feed
+                    </span>
+                  </div>
+
+                  {/* Mock Phone Frame */}
+                  <div className="mx-auto max-w-[280px] rounded-3xl border-4 border-slate-800 bg-[#FCFBF4] p-3 shadow-xl space-y-3">
+                    {/* Phone Top Notch */}
+                    <div className="flex justify-between items-center px-1 text-[9px] text-slate-400">
+                      <span>9:41 AM</span>
+                      <div className="h-3 w-12 bg-slate-800 rounded-full" />
+                      <span>5G 100%</span>
+                    </div>
+
+                    {/* App Header */}
+                    <div className="flex items-center gap-1.5 pb-2 border-b border-slate-200/80">
+                      <div className="h-5 w-5 rounded-lg bg-[#291E29] flex items-center justify-center text-[10px] font-bold text-[#FFA800]">
+                        L
+                      </div>
+                      <span className="text-[11px] font-extrabold text-slate-800 truncate">{tenant.name}</span>
+                    </div>
+
+                    {/* LIVE TICKER BANNER ON PHONE */}
+                    <div className="rounded-xl bg-gradient-to-r from-[#291E29] to-[#341539] p-2.5 text-white shadow-sm space-y-1">
+                      <div className="flex items-center gap-1.5 text-[9px] font-black tracking-wider text-[#FFA800] uppercase">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>LIVE BROADCAST</span>
+                      </div>
+                      <p className="text-[11px] font-bold leading-tight line-clamp-3 text-white">
+                        {activeBroadcastNotice}
+                      </p>
+                    </div>
+
+                    {/* Mock Ticket Card */}
+                    <div className="rounded-2xl border border-slate-200 bg-white p-3 space-y-2 shadow-xs">
+                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
+                        <span>YOUR TURN TICKET</span>
+                        <span className="text-emerald-600">IN QUEUE</span>
+                      </div>
+                      <div className="text-xl font-black text-slate-900 tracking-tight">
+                        {ticketPrefix}-022
+                      </div>
+                      <p className="text-[10px] text-slate-500">2 customers ahead &middot; Est. 4 mins</p>
+                    </div>
+                  </div>
+
+                  {/* Smart TV Marquee Display Preview */}
+                  <div className="rounded-2xl bg-[#291E29] p-4 text-white space-y-2 shadow-sm border border-white/10">
+                    <div className="flex items-center justify-between text-[10px] text-[#FFA800] font-bold uppercase tracking-wider">
+                      <span className="flex items-center gap-1">
+                        <Tv className="h-3.5 w-3.5" />
+                        <span>Lobby TV Marquee Display</span>
+                      </span>
+                      <span className="text-slate-400">Screen 1 &middot; Active</span>
+                    </div>
+                    <div className="overflow-hidden whitespace-nowrap bg-black/40 rounded-xl p-2.5 border border-white/10">
+                      <div className="text-xs font-bold text-white flex items-center gap-4">
+                        <span className="text-[#FFA800] font-black uppercase tracking-wider text-[10px] bg-white/10 px-1.5 py-0.5 rounded">
+                          ANNOUNCEMENT
+                        </span>
+                        <span>{activeBroadcastNotice}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-1">
+                    <button
+                      type="button"
+                      onClick={handleClearBroadcast}
+                      className="text-xs text-rose-600 hover:text-rose-800 font-bold hover:underline flex items-center gap-1"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>Clear Active Ticker</span>
+                    </button>
+                    <Link
+                      href={`/tenant/${tenant.slug}/track`}
+                      target="_blank"
+                      className="text-xs text-amber-700 hover:text-amber-900 font-bold hover:underline flex items-center gap-1"
+                    >
+                      <span>Open Customer Tracker &nearr;</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Multi-Channel Composer & Presets (7 cols) */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-5">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                    <div>
+                      <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                        <Megaphone className="h-4 w-4 text-[#FFA800]" />
+                        <span>Compose Live Announcement</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Broadcast custom copy or choose a high-velocity template</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowGroqModal(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold border border-amber-200 transition"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-[#FFA800]" />
+                      <span>AI Copilot</span>
+                    </button>
+                  </div>
+
+                  {/* Target Delivery Channels */}
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+                      Target Delivery Channels
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                      <label
+                        className={`flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${
+                          targetChannels.trackers
+                            ? 'bg-amber-50/60 border-amber-300 text-slate-900'
+                            : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={targetChannels.trackers}
+                          onChange={(e) =>
+                            setTargetChannels({ ...targetChannels, trackers: e.target.checked })
+                          }
+                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
+                        />
+                        <Smartphone className="h-4 w-4 text-[#FFA800]" />
+                        <span className="text-xs font-bold">Mobile Trackers</span>
+                      </label>
+
+                      <label
+                        className={`flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${
+                          targetChannels.lobbyTv
+                            ? 'bg-amber-50/60 border-amber-300 text-slate-900'
+                            : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={targetChannels.lobbyTv}
+                          onChange={(e) =>
+                            setTargetChannels({ ...targetChannels, lobbyTv: e.target.checked })
+                          }
+                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
+                        />
+                        <Tv className="h-4 w-4 text-[#FFA800]" />
+                        <span className="text-xs font-bold">Lobby Smart TVs</span>
+                      </label>
+
+                      <label
+                        className={`flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${
+                          targetChannels.sms
+                            ? 'bg-amber-50/60 border-amber-300 text-slate-900'
+                            : 'bg-slate-50 border-slate-200 text-slate-500'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={targetChannels.sms}
+                          onChange={(e) =>
+                            setTargetChannels({ ...targetChannels, sms: e.target.checked })
+                          }
+                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
+                        />
+                        <MessageSquare className="h-4 w-4 text-[#FFA800]" />
+                        <span className="text-xs font-bold">SMS Priority Push</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 1-Tap Broadcast Presets */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                        High-Velocity Presets (Tap to Load)
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-medium">1-click insert</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { label: 'Counters 4–6 Open', text: 'Counters 4–6 now open for commercial accounts and SME deposits.' },
+                        { label: 'Lunch Rush Speed', text: 'Lunch hour rush: All service windows running at peak velocity. Wait under 4 mins.' },
+                        { label: 'Fast-Track KYC', text: 'Skip intake queue: Upload ID on your phone while seated to get fast-tracked.' },
+                        { label: 'Sanitizing Break', text: 'Station 2 temporarily sanitizing: resuming in 5 minutes. Thank you.' },
+                        { label: 'Closing Intake', text: 'Queue intake closes at 4:30 PM. Active ticket holders will all be served.' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => setBroadcastInput(preset.text)}
+                          className="rounded-xl border border-slate-200 bg-slate-50 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-950 px-2.5 py-1 text-xs font-semibold text-slate-700 transition"
+                        >
+                          + {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Textarea Composer */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                      <label htmlFor="broadcast-text">Broadcast Announcement Text</label>
+                      <span className={`text-[11px] ${broadcastInput.length > 140 ? 'text-amber-600 font-extrabold' : 'text-slate-400'}`}>
+                        {broadcastInput.length} / 160 characters
+                      </span>
+                    </div>
+                    <textarea
+                      id="broadcast-text"
+                      rows={3}
+                      placeholder="e.g. Attention visitors: All service counters are operating at peak speed. Please check your phone for counter calls..."
+                      value={broadcastInput}
+                      onChange={(e) => setBroadcastInput(e.target.value)}
+                      className="w-full rounded-2xl border border-slate-200 p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFA800] focus:border-transparent"
+                    />
+                  </div>
+
+                  {/* Audio Chime & Speech Options */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
+                    <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={playChimeOnBroadcast}
+                          onChange={(e) => setPlayChimeOnBroadcast(e.target.checked)}
+                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
+                        />
+                        <Volume2 className="h-3.5 w-3.5 text-[#FFA800]" />
+                        <span>Play 2-Tone PA Chime</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={voiceOnBroadcast}
+                          onChange={(e) => setVoiceOnBroadcast(e.target.checked)}
+                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
+                        />
+                        <BellRing className="h-3.5 w-3.5 text-blue-500" />
+                        <span>Read with Voice PA</span>
+                      </label>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={playChime}
+                      className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1"
+                    >
+                      <Volume2 className="h-3.5 w-3.5" />
+                      <span>Test Speaker</span>
+                    </button>
+                  </div>
+
+                  {/* Publish Button */}
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      disabled={!broadcastInput.trim()}
+                      onClick={() => handlePublishStudioBroadcast()}
+                      className="w-full py-3.5 px-6 rounded-2xl bg-[#FFA800] hover:bg-[#ffb41f] text-[#291E29] font-black text-sm transition shadow-md shadow-[#FFA800]/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-98"
+                    >
+                      <Send className="h-4 w-4" />
+                      <span>Publish Live Broadcast to All Displays</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Broadcast History & Logs */}
+                <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                    <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                      <History className="h-4 w-4 text-[#FFA800]" />
+                      <span>Broadcast Log & Previous Advisories</span>
+                    </h3>
+                    <span className="text-xs text-slate-400 font-bold">{broadcastHistory.length} sent</span>
+                  </div>
+
+                  <div className="space-y-2.5 pt-1">
+                    {broadcastHistory.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        className={`p-3.5 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          idx === 0
+                            ? 'bg-amber-50/50 border-amber-200'
+                            : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            {idx === 0 && (
+                              <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FFA800] text-[#291E29]">
+                                Active Now
+                              </span>
+                            )}
+                            <span className="text-[10px] font-bold text-slate-500">{item.time}</span>
+                            <span className="text-[10px] text-slate-400">&middot; {item.channel || 'All Screens'}</span>
+                          </div>
+                          <p className="text-xs font-extrabold text-slate-900 leading-snug">
+                            {item.text}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handlePublishStudioBroadcast(item.text)}
+                          className="shrink-0 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-slate-800 transition shadow-2xs self-start sm:self-center"
+                        >
+                          Re-broadcast &nearr;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Walk-in Ticket Modal */}
         {showWalkinModal && (

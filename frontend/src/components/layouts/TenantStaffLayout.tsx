@@ -42,6 +42,14 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
   const [isSlim, setIsSlim] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [switchAccountOpen, setSwitchAccountOpen] = useState(false);
+  const [currentTab, setCurrentTab] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      setCurrentTab(p.get('tab'));
+    }
+  }, [pathname]);
 
   // Load staff list for this tenant
   const [staffList, setStaffList] = useState<StaffAccount[]>([]);
@@ -242,7 +250,14 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
               <nav className="mt-4 flex-1 space-y-1.5 text-xs font-semibold overflow-y-auto">
                 {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href;
+                  const isBroadcastItem = item.name.includes('Broadcast');
+                  const isOpsItem = item.name === 'Ops Console' || item.name === 'Ops';
+                  const isCurrentBroadcast = currentTab === 'broadcast';
+                  const isActive = isBroadcastItem
+                    ? pathname.includes('/ops-console') && isCurrentBroadcast
+                    : isOpsItem
+                    ? pathname.includes('/ops-console') && !isCurrentBroadcast
+                    : pathname === item.href;
                   const hasAccess = item.adminOnly ? isOwner : item.privilege ? hasPrivilege(item.privilege) : true;
 
                   return (
@@ -377,7 +392,14 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
           <nav className="mt-4 flex-1 w-full space-y-1.5 text-xs font-semibold overflow-y-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isBroadcastItem = item.name.includes('Broadcast');
+                  const isOpsItem = item.name === 'Ops Console' || item.name === 'Ops';
+                  const isCurrentBroadcast = currentTab === 'broadcast';
+                  const isActive = isBroadcastItem
+                    ? pathname.includes('/ops-console') && isCurrentBroadcast
+                    : isOpsItem
+                    ? pathname.includes('/ops-console') && !isCurrentBroadcast
+                    : pathname === item.href;
               const hasAccess = item.adminOnly ? isOwner : item.privilege ? hasPrivilege(item.privilege) : true;
 
               return (
@@ -478,7 +500,14 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#291E29]/95 backdrop-blur-md border-t border-[#341539] px-2 py-1.5 flex items-center justify-around shadow-lg">
         {bottomBarItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.href;
+          const isBroadcastItem = item.name.includes('Broadcast');
+                  const isOpsItem = item.name === 'Ops Console' || item.name === 'Ops';
+                  const isCurrentBroadcast = currentTab === 'broadcast';
+                  const isActive = isBroadcastItem
+                    ? pathname.includes('/ops-console') && isCurrentBroadcast
+                    : isOpsItem
+                    ? pathname.includes('/ops-console') && !isCurrentBroadcast
+                    : pathname === item.href;
           return (
             <Link
               key={item.name}
