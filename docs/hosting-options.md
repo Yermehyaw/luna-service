@@ -49,6 +49,28 @@ Weights cached in a Modal Volume.
 
 **Verdict:** best free path to a working, testable deployment today.
 
+### 1a. Ollama on Modal (generation)
+
+`Modal/ollama_app.py` runs `ollama serve` on CPU with `qwen2.5:3b` cached in a Modal
+Volume and exposes Ollama's OpenAI-compatible `/v1/chat/completions`, so the backend
+uses it with no code changes.
+
+**Pros**
+- Satisfies the team's Ollama requirement while staying on the free Modal tier.
+- One command deploy; models persist in a Volume between cold starts.
+- Backend is provider-agnostic: swaps between Ollama and Qwen/transformers by URL.
+- Native Ollama endpoints (`/api/chat`, `/api/generate`) are also available for manual testing.
+
+**Cons**
+- Ollama cannot serve DistilBERT or BART classifiers — those stay in `modal_app.py`
+  (transformers). Ollama only covers generation (replies/content ideas).
+- Larger cold-start download (~2 GB) the first time the volume is empty.
+- CPU-only generation is slow (~1–3 tokens/sec); replies take a few seconds.
+- Same vendor caveat as Modal itself.
+
+**Verdict:** use `ollama_app.py` for generation and `modal_app.py` for classification —
+both free, both deployed from the `Modal/` folder.
+
 ## 2. HF PRO Docker Space — strict-HF path
 
 `hf-space/` is already written for this: Docker Space serving `/sentiment` and `/intent`,
