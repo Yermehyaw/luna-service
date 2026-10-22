@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../lib/auth';
-import { getTenantStaff } from '../../mock/staff';
-import { LunaLogo, LunaIcon } from '../../components/shared/LumaMark';
-import { MOCK_TENANTS } from '../../mock/tenants';
-import { Tenant, TenantStatus, BusinessScale } from '../../types/tenant';
+import { useAuth } from '@/lib/auth';
+import { getTenantStaff } from '@/mock/staff';
+import { LunaLogo, LunaIcon } from '@/components/shared/LumaMark';
+import { MOCK_TENANTS } from '@/mock/tenants';
+import { Tenant, TenantStatus, BusinessScale } from '@/types/tenant';
 import {
   LayoutDashboard,
   Users,
