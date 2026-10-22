@@ -58,16 +58,30 @@ export default function StaffBranchesPage() {
       <div className="space-y-8 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-bold text-slate-900">Branch Network Management</h1>
-            <p className="text-xs text-slate-500">Configure active locations, hours, and queue load capacity for {tenant.name}.</p>
+            <h1 className="font-display text-2xl font-bold text-slate-900">
+              {tenant.businessScale === 'sme' ? 'Shop & Studio Locations' : 'Branch Network Management'}
+            </h1>
+            <p className="text-xs text-slate-500">
+              {tenant.businessScale === 'sme'
+                ? `Manage your primary studio address, operating hours, and capacity for ${tenant.name}.`
+                : `Configure active locations, hours, and queue load capacity for ${tenant.name}.`}
+            </p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition-transform hover:scale-105"
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition-transform hover:scale-105 min-h-[44px]"
           >
-            <Plus className="h-4 w-4 text-[#FFA800]" /> Add Branch
+            <Plus className="h-4 w-4 text-[#FFA800]" /> {tenant.businessScale === 'sme' ? 'Add Location' : 'Add Branch'}
           </button>
         </div>
+
+        {tenant.businessScale === 'sme' && (
+          <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 text-xs text-sky-900 flex items-center justify-between">
+            <span className="font-medium">
+              💡 <strong>Single or Multi-Studio:</strong> Small businesses run smoothly with just 1 active location. Add more branches anytime your brand expands!
+            </span>
+          </div>
+        )}
 
         {notice && (
           <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-bold text-emerald-800 animate-in fade-in">
@@ -77,63 +91,65 @@ export default function StaffBranchesPage() {
         )}
 
         {showAddModal && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-lg space-y-4 max-w-md animate-in fade-in">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-sm text-slate-900">Add New Branch Location</h3>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-xs text-slate-400 hover:text-slate-800"
-              >
-                ✕
-              </button>
-            </div>
-            <form onSubmit={handleAddBranch} className="space-y-3 text-xs">
-              <div>
-                <label className="font-semibold text-slate-700">Branch Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Victoria Island Express Hub"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
-                />
-              </div>
-              <div>
-                <label className="font-semibold text-slate-700">Physical Address</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Plot 12, Adeola Odeku Street"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
-                />
-              </div>
-              <div>
-                <label className="font-semibold text-slate-700">Operating Hours</label>
-                <input
-                  type="text"
-                  value={openUntil}
-                  onChange={(e) => setOpenUntil(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
-                />
-              </div>
-              <div className="flex gap-2 justify-end pt-2">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
+            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="font-bold text-base text-slate-900">Add New Branch Location</h3>
                 <button
-                  type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="rounded-xl px-4 py-2 text-slate-600 hover:bg-slate-100"
+                  className="rounded-lg p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="rounded-xl bg-[#FFA800] px-4 py-2 font-extrabold text-[#291E29]"
-                >
-                  Create Branch
+                  ✕
                 </button>
               </div>
-            </form>
+              <form onSubmit={handleAddBranch} className="space-y-4 text-xs">
+                <div>
+                  <label className="font-semibold text-slate-700">Branch Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Victoria Island Express Hub"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] min-h-[44px]"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700">Physical Address</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Plot 12, Adeola Odeku Street"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] min-h-[44px]"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700">Operating Hours</label>
+                  <input
+                    type="text"
+                    value={openUntil}
+                    onChange={(e) => setOpenUntil(e.target.value)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] min-h-[44px]"
+                  />
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="rounded-xl px-4 py-2.5 text-slate-600 hover:bg-slate-100 min-h-[44px]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-[#FFA800] px-5 py-2.5 font-extrabold text-[#291E29] min-h-[44px]"
+                  >
+                    Create Branch
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

@@ -125,7 +125,7 @@ export function MultiAiKeyModal({
             </div>
             <div>
               <h2 className="font-display font-extrabold text-lg text-white">
-                Multi-Provider AI Studio & Key Router
+                Multi-Provider AI &amp; Key Router
               </h2>
               <p className="text-xs text-[#FFF6E9]/70">
                 Connect Groq, OpenAI, Google Gemini, Anthropic Claude, or Moonshot Kimi.
@@ -256,39 +256,41 @@ export function MultiAiKeyModal({
 
                 <div className="space-y-1.5">
                   <label className="font-semibold text-slate-700">API Key</label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="password"
                       placeholder={current.placeholder}
                       value={currentVal}
                       onChange={(e) => handleKeyChange(current.id, e.target.value)}
-                      className="flex-1 rounded-xl border border-slate-200 p-2.5 font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
+                      className="flex-1 rounded-xl border border-slate-200 p-2.5 font-mono text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] min-h-[44px]"
                     />
-                    <button
-                      type="button"
-                      disabled={isTesting || !currentVal.trim()}
-                      onClick={() => handleTestKey(current.id)}
-                      className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 font-bold text-white hover:bg-slate-800 disabled:opacity-40 transition shadow-xs"
-                    >
-                      {isTesting ? (
-                        <>
-                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                          <span>Testing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="h-3.5 w-3.5 text-[#FFA800]" />
-                          <span>Test Key</span>
-                        </>
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSaveKey(current.id)}
-                      className="rounded-xl border border-slate-200 px-3.5 py-2.5 font-bold text-slate-700 hover:bg-slate-50 transition"
-                    >
-                      Save
-                    </button>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        disabled={isTesting || !currentVal.trim()}
+                        onClick={() => handleTestKey(current.id)}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2.5 font-bold text-white hover:bg-slate-800 disabled:opacity-40 transition shadow-xs min-h-[44px]"
+                      >
+                        {isTesting ? (
+                          <>
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            <span>Testing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="h-3.5 w-3.5 text-[#FFA800]" />
+                            <span>Test Key</span>
+                          </>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveKey(current.id)}
+                        className="flex-1 sm:flex-none rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-slate-700 hover:bg-slate-50 transition min-h-[44px]"
+                      >
+                        Save
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -326,7 +328,7 @@ export function MultiAiKeyModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-slate-100 bg-slate-50">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-4 border-t border-slate-100 bg-slate-50 gap-2">
           <span className="text-[11px] text-slate-500 font-medium">
             Active Strategy:{' '}
             <strong className="text-slate-800">
@@ -335,7 +337,7 @@ export function MultiAiKeyModal({
           </span>
           <button
             onClick={onClose}
-            className="rounded-xl bg-[#291E29] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#341539] transition shadow-md"
+            className="rounded-xl bg-[#291E29] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#341539] transition shadow-md min-h-[44px]"
           >
             Done
           </button>

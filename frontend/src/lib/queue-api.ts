@@ -69,6 +69,7 @@ export interface CreateTicketPayload {
   customer_id?: string;
   customer_name: string;
   customer_email?: string | null;
+  customer_phone?: string | null;
   booked_for?: string | null;
   notes?: string | null;
   is_priority?: boolean;

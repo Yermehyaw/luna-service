@@ -1,52 +1,37 @@
 'use client';
 
 import React, { useState, useEffect, use } from 'react';
+import Link from 'next/link';
 import { TenantStaffLayout } from '../../../../../components/layouts/TenantStaffLayout';
 import { useTenant } from '../../../../../lib/tenant-context';
 import { updateTenant } from '../../../../../lib/tenant';
+import { useAuth } from '../../../../../lib/auth';
+import { getTenantStaff } from '../../../../../mock/staff';
+import { StaffPrivilegesManager } from '../../../../../features/tenant-staff/StaffPrivilegesManager';
 import { FREE_THEME_PRESETS, ThemePreset } from '../../../../../features/tenant-branding/themes';
-import {
-  generateSiteCustomizationMultiAi,
-  getAllStoredAiKeys,
-  getActiveAiRouting,
-  AI_PROVIDERS,
-} from '../../../../../features/tenant-branding/multi-ai-service';
-import { MultiAiKeyModal } from '../../../../../features/tenant-branding/MultiAiKeyModal';
 import {
   Globe,
   Palette,
-  Sparkles,
-  Bot,
-  Key,
   Check,
   Copy,
   ExternalLink,
   Save,
-  Undo2,
-  Send,
   Eye,
   Smartphone,
   Monitor,
   CheckCircle2,
-  AlertCircle,
-  HelpCircle,
   Radio,
   Ticket,
   ShieldCheck,
+  Upload,
+  Image as ImageIcon,
+  Trash2,
+  Store,
+  Building2,
+  Sparkles,
   Lock,
-  Layers,
-  Zap,
+  Users,
 } from 'lucide-react';
-
-interface ChatMessage {
-  id: string;
-  sender: 'ai' | 'user';
-  text: string;
-  timestamp: string;
-  appliedTheme?: any;
-  providerName?: string;
-  latencyMs?: number;
-}
 
 export default function TenantBrandingSettingsPage({
   params,
@@ -55,12 +40,18 @@ export default function TenantBrandingSettingsPage({
 }) {
   const resolvedParams = use(params);
   const { tenant, setTenant } = useTenant();
+  const { user, loginAsStaffMember } = useAuth();
+  const [activeTab, setActiveTab] = useState<'branding' | 'team_privileges'>('branding');
 
   // Subdomain & Basic Info
   const [subdomain, setSubdomain] = useState(tenant?.slug || resolvedParams.tenantId || '');
   const [copiedDomain, setCopiedDomain] = useState(false);
 
-  // Active Customization State
+  // Logo & Active Customization State
+  const [logoUrl, setLogoUrl] = useState(tenant?.branding?.logoUrl || '');
+  const [templateLayout, setTemplateLayout] = useState<'sme_boutique' | 'enterprise_institutional'>(
+    tenant?.branding?.templateLayout || (tenant?.businessScale === 'sme' ? 'sme_boutique' : 'enterprise_institutional')
+  );
   const [primaryColor, setPrimaryColor] = useState(tenant?.branding?.primaryColor || '#291E29');
   const [secondaryColor, setSecondaryColor] = useState(tenant?.branding?.secondaryColor || '#341539');
   const [accentColor, setAccentColor] = useState(tenant?.branding?.accentColor || '#FFA800');
@@ -80,38 +71,14 @@ export default function TenantBrandingSettingsPage({
   const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Multi-Provider AI API Keys & Routing State
-  const [storedAiKeys, setStoredAiKeys] = useState<Record<string, string>>({});
-  const [activeRouting, setActiveRouting] = useState<'combined' | string>('combined');
-  const [showAiModal, setShowAiModal] = useState<boolean>(false);
-
-  // AI Chat State (Lovable & Replit style)
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      sender: 'ai',
-      text: `👋 Hi! I am your Luna AI Site Architect (similar to Lovable & Replit). Tell me how you'd like your website styled, or describe your brand vibe, and I will redesign your colors, hero copy, and buttons instantly! Supports Groq, OpenAI, Gemini, Claude, and Kimi with AI Auto-Routing.`,
-      timestamp: 'Just now',
-    },
-  ]);
-  const [aiPromptInput, setAiPromptInput] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState<string | null>(null);
-
-  // Refresh AI configuration from localStorage
-  const refreshAiConfig = () => {
-    setStoredAiKeys(getAllStoredAiKeys());
-    setActiveRouting(getActiveAiRouting());
-  };
-
-  useEffect(() => {
-    refreshAiConfig();
-  }, []);
-
   // Update form fields when tenant loads
   useEffect(() => {
     if (tenant) {
       setSubdomain(tenant.slug);
+      setLogoUrl(tenant.branding?.logoUrl || '');
+      setTemplateLayout(
+        tenant.branding?.templateLayout || (tenant.businessScale === 'sme' ? 'sme_boutique' : 'enterprise_institutional')
+      );
       setPrimaryColor(tenant.branding?.primaryColor || '#291E29');
       setSecondaryColor(tenant.branding?.secondaryColor || '#341539');
       setAccentColor(tenant.branding?.accentColor || '#FFA800');
@@ -140,6 +107,24 @@ export default function TenantBrandingSettingsPage({
     }
   };
 
+  const handleLogoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Logo file size must be under 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setLogoUrl(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Apply one of the 8 Free Theme Presets
   const handleApplyPreset = (theme: ThemePreset) => {
     setActiveThemeId(theme.id);
@@ -152,94 +137,10 @@ export default function TenantBrandingSettingsPage({
     setHeroSubtitle(theme.heroSubtitle);
     setAnnouncementTicker(theme.announcementTicker);
     setCtaButtonText(theme.ctaButtonText);
-
-    // Add notification in AI chat
-    setChatMessages((prev) => [
-      ...prev,
-      {
-        id: `theme-${Date.now()}`,
-        sender: 'ai',
-        text: `🎨 Applied the preset theme "${theme.name}" (${theme.category}). You can now fine-tune colors or chat with me to personalize further!`,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      },
-    ]);
-  };
-
-  // Submit AI Prompt
-  const handleSendAiPrompt = async (promptToSend?: string) => {
-    const text = promptToSend || aiPromptInput;
-    if (!text.trim() || aiLoading) return;
-
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      text: text.trim(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-
-    setChatMessages((prev) => [...prev, userMsg]);
-    if (!promptToSend) setAiPromptInput('');
-    setAiLoading(true);
-    setAiError(null);
-
-    try {
-      const currentBranding = {
-        primaryColor,
-        secondaryColor,
-        accentColor,
-        backgroundColor,
-        textColor,
-        heroTitle,
-        heroSubtitle,
-        announcementTicker,
-        ctaButtonText,
-      };
-
-      const result = await generateSiteCustomizationMultiAi(
-        text,
-        currentBranding,
-        tenant?.name || 'Our Business',
-        tenant?.industry || 'retail'
-      );
-
-      // Apply returned branding updates to state
-      if (result.updatedBranding) {
-        if (result.updatedBranding.primaryColor) setPrimaryColor(result.updatedBranding.primaryColor);
-        if (result.updatedBranding.secondaryColor) setSecondaryColor(result.updatedBranding.secondaryColor);
-        if (result.updatedBranding.accentColor) setAccentColor(result.updatedBranding.accentColor);
-        if (result.updatedBranding.backgroundColor) setBackgroundColor(result.updatedBranding.backgroundColor);
-        if (result.updatedBranding.textColor) setTextColor(result.updatedBranding.textColor);
-        if (result.updatedBranding.heroTitle) setHeroTitle(result.updatedBranding.heroTitle);
-        if (result.updatedBranding.heroSubtitle) setHeroSubtitle(result.updatedBranding.heroSubtitle);
-        if (result.updatedBranding.announcementTicker) setAnnouncementTicker(result.updatedBranding.announcementTicker);
-        if (result.updatedBranding.ctaButtonText) setCtaButtonText(result.updatedBranding.ctaButtonText);
-      }
-
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-${Date.now()}`,
-          sender: 'ai',
-          text: result.replyMessage,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          appliedTheme: result.updatedBranding,
-          providerName: result.usedProvider,
-          latencyMs: result.latencyMs,
-        },
-      ]);
-    } catch (err: any) {
-      setAiError(err.message || 'Failed to generate design with AI');
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: `ai-err-${Date.now()}`,
-          sender: 'ai',
-          text: `⚠️ AI Studio: ${err.message || 'Could not generate design'}. Please check your API keys or network connection.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
-    } finally {
-      setAiLoading(false);
+    if (theme.category.includes('SME') || theme.category.includes('Universal')) {
+      setTemplateLayout('sme_boutique');
+    } else if (theme.category.includes('Enterprise')) {
+      setTemplateLayout('enterprise_institutional');
     }
   };
 
@@ -250,6 +151,8 @@ export default function TenantBrandingSettingsPage({
       subdomain: subdomain.toLowerCase().replace(/[^a-z0-9-]/g, '') || tenant.slug,
       branding: {
         ...tenant.branding,
+        logoUrl,
+        templateLayout,
         primaryColor,
         secondaryColor,
         accentColor,
@@ -269,6 +172,71 @@ export default function TenantBrandingSettingsPage({
     }
   };
 
+  const isOwner = user?.role === 'tenant_admin' || user?.role === 'super_admin';
+
+  if (!isOwner) {
+    const tenantStaff = getTenantStaff(tenant?.slug || resolvedParams.tenantId);
+    const ownerAccount = tenantStaff.find((s) => s.role === 'tenant_admin') || tenantStaff[0];
+
+    return (
+      <TenantStaffLayout>
+        <div className="max-w-2xl mx-auto my-12 p-6 sm:p-8 rounded-3xl bg-white border border-amber-300 shadow-xl space-y-6 text-center font-sans">
+          <div className="h-16 w-16 rounded-3xl bg-amber-100 border border-amber-200 text-amber-900 mx-auto flex items-center justify-center shadow-xs">
+            <Lock className="h-8 w-8 text-amber-800" />
+          </div>
+
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-extrabold border border-amber-300">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Business Admin Protected</span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#291E29]">
+              Business Admin Authorization Required
+            </h1>
+            <p className="text-xs text-slate-600 max-w-md mx-auto">
+              Storefront branding, logo uploads, theme styling, and staff privilege management are strictly reserved for the <strong>Business Owner (Business Admin)</strong>.
+            </p>
+          </div>
+
+          {/* Current User Info */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-black/10 text-left flex items-center gap-3">
+            <div
+              className="h-10 w-10 rounded-xl flex items-center justify-center text-white font-extrabold text-sm shrink-0 shadow-xs"
+              style={{ backgroundColor: user?.avatarColor || '#D97706' }}
+            >
+              👔
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-[#291E29] truncate">{user?.name || 'Staff Member'}</p>
+              <p className="text-[11px] text-slate-500 truncate">
+                Role: <strong>Staff Member</strong> · {user?.designation || 'Staff Specialist'} · {user?.email}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            {ownerAccount && (
+              <button
+                type="button"
+                onClick={() => loginAsStaffMember(ownerAccount)}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFF6E9] text-xs font-extrabold shadow-md flex items-center justify-center gap-2 min-h-[44px]"
+              >
+                <span>👑 Switch to Business Owner ({ownerAccount.name})</span>
+              </button>
+            )}
+
+            <Link
+              href={`/tenant/${tenant?.slug || resolvedParams.tenantId}/staff/ops-console`}
+              className="w-full sm:w-auto px-5 py-3 rounded-xl border border-black/15 bg-white hover:bg-slate-50 text-slate-700 text-xs font-extrabold flex items-center justify-center gap-2 min-h-[44px]"
+            >
+              <span>Return to Ops Console</span>
+            </Link>
+          </div>
+        </div>
+      </TenantStaffLayout>
+    );
+  }
+
   return (
     <TenantStaffLayout>
       <div className="space-y-8 font-sans pb-16 selection:bg-[#FFA800] selection:text-[#291E29]">
@@ -278,17 +246,17 @@ export default function TenantBrandingSettingsPage({
           <div>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-[#FFA800]/20 text-[#291E29] text-[10px] font-extrabold uppercase px-2.5 py-0.5 tracking-wider">
-                Website & Theme Studio
+                Business Admin Console
               </span>
               <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1">
                 <Check className="h-3 w-3" /> Free Subdomain Active
               </span>
             </div>
             <h1 className="font-display text-2xl font-extrabold text-[#291E29] mt-1">
-              Website Customizer & AI Studio
+              Storefront Branding &amp; Team Management
             </h1>
             <p className="text-xs text-[#291E29]/70">
-              Customize your free <span className="font-bold font-mono">{subdomain}.{platformDomain}</span> portal, choose from 8 themes, or chat with AI to personalize your look.
+              Customize website themes, logo &amp; templates, and assign logins &amp; task privileges to your staff members.
             </p>
           </div>
 
@@ -297,29 +265,70 @@ export default function TenantBrandingSettingsPage({
               href={`/tenant/${tenant.slug}`}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 rounded-xl border border-[#291E29]/15 bg-white px-4 py-2.5 text-xs font-bold text-[#291E29] shadow-sm hover:bg-[#FFF6E9] transition-colors"
+              className="flex items-center gap-1.5 rounded-xl border border-[#291E29]/15 bg-white px-4 py-2.5 text-xs font-bold text-[#291E29] shadow-sm hover:bg-[#FFF6E9] transition-colors min-h-[44px]"
             >
               <span>Visit Live Portal</span>
               <ExternalLink className="h-3.5 w-3.5 text-[#FFA800]" />
             </a>
 
-            <button
-              onClick={handleSaveAll}
-              className="flex items-center gap-2 rounded-xl bg-[#FFA800] px-5 py-2.5 text-xs font-extrabold text-[#291E29] shadow-md shadow-[#FFA800]/25 hover:bg-[#FFB11A] transition-transform hover:scale-105"
-            >
-              <Save className="h-4 w-4" />
-              <span>Save & Publish</span>
-            </button>
+            {activeTab === 'branding' && (
+              <button
+                onClick={handleSaveAll}
+                className="flex items-center gap-2 rounded-xl bg-[#FFA800] px-5 py-2.5 text-xs font-extrabold text-[#291E29] shadow-md shadow-[#FFA800]/25 hover:bg-[#FFB11A] transition-transform hover:scale-105 min-h-[44px]"
+              >
+                <Save className="h-4 w-4" />
+                <span>Save & Publish</span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Save Notification */}
-        {saveSuccess && (
-          <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-bold text-emerald-800 shadow-sm animate-in fade-in">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <span>Success! All changes to your website and themes have been published live to {fullSubdomainUrl}.</span>
-          </div>
-        )}
+        {/* Tab Navigation: Storefront Branding vs Team Logins & Privileges */}
+        <div className="flex items-center gap-2 border-b border-black/10 pb-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab('branding')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all min-h-[44px] ${
+              activeTab === 'branding'
+                ? 'bg-[#291E29] text-white shadow-md'
+                : 'text-slate-600 hover:bg-black/5 hover:text-[#291E29]'
+            }`}
+          >
+            <Palette className={`h-4 w-4 ${activeTab === 'branding' ? 'text-[#FFA800]' : 'text-slate-400'}`} />
+            <span>Storefront Branding &amp; Themes</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('team_privileges')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all min-h-[44px] ${
+              activeTab === 'team_privileges'
+                ? 'bg-[#291E29] text-white shadow-md'
+                : 'text-slate-600 hover:bg-black/5 hover:text-[#291E29]'
+            }`}
+          >
+            <Users className={`h-4 w-4 ${activeTab === 'team_privileges' ? 'text-[#FFA800]' : 'text-slate-400'}`} />
+            <span>Team Logins &amp; Staff Privileges</span>
+            <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-amber-400/20 text-[#FFA800] border border-amber-400/30">
+              Admin Only
+            </span>
+          </button>
+        </div>
+
+        {activeTab === 'team_privileges' ? (
+          <StaffPrivilegesManager
+            tenantId={tenant?.slug || resolvedParams.tenantId}
+            tenantName={tenant?.name || 'Storefront'}
+          />
+        ) : (
+          <>
+            {/* Save Notification */}
+            {saveSuccess && (
+              <div className="flex items-center gap-2 rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-bold text-emerald-800 shadow-sm animate-in fade-in">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <span>Success! All changes to your website and themes have been published live to {fullSubdomainUrl}.</span>
+              </div>
+            )}
 
         {/* 1. Free Domain Management Card */}
         <section className="rounded-3xl border border-[#291E29]/10 bg-white p-6 shadow-sm space-y-4">
@@ -372,7 +381,210 @@ export default function TenantBrandingSettingsPage({
           </div>
         </section>
 
-        {/* 2. Choose From 8 Free Theme Options */}
+        {/* 2. Business Brand Logo Upload for Template */}
+        <section className="rounded-3xl border border-[#291E29]/10 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFA800] text-[#291E29] shadow-sm">
+                <ImageIcon className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-[#291E29]">Business Brand Logo Upload</h3>
+                <p className="text-xs text-[#291E29]/65">
+                  Upload your custom business logo to display across your website template header, hero banner, and digital ticket passes.
+                </p>
+              </div>
+            </div>
+
+            {logoUrl && (
+              <button
+                type="button"
+                onClick={() => setLogoUrl('')}
+                className="flex items-center gap-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 px-3 py-2 text-xs font-bold transition"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Remove Logo</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+            {/* Logo Preview */}
+            <div className="rounded-2xl border border-dashed border-[#291E29]/20 bg-[#FFF6E9]/40 p-4 flex flex-col items-center justify-center text-center min-h-[140px]">
+              {logoUrl ? (
+                <div className="space-y-2 flex flex-col items-center">
+                  <img
+                    src={logoUrl}
+                    alt="Uploaded Logo"
+                    className="h-16 w-auto max-w-[180px] object-contain rounded-xl shadow-xs border border-white"
+                  />
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    ✓ Custom Logo Active
+                  </span>
+                </div>
+              ) : (
+                <div className="space-y-1.5 flex flex-col items-center">
+                  <div
+                    className="h-12 w-12 rounded-xl flex items-center justify-center text-white font-extrabold text-base shadow-sm"
+                    style={{ backgroundColor: primaryColor }}
+                  >
+                    {tenant?.name?.[0] || 'B'}
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500">Default Letter Mark</span>
+                  <span className="text-[10px] text-slate-400">No custom logo uploaded yet</span>
+                </div>
+              )}
+            </div>
+
+            {/* Upload Area */}
+            <div className="md:col-span-2 flex flex-col justify-center space-y-3">
+              <label
+                htmlFor="logo-file-upload"
+                className="cursor-pointer rounded-2xl border-2 border-dashed border-[#291E29]/20 hover:border-[#FFA800] bg-white p-5 text-center transition-all hover:bg-[#FFF6E9]/30 flex flex-col items-center justify-center gap-2 group min-h-[140px]"
+              >
+                <Upload className="h-6 w-6 text-[#702D7B] group-hover:text-[#FFA800] transition-colors" />
+                <div className="space-y-0.5">
+                  <span className="font-bold text-xs text-[#291E29] block">
+                    Click to browse or drag &amp; drop your logo file
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    Supports PNG, JPG, SVG, WebP (Transparent PNG recommended, Max 5MB)
+                  </span>
+                </div>
+                <input
+                  id="logo-file-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoFileUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. Storefront Template Layout: SME Boutique vs Enterprise Institutional */}
+        <section className="rounded-3xl border border-[#291E29]/10 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#291E29]/10 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFA800]/20 text-[#291E29]">
+                <Store className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-sm text-[#291E29]">Storefront Layout &amp; Industry Template</h3>
+                <p className="text-xs text-[#291E29]/65">
+                  Choose between our dedicated <strong>SME Boutique Template</strong> (salons, auto repair, cafes, bakeries, clinics) or <strong>Enterprise Template</strong> (banks, hospitals, telecom).
+                </p>
+              </div>
+            </div>
+
+            <span className="text-[10px] font-extrabold uppercase px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 self-start sm:self-auto">
+              {templateLayout === 'sme_boutique' ? 'SME Boutique Active' : 'Enterprise Active'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {/* SME Boutique Card */}
+            <div
+              onClick={() => setTemplateLayout('sme_boutique')}
+              className={`cursor-pointer rounded-2xl border p-5 transition-all shadow-xs space-y-3 ${
+                templateLayout === 'sme_boutique'
+                  ? 'border-[#FFA800] bg-[#FFF6E9]/60 ring-2 ring-[#FFA800] shadow-md'
+                  : 'border-[#291E29]/10 bg-slate-50/50 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-xl bg-[#FFA800]/20 text-[#291E29]">
+                    <Store className="h-4 w-4" />
+                  </span>
+                  <span className="font-extrabold text-sm text-[#291E29]">
+                    SME Boutique &amp; Local Storefront
+                  </span>
+                </div>
+                {templateLayout === 'sme_boutique' && (
+                  <span className="flex items-center gap-1 rounded-full bg-[#FFA800] px-2.5 py-0.5 text-[10px] font-extrabold text-[#291E29]">
+                    <Check className="h-3 w-3" /> Selected
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Tailored for hair salons, barbershops, auto mechanics, bakeries, cafes, boutique clinics &amp; photography studios.
+              </p>
+
+              <ul className="space-y-1.5 text-[11px] text-slate-600 pt-1">
+                <li className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-[#FFA800]" />
+                  <span><strong>Dedicated Specialist / Chair / Bay booking</strong></span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-[#FFA800]" />
+                  <span><strong>Transparent price tags on every service menu</strong></span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-[#FFA800]" />
+                  <span><strong>Live &ldquo;Walk-Ins Welcome &amp; Next Spot&rdquo; badge</strong></span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Sparkles className="h-3 w-3 text-[#FFA800]" />
+                  <span><strong>Customer testimonials &amp; verified 5-star reviews</strong></span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Enterprise Institutional Card */}
+            <div
+              onClick={() => setTemplateLayout('enterprise_institutional')}
+              className={`cursor-pointer rounded-2xl border p-5 transition-all shadow-xs space-y-3 ${
+                templateLayout === 'enterprise_institutional'
+                  ? 'border-[#FFA800] bg-[#FFF6E9]/60 ring-2 ring-[#FFA800] shadow-md'
+                  : 'border-[#291E29]/10 bg-slate-50/50 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-xl bg-[#291E29]/10 text-[#291E29]">
+                    <Building2 className="h-4 w-4" />
+                  </span>
+                  <span className="font-extrabold text-sm text-[#291E29]">
+                    Enterprise Institutional Storefront
+                  </span>
+                </div>
+                {templateLayout === 'enterprise_institutional' && (
+                  <span className="flex items-center gap-1 rounded-full bg-[#FFA800] px-2.5 py-0.5 text-[10px] font-extrabold text-[#291E29]">
+                    <Check className="h-3 w-3" /> Selected
+                  </span>
+                )}
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Tailored for commercial banks, hospital clinical triage, national telecom flagships, and civic centers.
+              </p>
+
+              <ul className="space-y-1.5 text-[11px] text-slate-600 pt-1">
+                <li className="flex items-center gap-1.5">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                  <span><strong>Multi-branch lobby network with peak indicators</strong></span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                  <span><strong>Formal counter / window assignment triage</strong></span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                  <span><strong>Strict corporate handling time &amp; SLA compliance</strong></span>
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                  <span><strong>KYC and cryptographic paperwork clearances</strong></span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Choose From 8 Free Theme Options */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -463,175 +675,7 @@ export default function TenantBrandingSettingsPage({
           </div>
         </section>
 
-        {/* 3. AI Personalization Studio (Lovable & Replit Style) with Multi-Provider Support */}
-        <section className="rounded-3xl border border-[#702D7B]/20 bg-gradient-to-br from-[#291E29] via-[#341539] to-[#291E29] p-6 text-[#FFF6E9] shadow-xl space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#FFF6E9]/10 pb-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FFA800] text-[#291E29] shadow-lg shadow-[#FFA800]/25">
-                <Sparkles className="h-6 w-6" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-display text-base font-extrabold text-white">
-                    Luna AI Site Studio (Lovable & Replit Experience)
-                  </h3>
-                  <span className="rounded-full bg-[#FFA800]/20 text-[#FFA800] border border-[#FFA800]/30 text-[10px] font-bold px-2 py-0.5">
-                    Multi-Model Engine
-                  </span>
-                </div>
-                <p className="text-xs text-[#FFF6E9]/75">
-                  Chat with AI to personalize your site. Accepts Groq, OpenAI, Gemini, Claude &amp; Kimi with test keys &amp; Smart Auto-Routing.
-                </p>
-              </div>
-            </div>
-
-            {/* AI Key Status & Multi-Provider Setup */}
-            <div className="flex items-center gap-2">
-              {Object.keys(storedAiKeys).some((k) => !!storedAiKeys[k]) ? (
-                <button
-                  type="button"
-                  onClick={() => setShowAiModal(true)}
-                  className="flex items-center gap-2 rounded-xl bg-emerald-950/80 border border-emerald-500/40 px-3.5 py-2 text-xs transition-colors hover:bg-emerald-900/90"
-                >
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-emerald-300 font-bold">
-                    {Object.values(storedAiKeys).filter(Boolean).length} Key(s) ·{' '}
-                    {activeRouting === 'combined'
-                      ? 'Auto-Routing Cascade'
-                      : AI_PROVIDERS.find((p) => p.id === activeRouting)?.name || activeRouting.toUpperCase()}
-                  </span>
-                  <span className="text-[10px] bg-white/10 text-emerald-200 px-1.5 py-0.5 rounded font-mono ml-1">
-                    Manage
-                  </span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setShowAiModal(true)}
-                  className="flex items-center gap-1.5 rounded-xl bg-[#FFA800] px-3.5 py-2 text-xs font-bold text-[#291E29] shadow-md hover:bg-[#FFB11A]"
-                >
-                  <Key className="h-3.5 w-3.5" />
-                  <span>Configure AI Keys &amp; Routing</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Multi-Provider Key & Routing Modal */}
-          <MultiAiKeyModal
-            isOpen={showAiModal}
-            onClose={() => {
-              setShowAiModal(false);
-              refreshAiConfig();
-            }}
-          />
-
-          {/* Quick Prompt Ideas */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold text-[#FFA800] uppercase tracking-wider">
-              Try a 1-Click AI Redesign Prompt:
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {[
-                '🌸 Friendly pediatric clinic with pastel tones and welcoming copy',
-                '🖤 Luxury obsidian black and gold for a private VIP salon',
-                '⚡ High-energy retail sale with electric tangerine and urgent ticker',
-                '🏛️ Authoritative corporate banking with cobalt trust colors',
-              ].map((promptText) => (
-                <button
-                  key={promptText}
-                  onClick={() => handleSendAiPrompt(promptText)}
-                  disabled={aiLoading}
-                  className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-[#FFF6E9] hover:bg-[#FFA800] hover:text-[#291E29] transition-colors"
-                >
-                  {promptText}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Chat Messages Log */}
-          <div className="rounded-2xl border border-white/10 bg-black/25 p-4 max-h-64 overflow-y-auto space-y-3 text-xs">
-            {chatMessages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex gap-2.5 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {msg.sender === 'ai' && (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#FFA800] text-[#291E29] font-bold text-[10px]">
-                    <Bot className="h-4 w-4" />
-                  </div>
-                )}
-                <div
-                  className={`max-w-xl rounded-2xl p-3 leading-relaxed ${
-                    msg.sender === 'user'
-                      ? 'bg-[#FFA800] text-[#291E29] font-bold'
-                      : 'bg-white/10 text-white backdrop-blur-sm'
-                  }`}
-                >
-                  <p>{msg.text}</p>
-                  <div className="flex items-center justify-between gap-3 mt-1.5">
-                    {msg.providerName ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-[#FFA800]/20 border border-[#FFA800]/30 px-1.5 py-0.5 text-[9px] font-mono text-[#FFA800]">
-                        <Zap className="h-2.5 w-2.5" /> {msg.providerName} {msg.latencyMs ? `(${msg.latencyMs}ms)` : ''}
-                      </span>
-                    ) : (
-                      <span />
-                    )}
-                    <span
-                      className={`text-[9px] ${
-                        msg.sender === 'user' ? 'text-[#291E29]/70 text-right' : 'text-white/50'
-                      }`}
-                    >
-                      {msg.timestamp}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {aiLoading && (
-              <div className="flex items-center gap-2 text-xs text-[#FFA800] font-bold animate-pulse">
-                <Sparkles className="h-4 w-4 animate-spin" />
-                <span>
-                  Luna AI Site Architect is generating design via{' '}
-                  {activeRouting === 'combined'
-                    ? 'AI Auto-Routing Cascade'
-                    : AI_PROVIDERS.find((p) => p.id === activeRouting)?.name || activeRouting.toUpperCase()}
-                  ...
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* AI Prompt Input Bar */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendAiPrompt();
-            }}
-            className="flex gap-2"
-          >
-            <input
-              type="text"
-              value={aiPromptInput}
-              onChange={(e) => setAiPromptInput(e.target.value)}
-              placeholder="e.g. 'Make my website warm with coffee tones and write a welcoming headline for a boutique bakery'"
-              disabled={aiLoading}
-              className="flex-1 rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-xs text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
-            />
-            <button
-              type="submit"
-              disabled={aiLoading || !aiPromptInput.trim()}
-              className="flex items-center gap-2 rounded-2xl bg-[#FFA800] px-5 py-3 text-xs font-extrabold text-[#291E29] shadow-lg shadow-[#FFA800]/25 hover:bg-[#FFB11A] disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-              <span>Redesign with AI</span>
-            </button>
-          </form>
-        </section>
-
-        {/* 4. Fine-Tuning Controls & Real-Time Live Preview */}
+        {/* 3. Fine-Tuning Controls & Real-Time Live Preview */}
         <section className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           {/* Left Column: Manual Color & Copy Customizer (5 cols) */}
@@ -736,7 +780,7 @@ export default function TenantBrandingSettingsPage({
                   type="text"
                   value={heroTitle}
                   onChange={(e) => setHeroTitle(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs font-semibold"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs font-semibold min-h-[44px]"
                 />
               </div>
 
@@ -746,7 +790,7 @@ export default function TenantBrandingSettingsPage({
                   rows={2}
                   value={heroSubtitle}
                   onChange={(e) => setHeroSubtitle(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs"
                 />
               </div>
 
@@ -756,7 +800,7 @@ export default function TenantBrandingSettingsPage({
                   type="text"
                   value={announcementTicker}
                   onChange={(e) => setAnnouncementTicker(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs font-medium"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs font-medium min-h-[44px]"
                 />
               </div>
 
@@ -766,7 +810,7 @@ export default function TenantBrandingSettingsPage({
                   type="text"
                   value={ctaButtonText}
                   onChange={(e) => setCtaButtonText(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs font-bold"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs font-bold min-h-[44px]"
                 />
               </div>
             </div>
@@ -820,12 +864,20 @@ export default function TenantBrandingSettingsPage({
               {/* Header simulation */}
               <div className="flex items-center justify-between border-b border-black/10 pb-4">
                 <div className="flex items-center gap-2">
-                  <div
-                    className="flex h-8 w-8 items-center justify-center rounded-lg font-extrabold text-white text-xs"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    ✦
-                  </div>
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt="Brand Logo"
+                      className="h-8 w-8 rounded-lg object-contain border border-black/10 shadow-xs bg-white/80"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-8 w-8 items-center justify-center rounded-lg font-extrabold text-white text-xs"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      {tenant?.name?.[0] || '✦'}
+                    </div>
+                  )}
                   <span className="font-display font-extrabold text-sm" style={{ color: textColor }}>
                     {tenant?.name || 'Your Company'}
                   </span>
@@ -840,6 +892,15 @@ export default function TenantBrandingSettingsPage({
 
               {/* Hero Banner simulation */}
               <div className="py-8 text-center space-y-4">
+                {logoUrl && (
+                  <div className="flex justify-center mb-1">
+                    <img
+                      src={logoUrl}
+                      alt="Brand Logo"
+                      className="h-14 w-14 rounded-2xl object-contain bg-white/90 p-1.5 shadow-sm border border-black/10"
+                    />
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   <span className="inline-flex items-center gap-1 rounded-full bg-black/5 px-2.5 py-1 text-[10px] font-bold">
                     <Globe className="h-3 w-3" style={{ color: primaryColor }} />
@@ -909,6 +970,8 @@ export default function TenantBrandingSettingsPage({
             </div>
           </div>
         </section>
+          </>
+        )}
       </div>
     </TenantStaffLayout>
   );
