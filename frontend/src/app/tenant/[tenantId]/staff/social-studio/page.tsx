@@ -6,6 +6,7 @@ import { TenantStaffLayout } from '../../../../../components/layouts/TenantStaff
 import { useTenant } from '../../../../../lib/tenant-context';
 import { useAuth } from '../../../../../lib/auth';
 import { generateAiContent } from '../../../../../lib/ai-service';
+import { aiFeedbackApi } from '../../../../../lib/ai-feedback-api';
 import {
   MessageSquare,
   Search,

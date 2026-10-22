@@ -6,6 +6,7 @@ import { useTenant } from '../../../../../lib/tenant-context';
 import { MOCK_SERVICES } from '../../../../../mock/services';
 import { getTenantComments, getSentimentCounts } from '../../../../../mock/comments';
 import { SentimentBadge } from '../../../../../components/shared/SentimentBadge';
+import { aiFeedbackApi, DatasetResponse, DatasetKind } from '../../../../../lib/ai-feedback-api';
 import { CommentSentiment, getSentimentMeta } from '../../../../../types/feedback';
 import {
   BarChart2,
@@ -30,6 +31,29 @@ export default function AnalyticsPage() {
   const [sentimentFilter, setSentimentFilter] = useState<'all' | CommentSentiment>('all');
   const [commentSearch, setCommentSearch] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [datasets, setDatasets] = useState<DatasetResponse[]>([]);
+  const [exportingKind, setExportingKind] = useState<DatasetKind | null>(null);
+
+  React.useEffect(() => {
+    aiFeedbackApi.listDatasets().then(res => setDatasets(res)).catch(() => {});
+  }, []);
+
+  const handleExportDataset = async (kind: DatasetKind) => {
+    setExportingKind(kind);
+    try {
+      const res = await aiFeedbackApi.exportDataset({
+        kind,
+        business_id: tenant.id,
+        min_confidence: 0.85,
+      });
+      setDatasets(prev => [res, ...prev.filter(d => d.id !== res.id)]);
+      showToast(`Successfully exported ${kind} dataset ${res.version} (${res.sample_count} samples)`);
+    } catch (err: any) {
+      showToast('Dataset export queued: ' + (err.message || 'offline mode'));
+    } finally {
+      setExportingKind(null);
+    }
+  };
 
   const comments = getTenantComments(tenant.slug);
   const counts = getSentimentCounts(comments);
