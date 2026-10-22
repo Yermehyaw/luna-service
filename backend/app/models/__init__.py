@@ -1,3 +1,9 @@
+from app.models.ai_feedback import (
+    AIFeedback,
+    AITrainingDataset,
+    DatasetKind,
+    FeedbackOutcome,
+)
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, new_id
 from app.models.customer import Customer
 from app.models.payment import Payment, PaymentStatus
@@ -25,12 +31,16 @@ from app.models.tenant import Branch, Business
 
 __all__ = [
     "ACTIVE_STATUSES",
+    "AIFeedback",
+    "AITrainingDataset",
     "ALLOWED_TRANSITIONS",
     "Base",
     "Branch",
     "Business",
     "ContentCredit",
     "Customer",
+    "DatasetKind",
+    "FeedbackOutcome",
     "Intent",
     "Payment",
     "PaymentStatus",

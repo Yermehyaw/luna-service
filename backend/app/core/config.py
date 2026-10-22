@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # Bounded SDK-level retries for transient network/5xx errors, with backoff.
     OPENAI_MAX_RETRIES: int = 2
 
+    # --- AI training feedback ---
+    # Feedback rows are transient training material, not customer records; they are
+    # purged after this window. Exports strip PII again on the way out.
+    AI_FEEDBACK_RETENTION_DAYS: int = 180
+    # Distillation only keeps teacher labels we trust; below this the row is noise.
+    AI_DISTILL_MIN_CONFIDENCE: float = 0.85
+    AI_TRAINING_EXPORT_DIR: str = "training_exports"
+
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
