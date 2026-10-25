@@ -38,7 +38,7 @@ The backend must use a strict Ports and Adapters (Hexagonal) architecture to ens
 ```text
 backend/
 ├── app/
-│   ├── a_i/                       # Dedicated directory for HuggingFace/NLP (Suggested replies, sentiment)
+│   ├── ai/                       # Dedicated directory for HuggingFace/NLP (Suggested replies, sentiment)
 │   ├── core/                      # Global DB, Redis, Auth configs
 │   ├── social_studio/
 │   │   ├── router.py              # API Endpoints (FastAPI)
@@ -54,7 +54,7 @@ backend/
 ### Development Directives for Antigravity:
 1.  **Strict Interfaces:** Define `ISocialProvider` in `interfaces.py` with methods like `schedule_post()`, `fetch_analytics()`, and `send_dm_reply()`. All UI requests must talk to this interface, never directly to Meta or Zernio.
 2.  **Dependency Injection:** Use FastAPI's `Depends()` to dynamically resolve the active adapter. Read the tenant's `active_social_provider` from PostgreSQL and inject the correct adapter class into the route.
-3.  **Unified Webhook Ingress:** Build a single `/webhooks` endpoint in `webhook_parser.py`. It must identify if the payload is from Meta or Zernio, parse it into a standard `LunaMessage` Pydantic model, pass it to the `a_i/` module for intent classification/suggested replies, save it to PostgreSQL, and push it to Redis.
+3.  **Unified Webhook Ingress:** Build a single `/webhooks` endpoint in `webhook_parser.py`. It must identify if the payload is from Meta or Zernio, parse it into a standard `LunaMessage` Pydantic model, pass it to the `ai/` module for intent classification/suggested replies, save it to PostgreSQL, and push it to Redis.
 4.  **Real-time WebSockets:** Use Redis Pub/Sub connected to FastAPI WebSockets to push new DMs to the Next.js frontend instantly.
 5.  **Hyperfast Latency:** All adapters MUST use `httpx.AsyncClient` for non-blocking network I/O. Use Redis to cache analytics data heavily. 
 
