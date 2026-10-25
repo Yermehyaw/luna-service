@@ -31,10 +31,8 @@ class LunaModelClient:
         self._timeout = timeout
 
     def _chat(self, system: str, user: str, max_tokens: int = 160) -> str:
-        if not self._base_url or not self._api_key:
-            raise LunaModelError(
-                "LUNA_MODEL_URL or LUNA_MODEL_API_KEY is not configured"
-            )
+        if not self._base_url:
+            raise LunaModelError("LUNA_MODEL_URL is not configured")
 
         payload = {
             "model": self._model,
@@ -45,11 +43,14 @@ class LunaModelClient:
             "max_tokens": max_tokens,
             "temperature": 0.7,
         }
+        headers = (
+            {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        )
         try:
             response = httpx.post(
                 f"{self._base_url}/chat/completions",
                 json=payload,
-                headers={"Authorization": f"Bearer {self._api_key}"},
+                headers=headers,
                 timeout=self._timeout,
             )
             response.raise_for_status()
