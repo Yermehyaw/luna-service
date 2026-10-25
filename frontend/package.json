@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "better-auth": "^1.7.12",
     "clsx": "^2.1.1",
     "framer-motion": "^12.4.0",
     "lucide-react": "^0.475.0",

@@ -23,6 +23,9 @@ import {
   Palette,
   Bot,
   Laptop,
+  Menu,
+  X,
+  Trophy,
 } from 'lucide-react';
 import { LunaLogo } from '../components/shared/LunaMark';
 
@@ -57,25 +60,25 @@ const MODULES = [
     accentColor: '#BA68D7',
   },
   {
-    id: 'verify',
-    icon: FileCheck2,
-    title: 'Instant Document Pre-Clearance',
-    tag: 'Zero-Wait Desk',
-    desc: 'Upload IDs, receipts, and proofs before visiting. Customers arrive pre-cleared and move straight to service execution.',
-    points: ['Automated pre-triage scan', 'Instant document pass check', 'Integrated into queue ticket'],
-    href: '/tenant/acme-bank/verify',
-    cta: 'Pre-Clear Documents',
-    accentColor: '#12A05A',
+    id: 'leaderboard',
+    icon: Trophy,
+    title: 'Business Leaderboard & Performance',
+    tag: 'Live Rankings',
+    desc: 'Rank top-performing salons, auto garages, bakeries, clinics, and banks by fastest wait times, highest 5-star customer ratings, and queue throughput.',
+    points: ['Real-time SME & branch rankings', 'Fastest wait time & SLA tracking', 'Top customer satisfaction badges'],
+    href: '/leaderboard',
+    cta: 'View Business Leaderboard',
+    accentColor: '#FFA800',
   },
   {
     id: 'social',
     icon: Megaphone,
-    title: 'Social Studio & AI Broadcasts',
+    title: 'Live Broadcasts & Announcements',
     tag: 'Live Announcements',
     desc: 'Publish instant ticker announcements directly to customer portals, and draft messages with built-in Groq AI presets.',
     points: ['Public portal announcement tickers', 'Groq AI response & copy generation', 'Broadcast history log'],
-    href: '/tenant/acme-bank/staff/social-studio',
-    cta: 'Launch Social Studio',
+    href: '/tenant/acme-bank/staff/ops-console?tab=broadcast',
+    cta: 'Launch Broadcasts',
     accentColor: '#0057B8',
   },
 ];
@@ -93,42 +96,91 @@ const THEMES_PREVIEW = [
 
 const TENANTS = [
   {
+    name: "Kemi's Hair & Beauty Lounge",
+    slug: 'kemis-lounge',
+    industry: 'Hair Salon, Nails & Spa',
+    desc: 'Boutique styling chairs, braiding stations, lookbook pre-selection, and zero-wait VIP lounge.',
+    badge: 'Small Business · Salon',
+    scale: 'sme',
+    color: '#831843',
+    icon: '💇',
+  },
+  {
+    name: 'QuickFix AutoCare Garage',
+    slug: 'quickfix-auto',
+    industry: 'Auto Repair & Oil Lube Bays',
+    desc: 'Timed service bays, vehicle fault checklist pre-upload, and live mechanic status tracking.',
+    badge: 'Small Business · Auto',
+    scale: 'sme',
+    color: '#1E293B',
+    icon: '🚗',
+  },
+  {
+    name: 'The Daily Grind Cafe & Bakery',
+    slug: 'daily-grind',
+    industry: 'Specialty Coffee & Bakery',
+    desc: 'Express pickup window for fresh sourdough batches, breakfast orders, and custom cake consultations.',
+    badge: 'Small Business · Cafe',
+    scale: 'sme',
+    color: '#3C2A21',
+    icon: '🥐',
+  },
+  {
+    name: 'Apex Boutique Dental & Vision',
+    slug: 'apex-dental',
+    industry: 'Private Dental & Optical Studio',
+    desc: 'Private consultation suites, online insurance pre-clearance, and zero-wait health triage.',
+    badge: 'Small Business · Clinic',
+    scale: 'sme',
+    color: '#0F766E',
+    icon: '🦷',
+  },
+  {
     name: 'Acme Bank',
     slug: 'acme-bank',
     industry: 'Retail & Business Banking',
     desc: 'Priority teller windows, timed cash deposit intake, and foreign exchange queues.',
-    badge: 'Banking Flagship',
+    badge: 'Enterprise · Banking',
+    scale: 'enterprise',
     color: '#0057B8',
+    icon: '🏦',
   },
   {
     name: 'City General Hospital',
     slug: 'city-hospital',
     industry: 'Healthcare & Clinical Triage',
     desc: 'Outpatient consultation windows, pre-cleared lab diagnostics, and emergency triage.',
-    badge: 'Healthcare Hub',
+    badge: 'Enterprise · Hospital',
+    scale: 'enterprise',
     color: '#12A05A',
+    icon: '🏥',
   },
   {
     name: 'Luna Mobile & Fiber',
     slug: 'luna-telecom',
     industry: 'Telecom & High-Speed Internet',
     desc: 'Express SIM replacement, biometric re-registration, and device pickup appointments.',
-    badge: 'Telecom Retail',
+    badge: 'Enterprise · Telecom',
+    scale: 'enterprise',
     color: '#FF8A00',
+    icon: '📱',
   },
 ];
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'queue' | 'ops' | 'verify' | 'social'>('queue');
+  const [activeTab, setActiveTab] = useState<'queue' | 'ops' | 'leaderboard' | 'social'>('queue');
+  const [tenantFilter, setTenantFilter] = useState<'all' | 'sme' | 'enterprise'>('all');
   const [claimedName, setClaimedName] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const currentModule = MODULES.find((m) => m.id === activeTab) || MODULES[0];
+  const filteredTenants = TENANTS.filter((t) => (tenantFilter === 'all' ? true : t.scale === tenantFilter));
 
   return (
-    <div className="min-h-screen bg-[#FFF6E9] text-[#291E29] selection:bg-[#FFA800] selection:text-[#291E29] font-sans">
+    <div className="min-h-screen bg-[#FFF6E9] text-[#291E29] selection:bg-[#FFA800] selection:text-[#291E29] font-sans overflow-x-hidden">
       {/* 1. TOP ANNOUNCEMENT TICKER */}
-      <div className="bg-[#291E29] text-[#FFF6E9] py-2 px-4 text-xs font-medium text-center flex items-center justify-center gap-2 border-b border-[#341539]">
-        <span className="flex h-2 w-2 rounded-full bg-[#FFA800] animate-pulse" />
+      <div className="bg-[#291E29] text-[#FFF6E9] py-2 px-4 text-xs font-medium text-center flex items-center justify-center gap-2 flex-wrap border-b border-[#341539]">
+        <span className="flex h-2 w-2 rounded-full bg-[#FFA800] animate-pulse shrink-0" />
         <span>
           <strong>Luna 2.0 is Live:</strong> Multi-tenant real-time queue WebSockets, FastAPI backend, and free subdomains (`yourname.luna.com`).
         </span>
@@ -149,6 +201,10 @@ export default function Home() {
               <a href="#features" className="hover:text-[#291E29] transition-colors">
                 Solutions
               </a>
+              <Link href="/leaderboard" className="text-[#291E29] hover:text-[#FFA800] transition-colors flex items-center gap-1 font-bold">
+                <Trophy className="h-3 w-3 text-[#FFA800]" />
+                <span>Leaderboard</span>
+              </Link>
               <a href="#subdomains" className="hover:text-[#291E29] transition-colors">
                 Free Subdomains
               </a>
@@ -161,23 +217,117 @@ export default function Home() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/login"
-              className="px-4 py-2 text-xs font-bold text-[#291E29] hover:bg-[#291E29]/5 rounded-xl transition"
+              className="hidden sm:inline-flex px-4 py-2 text-xs font-bold text-[#291E29] hover:bg-[#291E29]/5 rounded-xl transition"
             >
               Sign In
             </Link>
             <Link
               href="/register"
-              className="px-5 py-2.5 text-xs font-extrabold bg-[#291E29] text-[#FFF6E9] hover:bg-[#341539] rounded-xl shadow-md transition-transform hover:scale-105 flex items-center gap-1.5"
+              className="px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-extrabold bg-[#291E29] text-[#FFF6E9] hover:bg-[#341539] rounded-xl shadow-md transition-transform hover:scale-105 flex items-center gap-1.5"
             >
               <span>Get Started</span>
               <ArrowRight className="h-3.5 w-3.5 text-[#FFA800]" />
             </Link>
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-black/5 text-[#291E29] hover:bg-black/10 active:scale-95 transition"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Mobile Slide-Over Drawer Navigation */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative w-4/5 max-w-xs bg-[#291E29] text-[#FFF6E9] p-6 flex flex-col shadow-2xl z-10 animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-[#341539]">
+              <LunaLogo variant="light" size={28} />
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <nav className="mt-6 flex-1 space-y-2 text-sm font-bold">
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
+              >
+                Solutions &amp; Modules
+              </a>
+              <a
+                href="#subdomains"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
+              >
+                Free Subdomain Registry
+              </a>
+              <a
+                href="#themes"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
+              >
+                8 Curated Themes
+              </a>
+              <a
+                href="#tenants"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
+              >
+                Live SME &amp; Enterprise Portals
+              </a>
+              <Link
+                href="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
+              >
+                Platform Admin Dashboard
+              </Link>
+              <Link
+                href="/admin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-3 py-2.5 rounded-xl text-[#FFA800] bg-[#FFA800]/10 font-bold"
+              >
+                Admin Master Control
+              </Link>
+            </nav>
+
+            <div className="pt-4 border-t border-[#341539] mt-auto space-y-2">
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-center py-2.5 rounded-xl text-xs font-bold text-white hover:bg-white/10"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#FFA800] text-xs font-extrabold text-[#291E29] shadow-md"
+              >
+                <span>Get Started Free</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. HERO SECTION */}
       <section className="relative overflow-hidden pt-12 pb-20 lg:pt-20 lg:pb-28">
@@ -187,7 +337,7 @@ export default function Home() {
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#291E29]/5 border border-[#291E29]/10 px-4 py-1.5 text-xs font-bold text-[#291E29]">
                 <Sparkles className="h-3.5 w-3.5 text-[#FFA800]" />
-                <span>Next-Gen Enterprise Queue & Operations Infrastructure</span>
+                <span>Next-Gen Smart Queues for SMEs, Local Shops &amp; Enterprises</span>
               </div>
 
               <h1 className="font-display text-4xl sm:text-6xl font-extrabold text-[#291E29] leading-[1.08] tracking-tight">
@@ -197,26 +347,27 @@ export default function Home() {
               </h1>
 
               <p className="text-base sm:text-lg text-[#291E29]/75 max-w-2xl leading-relaxed">
-                Luna provides banks, hospitals, telecoms, and enterprises with an intelligent customer service delivery system.
-                Timed arrival tickets, document pre-clearance from home, real-time counter triage, and instant AI broadcasts—all from your dedicated <strong>free subdomain</strong> (`yourname.luna.com`).
+                Whether you run a busy hair salon, auto repair garage, artisan bakery, private clinic, or tier-1 bank:
+                Luna powers timed arrival windows, photo &amp; document pre-clearance, and zero lobby waiting.
+                Run your whole shop directly from any smartphone, tablet, or multi-branch operations console on your <strong>free subdomain</strong> (`yourname.luna.com`).
               </p>
 
               {/* Subdomain Quick Claim Input */}
               <div className="p-2 sm:p-2.5 rounded-2xl bg-white border border-[#291E29]/15 shadow-xl flex flex-col sm:flex-row gap-2 max-w-xl">
-                <div className="flex-1 flex items-center px-3 py-2 bg-slate-50 rounded-xl text-xs font-mono">
+                <div className="flex-1 flex items-center px-3 py-2.5 bg-slate-50 rounded-xl text-base sm:text-xs font-mono min-h-[44px]">
                   <span className="text-slate-400 select-none">https://</span>
                   <input
                     type="text"
                     placeholder="your-business"
                     value={claimedName}
                     onChange={(e) => setClaimedName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    className="bg-transparent font-bold text-[#291E29] focus:outline-none w-full px-1"
+                    className="bg-transparent font-bold text-[#291E29] focus:outline-none w-full px-1 text-base sm:text-xs"
                   />
                   <span className="text-slate-400 select-none font-semibold">.luna.com</span>
                 </div>
                 <Link
                   href={`/register?subdomain=${encodeURIComponent(claimedName || 'mybusiness')}`}
-                  className="rounded-xl bg-[#291E29] px-6 py-3 text-xs font-extrabold text-[#FFF6E9] hover:bg-[#341539] transition flex items-center justify-center gap-2 shadow-md shrink-0"
+                  className="rounded-xl bg-[#291E29] px-6 py-3 text-xs font-extrabold text-[#FFF6E9] hover:bg-[#341539] transition flex items-center justify-center gap-2 shadow-md shrink-0 min-h-[44px]"
                 >
                   <Globe className="h-4 w-4 text-[#FFA800]" />
                   <span>Claim Free Domain</span>
@@ -489,11 +640,11 @@ export default function Home() {
 
               <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2">
-                  <Bot className="h-4 w-4 text-[#BA68D7]" />
-                  <span className="font-semibold text-slate-700">Need a unique look?</span>
+                  <Palette className="h-4 w-4 text-[#BA68D7]" />
+                  <span className="font-semibold text-slate-700">Need a custom look?</span>
                 </div>
                 <span className="text-[11px] text-slate-500">
-                  Chat with <strong>Groq AI Studio</strong> inside Tenant Settings
+                  Choose from <strong>8 free themes</strong> or fine-tune colors in settings
                 </span>
               </div>
             </div>
@@ -504,6 +655,82 @@ export default function Home() {
       {/* 6. LIVE TENANTS PORTAL DIRECTORY */}
       <section id="tenants" className="py-20 bg-white border-t border-[#291E29]/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          
+          {/* SME vs Enterprise Capability Showcase */}
+          <div className="rounded-3xl border border-[#291E29]/15 bg-gradient-to-br from-white to-[#FFF6E9] p-6 sm:p-10 shadow-sm space-y-6">
+            <div className="text-center max-w-2xl mx-auto space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#FFA800] bg-[#291E29] px-3.5 py-1 rounded-full">
+                SMEs &amp; Enterprises Side-by-Side
+              </span>
+              <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-[#291E29]">
+                How Luna Adapts to Your Business Size
+              </h3>
+              <p className="text-xs text-[#291E29]/70">
+                No complex setup. Run a single-counter salon chair queue on your phone, or manage 50 hospital consultation desks.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+              {/* SME Card */}
+              <div className="rounded-2xl border border-pink-200 bg-pink-50/50 p-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl p-2 rounded-xl bg-white shadow-xs">🏪</span>
+                  <div>
+                    <h4 className="font-bold text-base text-slate-900">For Small Businesses &amp; Local Shops</h4>
+                    <p className="text-[11px] text-slate-500">Salons, barbers, auto repair, cafes, bakeries &amp; boutiques</p>
+                  </div>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-700">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Zero Hardware Required:</strong> Run your entire queue and call customers right from your smartphone or tablet.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Instant Lookbook &amp; Checklist Pre-Clearance:</strong> Let customers upload hair reference photos or vehicle fault checklists before arriving.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Free Custom Subdomain:</strong> Share your branded link (`yoursalon.luna.com`) on Instagram, WhatsApp, or Google Maps.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <span><strong>Solo Mode:</strong> 1-tap call &amp; serve interface tailored for solo stylists, mechanics, and baristas.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Enterprise Card */}
+              <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl p-2 rounded-xl bg-white shadow-xs">🏛️</span>
+                  <div>
+                    <h4 className="font-bold text-base text-slate-900">For Enterprises &amp; Institutions</h4>
+                    <p className="text-[11px] text-slate-500">Commercial banks, general hospitals, telecoms &amp; civic centers</p>
+                  </div>
+                </div>
+                <ul className="space-y-2 text-xs text-slate-700">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span><strong>Multi-Branch Telemetry:</strong> Live WebSocket feeds across 50+ nationwide branch lobbies with peak load indicators.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span><strong>SLA &amp; Window Duration Tracking:</strong> Automatic alerts when counter handling times exceed strict SLA targets.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span><strong>Multi-Window Ticket Routing:</strong> Transfer customers seamlessly from intake triage to specialist consultations.</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span><strong>Cryptographic Pre-Clearance:</strong> KYC documents, bank verification, and lab referrals verified before lobby entry.</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <span className="text-xs font-bold uppercase tracking-wider text-[#BA68D7] bg-[#291E29] px-3.5 py-1 rounded-full">
               Live Interactive Demos
@@ -512,20 +739,58 @@ export default function Home() {
               Explore sample business tenants
             </h2>
             <p className="text-xs text-[#291E29]/70">
-              Test customer booking, document clearance, and staff ops consoles on pre-configured enterprise portals.
+              Test customer booking, document &amp; photo clearance, and staff ops consoles on pre-configured SME &amp; enterprise portals.
             </p>
+
+            {/* Filter Pills */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setTenantFilter('all')}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition min-h-[40px] ${
+                  tenantFilter === 'all'
+                    ? 'bg-[#291E29] text-[#FFF6E9] shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                All Demos ({TENANTS.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setTenantFilter('sme')}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 min-h-[40px] ${
+                  tenantFilter === 'sme'
+                    ? 'bg-[#831843] text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>🏪 Small Businesses &amp; SMEs ({TENANTS.filter((t) => t.scale === 'sme').length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTenantFilter('enterprise')}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 min-h-[40px] ${
+                  tenantFilter === 'enterprise'
+                    ? 'bg-[#0057B8] text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <span>🏛️ Enterprises &amp; Institutions ({TENANTS.filter((t) => t.scale === 'enterprise').length})</span>
+              </button>
+            </div>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6">
-            {TENANTS.map((tenant) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredTenants.map((tenant) => (
               <div
                 key={tenant.slug}
                 className="rounded-3xl border border-[#291E29]/15 bg-[#FFF6E9]/50 p-6 flex flex-col justify-between shadow-sm hover:shadow-lg transition space-y-6"
               >
                 <div className="space-y-4">
                   <div className="flex justify-between items-start">
-                    <span className="rounded-full bg-white border border-[#291E29]/10 px-3 py-1 text-[11px] font-bold text-[#291E29]">
-                      {tenant.badge}
+                    <span className="rounded-full bg-white border border-[#291E29]/10 px-3 py-1 text-[11px] font-bold text-[#291E29] flex items-center gap-1">
+                      <span>{tenant.icon}</span>
+                      <span>{tenant.badge}</span>
                     </span>
                     <span className="text-xs font-mono text-slate-400">{tenant.slug}.luna.com</span>
                   </div>
@@ -541,7 +806,7 @@ export default function Home() {
                 <div className="space-y-2 pt-4 border-t border-[#291E29]/10 text-xs">
                   <Link
                     href={`/tenant/${tenant.slug}`}
-                    className="w-full flex items-center justify-between rounded-xl bg-[#291E29] px-4 py-2.5 font-bold text-[#FFF6E9] hover:bg-[#341539] transition"
+                    className="w-full flex items-center justify-between rounded-xl bg-[#291E29] px-4 py-2.5 font-bold text-[#FFF6E9] hover:bg-[#341539] transition min-h-[44px]"
                   >
                     <span>View Customer Portal</span>
                     <ExternalLink className="h-3.5 w-3.5 text-[#FFA800]" />
@@ -550,13 +815,13 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-2">
                     <Link
                       href={`/tenant/${tenant.slug}/book-queue`}
-                      className="rounded-xl border border-[#291E29]/20 bg-white py-2 text-center text-[11px] font-bold text-[#291E29] hover:bg-slate-50 transition"
+                      className="rounded-xl border border-[#291E29]/20 bg-white py-2 text-center text-[11px] font-bold text-[#291E29] hover:bg-slate-50 transition min-h-[40px] flex items-center justify-center"
                     >
                       Book Ticket
                     </Link>
                     <Link
                       href={`/tenant/${tenant.slug}/staff/ops-console`}
-                      className="rounded-xl border border-[#291E29]/20 bg-white py-2 text-center text-[11px] font-bold text-[#291E29] hover:bg-slate-50 transition"
+                      className="rounded-xl border border-[#291E29]/20 bg-white py-2 text-center text-[11px] font-bold text-[#291E29] hover:bg-slate-50 transition min-h-[40px] flex items-center justify-center"
                     >
                       Staff Console
                     </Link>
@@ -598,8 +863,9 @@ export default function Home() {
               <ul className="space-y-2 text-[#FFF6E9]/75">
                 <li><Link href="/register" className="hover:text-white">Claim Subdomain</Link></li>
                 <li><Link href="/login" className="hover:text-white">Staff Login</Link></li>
+                <li><Link href="/admin" className="hover:text-[#FFA800] font-bold text-[#FFA800]">Admin Master Control</Link></li>
                 <li><Link href="/tenant/acme-bank/staff/settings" className="hover:text-white">8 Theme Customizer</Link></li>
-                <li><Link href="/tenant/acme-bank/staff/social-studio" className="hover:text-white">Groq AI Studio</Link></li>
+                <li><Link href="/tenant/acme-bank/staff/ops-console?tab=broadcast" className="hover:text-white">Live Operations Broadcasts</Link></li>
               </ul>
             </div>
           </div>
