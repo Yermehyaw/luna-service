@@ -12,6 +12,7 @@
 .DS_Store
 *.pem
 *.tsbuildinfo
+package-lock.json
 
 # Debug logs
 npm-debug.log*
