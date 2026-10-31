@@ -177,7 +177,7 @@ export default function Home() {
   const filteredTenants = TENANTS.filter((t) => (tenantFilter === 'all' ? true : t.scale === tenantFilter));
 
   return (
-    <div className="min-h-screen bg-[#FFF6E9] text-[#291E29] selection:bg-[#FFA800] selection:text-[#291E29] font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#f7f6f2] text-[#291E29] selection:bg-[#ead9f1] selection:text-[#291E29] font-sans overflow-x-hidden">
       {/* 1. TOP ANNOUNCEMENT TICKER */}
       <div className="bg-[#291E29] text-[#FFF6E9] py-2 px-4 text-xs font-medium text-center flex items-center justify-center gap-2 flex-wrap border-b border-[#341539]">
         <span className="flex h-2 w-2 rounded-full bg-[#FFA800] animate-pulse shrink-0" />
@@ -190,8 +190,8 @@ export default function Home() {
       </div>
 
       {/* 2. NAVBAR */}
-      <header className="sticky top-0 z-50 bg-[#FFF6E9]/90 backdrop-blur-md border-b border-[#291E29]/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-[#f7f6f2]/90 backdrop-blur-xl">
+        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2 group">
               <LunaLogo size={34} variant="dark" showTagline />
@@ -226,7 +226,7 @@ export default function Home() {
             </Link>
             <Link
               href="/register"
-              className="px-4 sm:px-5 py-2 sm:py-2.5 text-xs font-extrabold bg-[#291E29] text-[#FFF6E9] hover:bg-[#341539] rounded-xl shadow-md transition-transform hover:scale-105 flex items-center gap-1.5"
+              className="flex items-center gap-1.5 rounded-xl bg-[#291E29] px-4 py-2.5 text-xs font-extrabold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[#4a264e] sm:px-5"
             >
               <span>Get Started</span>
               <ArrowRight className="h-3.5 w-3.5 text-[#FFA800]" />
