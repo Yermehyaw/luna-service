@@ -30,6 +30,7 @@ import {
   ArrowRightLeft,
   Check,
   MessageSquare,
+  House,
 } from 'lucide-react';
 
 export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +40,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
   const { user, loginAsStaffMember, hasPrivilege } = useAuth();
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isSlim, setIsSlim] = useState(false);
+  const [isSlim, setIsSlim] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [switchAccountOpen, setSwitchAccountOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState<string | null>(null);
@@ -81,6 +82,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
     privilege?: StaffPrivilege;
     adminOnly?: boolean;
   }[] = [
+    { name: 'Home', href: `${basePath}/dashboard`, icon: House },
     { name: 'Ops Console', href: `${basePath}/ops-console`, icon: LayoutDashboard, privilege: 'ops_console' },
     { name: 'Social Studio', href: `${basePath}/social-studio`, icon: MessageSquare, privilege: 'social_studio' },
     { name: 'Live Broadcasts', href: `${basePath}/ops-console?tab=broadcast`, icon: Share2, privilege: 'ops_console' },
@@ -93,9 +95,9 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
 
   // Primary items for mobile bottom bar
   const bottomBarItems = [
+    { name: 'Home', href: `${basePath}/dashboard`, icon: House },
     { name: 'Ops', href: `${basePath}/ops-console`, icon: LayoutDashboard },
     { name: 'Social', href: `${basePath}/social-studio`, icon: MessageSquare },
-    { name: 'Broadcast', href: `${basePath}/ops-console?tab=broadcast`, icon: Share2 },
     { name: 'Services', href: `${basePath}/services`, icon: Briefcase },
     isOwner
       ? { name: 'Settings', href: `${basePath}/settings`, icon: Settings }
@@ -120,9 +122,9 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCFBF4] flex flex-col font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+    <div className="min-h-screen bg-[#f7f6f2] flex flex-col font-sans selection:bg-[#ead9f1] selection:text-[#291E29]">
       {/* Universal Sticky Top Header Bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[#341539] bg-[#291E29] px-3 sm:px-4 py-2.5 sm:py-3 text-[#FFF6E9] shadow-md">
+      <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between border-b border-[#4b3650] bg-[#291E29] px-3 text-[#FFF6E9] shadow-lg sm:px-4">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Hamburger Menu Toggle Button */}
           <button
@@ -130,13 +132,19 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
             onClick={handleToggleSidebar}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-[#FFA800] hover:text-[#291E29] active:scale-95 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FFA800] shrink-0"
             aria-label="Toggle navigation sidebar"
-            title={sidebarOpen ? 'Collapse sidebar into hamburger menu' : 'Expand navigation sidebar'}
+            title={isSlim ? 'Open navigation sidebar' : 'Close navigation sidebar'}
           >
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <LunaLogo variant="light" size={26} />
+          <Link href={`${basePath}/dashboard`} className="flex items-center gap-2 shrink-0">
+            {tenant.branding?.logoUrl ? (
+              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-sm">
+                <img src={tenant.branding.logoUrl} alt={`${tenant.name} logo`} className="h-full w-full object-contain" />
+              </span>
+            ) : (
+              <LunaLogo variant="light" size={26} />
+            )}
           </Link>
 
           <div className="border-l border-white/20 pl-2.5 sm:pl-3 min-w-0">
@@ -304,7 +312,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
         {/* Desktop Collapsible Sidebar */}
         <aside
           className={`hidden md:flex flex-col border-r border-[#341539] bg-[#291E29] text-[#FFF6E9] shadow-xl shrink-0 transition-all duration-300 ease-in-out ${
-            isSlim ? 'w-20 p-3 items-center' : 'w-64 p-4'
+            isSlim ? 'w-0 overflow-hidden p-0 opacity-0 pointer-events-none' : 'w-64 p-4 opacity-100'
           }`}
         >
           {/* Sidebar Top Header & Collapse Controls */}

@@ -19,9 +19,29 @@
 }
 
 body {
-  background-color: var(--luna-cream);
+  min-width: 320px;
+  background: #f7f6f2;
   color: var(--luna-purple);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+html { scroll-behavior: smooth; }
+
+button, a, input, select, textarea { outline-offset: 3px; }
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(112, 45, 123, 0.28);
+}
+
+::selection { background: #ead9f1; color: #291E29; }
+
+@layer components {
+  .luna-page { @apply min-h-screen bg-[#f7f6f2] text-[#291E29]; }
+  .luna-surface { @apply rounded-2xl border border-slate-200 bg-white shadow-sm; }
+  .luna-kicker { @apply text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#702D7B]; }
+  .luna-action { @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#291E29] px-4 text-xs font-extrabold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#4a264e]; }
 }
 
 @keyframes marquee {
@@ -44,4 +64,10 @@ body {
 
 .bg-luna-tangerine-gradient {
   background: linear-gradient(135deg, #FFA800 0%, #FFB11A 100%);
+}
+
+@layer components {
+  .input {
+    @apply min-h-[48px] w-full rounded-xl border border-[#ded8e0] bg-[#fcfbfc] py-3 pl-10 pr-3 text-base font-medium text-[#291E29] outline-none transition placeholder:text-slate-400 focus:border-[#702D7B] focus:bg-white focus:ring-4 focus:ring-[#702D7B]/10 sm:text-xs;
+  }
 }

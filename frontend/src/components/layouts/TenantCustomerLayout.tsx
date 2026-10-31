@@ -33,10 +33,10 @@ export function TenantCustomerLayout({
   ];
 
   return (
-    <div className="min-h-screen bg-[var(--tenant-bg,#FFF6E9)] text-[var(--tenant-text,#291E29)] flex flex-col font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+    <div className="min-h-screen bg-[var(--tenant-bg,#f7f6f2)] text-[var(--tenant-text,#291E29)] flex flex-col font-sans selection:bg-[#ead9f1] selection:text-[#291E29]">
       {/* Sticky Header with Hamburger Menu */}
-      <header className="border-b border-black/5 bg-white/90 backdrop-blur-md sticky top-0 z-40 shadow-xs">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4">
+      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
+        <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link
             href={basePath}
             className="flex items-center gap-2.5 sm:gap-3 font-display text-base sm:text-lg font-extrabold text-[#291E29] max-w-[200px] sm:max-w-none"
@@ -72,7 +72,7 @@ export function TenantCustomerLayout({
                   key={link.name}
                   href={link.href}
                   className={`transition-colors py-1 ${
-                    isActive ? 'text-[#FFA800] font-extrabold border-b-2 border-[#FFA800]' : 'hover:text-[#FFA800]'
+                    isActive ? 'text-[#702D7B] font-extrabold' : 'hover:text-[#702D7B]'
                   }`}
                 >
                   {link.name}
@@ -81,7 +81,7 @@ export function TenantCustomerLayout({
             })}
             <Link
               href={`${basePath}/book-queue`}
-              className="rounded-xl bg-[#FFA800] px-4 py-2 text-xs font-extrabold text-[#291E29] shadow-sm hover:bg-[#FFB11A] transition-all"
+              className="rounded-xl bg-[#291E29] px-4 py-2.5 text-xs font-extrabold text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#4a264e]"
             >
               Book Ticket
             </Link>

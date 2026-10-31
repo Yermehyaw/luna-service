@@ -10,6 +10,13 @@ export interface TenantRepository {
 }
 
 let dynamicTenants: Tenant[] = [...MOCK_TENANTS];
+const LOCAL_TENANTS_KEY = 'luna_dynamic_tenants';
+
+function persistDynamicTenants() {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_TENANTS_KEY, JSON.stringify(dynamicTenants));
+  }
+}
 
 export class MockTenantRepository implements TenantRepository {
   async getTenants(): Promise<Tenant[]> {
@@ -74,6 +81,7 @@ export class MockTenantRepository implements TenantRepository {
     };
 
     dynamicTenants = [newTenant, ...dynamicTenants];
+    persistDynamicTenants();
     return Promise.resolve(newTenant);
   }
 
@@ -95,6 +103,7 @@ export class MockTenantRepository implements TenantRepository {
       },
     };
     dynamicTenants[index] = updated;
+    persistDynamicTenants();
     return Promise.resolve(updated);
   }
 }

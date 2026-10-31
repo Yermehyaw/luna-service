@@ -23,6 +23,18 @@ export function TenantProvider({
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    try {
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      const tenantSlug = pathParts[0] === 'tenant' ? pathParts[1] : undefined;
+      const savedTenants = JSON.parse(localStorage.getItem('luna_dynamic_tenants') || '[]') as Tenant[];
+      const savedTenant = savedTenants.find((item) => item.slug === tenantSlug);
+      if (savedTenant) setTenant(savedTenant);
+    } catch {
+      // The mock repository remains the fallback when local storage is unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
     if (tenant) {
       applyTenantBranding(tenant.branding);
     }

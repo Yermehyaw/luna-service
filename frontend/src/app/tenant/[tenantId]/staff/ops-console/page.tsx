@@ -640,35 +640,33 @@ function StaffOpsConsoleContent() {
 
   return (
     <TenantStaffLayout>
-      <div className="space-y-6 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+      <div className="space-y-5 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
         {/* ========================================================= */}
         {/* TOP HEADER WITH BRANCH SELECTOR & DATE                    */}
         {/* ========================================================= */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 md:flex-row md:items-end">
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#291E29] text-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider">
-                <LayoutDashboard className="h-3.5 w-3.5 text-[#FFA800]" />
-                Operations Console
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#702D7B]">
+                Today&apos;s operations
               </span>
               {isConnected ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[11px] font-bold border border-emerald-300">
-                  <Radio className="h-3 w-3 text-emerald-600 animate-pulse" />
-                  Live WebSocket
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Live
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-[11px] font-medium border border-slate-200">
-                  <RefreshCw className="h-3 w-3 animate-spin text-slate-400" />
                   Synced
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mt-2 font-display">
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#291E29] sm:text-4xl">
               Run today&apos;s queues
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Call tickets, manage counters and keep every branch flowing &mdash; with voice announcements built in.
+            <p className="mt-1.5 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
+              See what needs attention, call the next guest, and keep every branch moving.
             </p>
           </div>
 
@@ -676,7 +674,7 @@ function StaffOpsConsoleContent() {
           <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
             {/* Branch Selector */}
             <div className="relative">
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-2xs">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm">
                 <Building className="h-4 w-4 text-[#FFA800]" />
                 <select
                   value={selectedBranch}
@@ -698,7 +696,7 @@ function StaffOpsConsoleContent() {
             </div>
 
             {/* Date Picker */}
-            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-2xs">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm">
               <Calendar className="h-4 w-4 text-slate-500" />
               <span>{selectedDate}</span>
             </div>
@@ -731,8 +729,8 @@ function StaffOpsConsoleContent() {
         {/* ========================================================= */}
         {/* TOP TAB SWITCHER: CONSOLE VS LIVE BROADCASTS              */}
         {/* ========================================================= */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-          <div className="inline-flex rounded-2xl bg-slate-200/60 p-1 border border-slate-200/80">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
             <button
               type="button"
               onClick={() => {
@@ -755,8 +753,8 @@ function StaffOpsConsoleContent() {
                 router.push(`${basePath}/ops-console?tab=broadcast`);
               }}
               className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition-all relative ${
-                activeTab === 'broadcast'
-                  ? 'bg-[#FFA800] text-[#291E29] shadow-sm font-black'
+                  activeTab === 'broadcast'
+                    ? 'bg-[#fef3c7] text-[#92400e] shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
@@ -804,8 +802,8 @@ function StaffOpsConsoleContent() {
             {/* ========================================================= */}
             {/* TOP METRICS KPI BAR (6 TILES)                             */}
             {/* ========================================================= */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-[#291E29] bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               SCHEDULED
             </span>
@@ -813,7 +811,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">tickets today</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-[#FFA800] bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               WAITING
             </span>
@@ -821,7 +819,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">in queue</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-blue-500 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               AT COUNTERS
             </span>
@@ -829,7 +827,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">called + serving</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-emerald-500 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               SERVED
             </span>
@@ -839,7 +837,7 @@ function StaffOpsConsoleContent() {
             </span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-slate-300 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               NO-SHOW
             </span>
@@ -847,7 +845,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">missed / cancelled</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-purple-500 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               NETWORK LIVE
             </span>
@@ -859,11 +857,11 @@ function StaffOpsConsoleContent() {
         {/* ========================================================= */}
         {/* OPERATIONAL HERO TRIAGE GRID (3 CARDS)                    */}
         {/* ========================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
           {/* ------------------------------------------------------- */}
           {/* CARD 1: NEXT UP HERO CARD (4 COLS)                      */}
           {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 rounded-3xl border border-[#291E29]/15 bg-gradient-to-br from-[#291E29] to-[#341539] p-5 sm:p-6 text-white shadow-lg flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-4 rounded-2xl border border-[#291E29]/15 bg-gradient-to-br from-[#291E29] via-[#341539] to-[#52215A] p-5 text-white shadow-lg sm:p-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#FFA800]">
@@ -924,7 +922,7 @@ function StaffOpsConsoleContent() {
           {/* ------------------------------------------------------- */}
           {/* CARD 2: BRANCH ANNOUNCEMENTS (4 COLS)                   */}
           {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -983,7 +981,7 @@ function StaffOpsConsoleContent() {
           {/* ------------------------------------------------------- */}
           {/* CARD 3: COUNTERS GRID (4 COLS)                          */}
           {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-3">
+          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div>
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="font-extrabold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
