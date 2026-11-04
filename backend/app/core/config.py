@@ -52,6 +52,17 @@ class Settings(BaseSettings):
     AI_DISTILL_MIN_CONFIDENCE: float = 0.85
     AI_TRAINING_EXPORT_DIR: str = "training_exports"
 
+    # --- Social Studio (Hexagonal Ports & Adapters) ---
+    DEFAULT_SOCIAL_PROVIDER: str = "zernio"
+    ZERNIO_API_KEY: str = ""
+    ZERNIO_BASE_URL: str = "https://api.zernio.com/v1"
+    SOCIALAPI_AI_KEY: str = ""
+    SOCIALAPI_BASE_URL: str = "https://api.socialapi.ai/v1"
+    POSTPROXY_API_KEY: str = ""
+    POSTPROXY_BASE_URL: str = "https://api.postproxy.dev/v1"
+    FCM_SERVER_KEY: str = ""
+    SOCIAL_CREDITS_TRIAL_DEFAULT: int = 50
+
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
