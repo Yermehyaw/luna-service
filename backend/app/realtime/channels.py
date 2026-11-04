@@ -18,10 +18,12 @@ string, none of which can contain a colon.
 
 BRANCH_CHANNEL_PREFIX = "queue:branch"
 TICKET_CHANNEL_PREFIX = "queue:ticket"
+SOCIAL_INBOX_CHANNEL_PREFIX = "social:inbox"
 
 # Matches every queue channel, so one Redis subscription covers both kinds
 # instead of needing a fresh PSUBSCRIBE whenever a branch or ticket connects.
 CHANNEL_PATTERN = "queue:*"
+SOCIAL_CHANNEL_PATTERN = "social:*"
 
 
 def branch_channel(business_id: str, branch_id: str) -> str:
@@ -32,3 +34,8 @@ def branch_channel(business_id: str, branch_id: str) -> str:
 def ticket_channel(business_id: str, ticket_number: str) -> str:
     """Channel a single customer subscribes to: their own ticket only."""
     return f"{TICKET_CHANNEL_PREFIX}:{business_id}:{ticket_number}"
+
+
+def social_inbox_channel(business_id: str) -> str:
+    """Channel staff Social Studio subscribes to: incoming social DMs/queries."""
+    return f"{SOCIAL_INBOX_CHANNEL_PREFIX}:{business_id}"
