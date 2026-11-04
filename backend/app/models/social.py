@@ -123,6 +123,7 @@ class SocialPost(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     author_id: Mapped[str | None] = mapped_column(String(36), index=True)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    media_url: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=PostStatus.DRAFT.value, index=True
     )
@@ -190,6 +191,7 @@ class SocialQuery(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     author_handle: Mapped[str] = mapped_column(String(255), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    media_url: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=QueryStatus.OPEN.value, index=True
     )

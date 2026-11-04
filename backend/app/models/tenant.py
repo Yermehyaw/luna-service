@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
@@ -25,6 +25,12 @@ class Business(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     subdomain: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     ticket_prefix: Mapped[str] = mapped_column(
         String(8), nullable=False, default="LM", server_default="LM"
+    )
+    active_social_provider: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="zernio", server_default="zernio"
+    )
+    social_credits: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=50, server_default="50"
     )
 
     branches: Mapped[list[Branch]] = relationship(
