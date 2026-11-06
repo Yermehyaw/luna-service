@@ -25,7 +25,7 @@ The backend must be architected to transition through these three phases via sim
 *   **Methodology:** PWA Reminder Mode for publishing. 3rd-party APIs for reading/replying to DMs and fetching analytics.
 
 ### Phase 2: The Funded 3rd-Party Scaling
-*   **Trigger:** Users convert after the 7-day trial, generating revenue.
+*   **Trigger:** Users convert after a free trial for a certain no of days which ensures customers are already hooked on the product and williong to pay, thus generating revenue.
 *   **Action:** We consolidate API routing to a paid tier of a single provider (likely SocialAPI.ai or Postproxy) to handle higher volumes.
 *   **Engineering Effort:** Zero frontend rewrites. We simply update the `active_social_provider` flag in PostgreSQL, and the backend routes requests through the upgraded adapter.
 
@@ -43,8 +43,8 @@ The MVP relies on a strict freemium model governed by a **Social Credit (SC)** b
 ### The Trial & Billing Flow
 *   **Sign-Up:** Content ideas, post scheduling/calendar, and social analytics are available immediately.
 *   **The Inbox Lock:** The Unified Inbox is strictly **locked** for all newly onboarded clients.
-*   **The 7-Day Trial:** To unlock the Inbox, the client must enter Credit/Debit Card details upfront. This triggers a 7-day free trial limited to a maximum of **50 Social Credits (SC)**.
-*   **Conversion:** At the end of the 7-day trial, the system sends a payment reminder and auto-bills **20,000 Naira/month** for the Pro plan.
+*   **The 7-Day Trial:** To unlock the Inbox, the client must enter Credit/Debit Card details upfront. This triggers the free trial limited to a maximum of **50 Social Credits (SC)**.
+*   **Conversion:** At the end of the trial period, the system sends a payment reminder and auto-bills **20,000 Naira/month** for the Pro plan.
 *   **Pay-As-You-Go (PAYG):** If a user depletes their SC balance, they are prompted to purchase additional credit top-ups.
 
 ### The Social Credit (SC) Economy Rules
