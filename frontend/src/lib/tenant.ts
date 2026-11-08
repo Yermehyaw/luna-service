@@ -61,6 +61,7 @@ export class MockTenantRepository implements TenantRepository {
       area: newTenantData.area || 'Central District',
       rating: 5.0,
       reviewCount: 1,
+      plan: newTenantData.plan || 'free',
       branding: {
         primaryColor: newTenantData.branding?.primaryColor || '#0057B8',
         secondaryColor: newTenantData.branding?.secondaryColor || '#002F6C',

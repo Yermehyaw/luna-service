@@ -92,6 +92,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
     { name: 'Branches', href: `${basePath}/branches`, icon: GitBranch, privilege: 'manage_branches' },
     { name: 'Services', href: `${basePath}/services`, icon: Briefcase, privilege: 'manage_services' },
     { name: 'Analytics', href: `${basePath}/analytics`, icon: BarChart2, privilege: 'view_analytics' },
+    { name: 'Plans', href: `${basePath}/plans`, icon: CreditCard, adminOnly: true },
     { name: 'Payments', href: `${basePath}/payments`, icon: CreditCard, adminOnly: true },
     { name: 'AI Agents · Coming soon', href: `${basePath}/agents`, icon: Lock },
     { name: 'Branding & Settings', href: `${basePath}/settings`, icon: Settings, adminOnly: true },
