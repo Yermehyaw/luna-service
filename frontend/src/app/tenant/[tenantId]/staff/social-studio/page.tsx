@@ -145,6 +145,16 @@ export default function SocialStudioPage() {
   const savePost = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!postText.trim() || postHandles.length === 0 || !postDate || !postTime) return;
+    const isFreePlan = !tenant.plan || tenant.plan === 'free' || tenant.plan === 'free_subdomain';
+    const selectedMonth = postDate.slice(0, 7);
+    const postsThisMonth = scheduledPosts.filter((post) => {
+      const scheduledDate = new Date(post.scheduledAt);
+      return `${scheduledDate.getFullYear()}-${String(scheduledDate.getMonth() + 1).padStart(2, '0')}` === selectedMonth;
+    }).length;
+    if (isFreePlan && !editingPostId && postsThisMonth >= 10) {
+      setActionNotice('The Free plan includes 10 posts each month. Choose another month or upgrade your plan.');
+      return;
+    }
     setPostSaving(true);
     const scheduledAt = new Date(`${postDate}T${postTime}`).toISOString();
     const nextPost: ScheduledSocialPost = {
