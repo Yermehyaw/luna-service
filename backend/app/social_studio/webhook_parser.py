@@ -48,12 +48,36 @@ def parse_webhook_payload(
         media_url = data.get("media_url")
 
     elif prov in ("socialapi", "socialapi_ai"):
-        msg_id = payload.get("message_id", payload.get("id", msg_id))
-        business_id = payload.get("business_id", business_id)
-        platform = payload.get("network", payload.get("channel", "facebook"))
-        author_handle = payload.get("sender_handle", payload.get("from", "@customer"))
-        author_name = payload.get("sender_name")
-        body = payload.get("text", payload.get("body", ""))
+        # SocialAPI webhook event shape or interaction payload
+        event_data = payload.get("data", payload)
+        msg_id = event_data.get("id", payload.get("message_id", msg_id))
+        business_id = event_data.get("account_id", payload.get("business_id", business_id))
+        platform = event_data.get("platform", payload.get("network", "instagram"))
+
+        author_obj = event_data.get("author")
+        if isinstance(author_obj, dict) and author_obj:
+            username = author_obj.get("username", "customer")
+            author_handle = f"@{username}".replace("@@", "@")
+            author_name = author_obj.get("name") or author_obj.get("username")
+        else:
+            author_handle = payload.get("sender_handle") or event_data.get("sender_handle") or payload.get("from") or "@customer"
+            author_name = payload.get("sender_name") or event_data.get("sender_name") or author_handle.lstrip("@")
+
+        content_obj = event_data.get("content")
+        if isinstance(content_obj, dict) and content_obj:
+            body = content_obj.get("text", payload.get("text", ""))
+            media_list = content_obj.get("media") or []
+            if media_list and isinstance(media_list, list) and len(media_list) > 0:
+                media_url = media_list[0].get("url")
+        else:
+            body = payload.get("text", payload.get("body", event_data.get("text", "")))
+
+    elif prov == "planvortex":
+        msg_id = payload.get("event_id", payload.get("id", msg_id))
+        business_id = payload.get("org_id", payload.get("business_id", business_id))
+        platform = payload.get("channel", "x")
+        author_handle = payload.get("handle", "@customer")
+        body = payload.get("content", payload.get("text", ""))
         media_url = payload.get("media_url")
 
     elif prov == "postproxy":

@@ -53,15 +53,18 @@ class Settings(BaseSettings):
     AI_TRAINING_EXPORT_DIR: str = "training_exports"
 
     # --- Social Studio (Hexagonal Ports & Adapters) ---
-    DEFAULT_SOCIAL_PROVIDER: str = "zernio"
+    DEFAULT_SOCIAL_PROVIDER: str = "socialapi"
     ZERNIO_API_KEY: str = ""
     ZERNIO_BASE_URL: str = "https://api.zernio.com/v1"
     SOCIALAPI_AI_KEY: str = ""
-    SOCIALAPI_BASE_URL: str = "https://api.socialapi.ai/v1"
+    SOCIALAPI_BASE_URL: str = "https://api.social-api.ai/v1"
     POSTPROXY_API_KEY: str = ""
-    POSTPROXY_BASE_URL: str = "https://api.postproxy.dev/v1"
+    POSTPROXY_BASE_URL: str = "https://api.postproxy.dev"
+    PLANVORTEX_API_KEY: str = ""
+    PLANVORTEX_BASE_URL: str = "https://api.planvortex.com/v1"
     FCM_SERVER_KEY: str = ""
     SOCIAL_CREDITS_TRIAL_DEFAULT: int = 50
+    SOCIAL_PUBLISHING_MODE: str = "REMINDER"
 
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.

@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from app.models.tenant import Business
 from app.realtime.channels import social_inbox_channel
 from app.social_studio import credit_manager
+from app.social_studio.adapters.planvortex_adapter import PlanVortexAdapter
 from app.social_studio.adapters.postproxy_api import PostproxyAdapter
 from app.social_studio.adapters.reminder_mode import ReminderModeAdapter
 from app.social_studio.adapters.socialapi_ai import SocialApiAdapter
@@ -26,8 +27,12 @@ from app.social_studio.credit_manager import InsufficientCreditsError
 from app.social_studio.interfaces import (
     DmReplyResult,
     LunaMessage,
+    PostConfirmationResult,
+    ProviderCapabilities,
     ScheduleResult,
     SocialAnalyticsData,
+    SocialConversationSummary,
+    SocialMessageItem,
 )
 from app.social_studio.webhook_parser import parse_webhook_payload
 
@@ -288,3 +293,87 @@ def test_social_inbox_channel_isolation():
     assert ch1 == "social:inbox:tenant-a"
     assert ch2 == "social:inbox:tenant-b"
     assert ch1 != ch2
+
+
+# --- PlanVortex & Extended Provider Tests ---
+
+@pytest.mark.asyncio
+async def test_planvortex_adapter_inbox_and_reply():
+    adapter = PlanVortexAdapter(db=None)
+    inbox = await adapter.get_inbox("biz-pv-101")
+    assert isinstance(inbox, list)
+
+    res = await adapter.send_dm_reply(
+        business_id="biz-pv-101",
+        message_id="msg-pv-202",
+        reply_text="Your ticket has been escalated to support.",
+    )
+    assert res.success is True
+    assert res.message_id == "msg-pv-202"
+    assert "planvortex_sim_" in res.external_id
+
+
+def test_webhook_parser_planvortex():
+    payload = {
+        "event_id": "pv-evt-99",
+        "org_id": "biz-pv-303",
+        "channel": "instagram",
+        "handle": "@ade_ola",
+        "content": "Can I open an account with international passport?",
+    }
+    msg = parse_webhook_payload("planvortex", payload)
+    assert msg.id == "pv-evt-99"
+    assert msg.business_id == "biz-pv-303"
+    assert msg.platform == "instagram"
+    assert msg.author_handle == "@ade_ola"
+    assert msg.body == "Can I open an account with international passport?"
+
+
+@pytest.mark.asyncio
+async def test_credit_manager_get_tenant_capabilities():
+    biz = Business(
+        name="Lekki Boutique",
+        subdomain="lekki",
+        social_credits=25,
+        active_social_provider="socialapi",
+        tier="free",
+    )
+    db = MockAsyncDbSession(biz)
+
+    caps = await credit_manager.get_tenant_capabilities(db, str(biz.id))
+    assert isinstance(caps, ProviderCapabilities)
+    assert caps.publishing_mode == "REMINDER"
+    assert caps.active_provider == "socialapi"
+    assert caps.posts_limit_monthly == 10
+    assert caps.interactions_limit_monthly == 50
+    assert caps.social_credits_remaining == 25
+    assert caps.is_locked is False
+    assert caps.is_trial_active is True
+
+
+def test_social_conversation_summary_contract():
+    item = SocialMessageItem(
+        id="item-1",
+        sender="customer",
+        authorName="Kemi",
+        text="Hello, do you have branch in Ikeja?",
+        timestamp="10:00 AM",
+    )
+    summary = SocialConversationSummary(
+        id="conv-1",
+        platform="instagram",
+        authorName="Kemi",
+        authorHandle="@kemi",
+        avatarColor="from-purple-500 to-indigo-500",
+        initialTime="10:00 AM",
+        preview="Hello, do you have branch in Ikeja?",
+        sentiment="neutral",
+        category="General Inquiry",
+        urgent=False,
+        status="open",
+        messages=[item],
+    )
+    assert summary.id == "conv-1"
+    assert len(summary.messages) == 1
+    assert summary.messages[0].sender == "customer"
+

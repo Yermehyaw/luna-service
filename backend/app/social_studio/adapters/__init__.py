@@ -1,6 +1,7 @@
 """Adapters package for Social Studio vendor and PWA providers."""
 
 from app.social_studio.adapters.base import BaseSocialAdapter
+from app.social_studio.adapters.planvortex_adapter import PlanVortexAdapter
 from app.social_studio.adapters.postproxy_api import PostproxyAdapter
 from app.social_studio.adapters.reminder_mode import ReminderModeAdapter
 from app.social_studio.adapters.socialapi_ai import SocialApiAdapter
@@ -11,5 +12,6 @@ __all__ = [
     "ZernioAdapter",
     "SocialApiAdapter",
     "PostproxyAdapter",
+    "PlanVortexAdapter",
     "ReminderModeAdapter",
 ]

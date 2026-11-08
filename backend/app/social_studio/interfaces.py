@@ -71,12 +71,68 @@ class ScheduleResult(BaseModel):
 
     success: bool
     post_id: str
-    status: str  # scheduled | reminder_queued | published
+    status: str  # draft | scheduled | reminder_queued | pending_confirmation | published | missed_reminder
     scheduled_for: datetime | None = None
     platforms: list[str] = Field(default_factory=list)
-    mode: str = "REMINDER"  # REMINDER (PWA zero-cost) or AUTOMATED (native API)
+    mode: str = "REMINDER"  # REMINDER (PWA zero-cost) or DIRECT_API
     reminder_payload: dict[str, Any] | None = None
     error: str | None = None
+
+
+class SocialMessageItem(BaseModel):
+    """Individual message bubble inside a conversation thread."""
+
+    id: str
+    sender: str  # customer | staff | ai
+    authorName: str
+    text: str
+    timestamp: str
+
+
+class SocialConversationSummary(BaseModel):
+    """Full conversation model conforming to frontend SocialConversation contract."""
+
+    id: str
+    platform: str  # instagram | x | facebook | linkedin | tiktok | whatsapp
+    authorName: str
+    authorHandle: str
+    avatarColor: str = "#291E29"
+    initialTime: str = "Just now"
+    date: str = ""
+    preview: str
+    sentiment: str = "neutral"  # negative | neutral | positive
+    category: str = "General Inquiry"
+    urgent: bool = False
+    status: str = "open"  # open | urgent | resolved
+    assignee: str = "Unassigned"
+    messages: list[SocialMessageItem] = Field(default_factory=list)
+
+
+class ProviderCapabilities(BaseModel):
+    """Reflects active social API capabilities, publishing mode, and free-tier limits."""
+
+    tenant_id: str
+    active_provider: str  # socialapi | postproxy | zernio | planvortex
+    publishing_mode: str  # REMINDER | DIRECT_API
+    inbox_supported: bool = True
+    analytics_supported: bool = True
+    posts_limit_monthly: int = 10
+    interactions_limit_monthly: int = 50
+    posts_remaining: int = 10
+    interactions_remaining: int = 50
+    social_credits_remaining: int = 50
+    tier: str = "free"
+    is_trial_active: bool = True
+    is_locked: bool = False
+
+
+class PostConfirmationResult(BaseModel):
+    """Result of marking a reminder mode post as published or rescheduled."""
+
+    post_id: str
+    status: str
+    message: str
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class ISocialProvider(abc.ABC):
