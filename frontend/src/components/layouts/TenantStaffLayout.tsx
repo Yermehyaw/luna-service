@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTenant } from '../../lib/tenant-context';
 import { useAuth } from '../../lib/auth';
 import { LunaLogo } from '../shared/LumaMark';
+import { InstallAppNotice } from '../shared/InstallAppNotice';
 import { getTenantStaff, DEFAULT_TENANT_STAFF } from '../../mock/staff';
 import { StaffAccount, StaffPrivilege } from '../../types/user';
 import {
@@ -16,6 +17,7 @@ import {
   Share2,
   BarChart2,
   Briefcase,
+  CreditCard,
   ExternalLink,
   Menu,
   X,
@@ -90,6 +92,8 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
     { name: 'Branches', href: `${basePath}/branches`, icon: GitBranch, privilege: 'manage_branches' },
     { name: 'Services', href: `${basePath}/services`, icon: Briefcase, privilege: 'manage_services' },
     { name: 'Analytics', href: `${basePath}/analytics`, icon: BarChart2, privilege: 'view_analytics' },
+    { name: 'Payments', href: `${basePath}/payments`, icon: CreditCard, adminOnly: true },
+    { name: 'AI Agents · Coming soon', href: `${basePath}/agents`, icon: Lock },
     { name: 'Branding & Settings', href: `${basePath}/settings`, icon: Settings, adminOnly: true },
   ];
 
@@ -312,7 +316,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
         {/* Desktop Collapsible Sidebar */}
         <aside
           className={`hidden md:flex flex-col border-r border-[#341539] bg-[#291E29] text-[#FFF6E9] shadow-xl shrink-0 transition-all duration-300 ease-in-out ${
-            isSlim ? 'w-0 overflow-hidden p-0 opacity-0 pointer-events-none' : 'w-64 p-4 opacity-100'
+            isSlim ? 'w-16 p-2 opacity-100' : 'w-64 p-4 opacity-100'
           }`}
         >
           {/* Sidebar Top Header & Collapse Controls */}
@@ -397,7 +401,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Nav Items */}
-          <nav className="mt-4 flex-1 w-full space-y-1.5 text-xs font-semibold overflow-y-auto">
+          <nav className="mt-4 flex-1 w-full space-y-1.5 text-xs font-semibold overflow-y-auto overflow-x-visible">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isBroadcastItem = item.name.includes('Broadcast');
@@ -414,6 +418,8 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.name}
                   href={item.href}
+                  title={isSlim ? item.name : undefined}
+                  aria-label={isSlim ? item.name : undefined}
                   className={`group relative flex items-center transition-all ${
                     isSlim ? 'justify-center p-2.5 rounded-xl' : 'justify-between px-3 py-2.5 rounded-xl'
                   } ${
@@ -500,6 +506,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 md:pb-8 overflow-y-auto bg-[#FCFBF4] min-w-0 transition-all duration-300">
+          {pathname.includes('/social-studio') && <InstallAppNotice />}
           {children}
         </main>
       </div>

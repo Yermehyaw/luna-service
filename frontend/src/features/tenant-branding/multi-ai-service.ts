@@ -258,7 +258,7 @@ export interface MultiAiDesignResponse {
 
 function buildSystemPrompt(businessName: string, industry: string, branding: TenantBranding): string {
   return `You are the Luna AI Site Architect (elite site builder and design generator similar to Lovable and Replit).
-You customize multi-tenant digital arrival and queue portals on Luna (e.g. victor.luna.com).
+You customize multi-tenant customer service portals on Luna (e.g. victor.withluna.tech).
 
 Business Context:
 Name: "${businessName}"

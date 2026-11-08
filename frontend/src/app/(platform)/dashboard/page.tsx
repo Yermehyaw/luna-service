@@ -83,7 +83,7 @@ export default function PlatformDashboardPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#291E29] text-[#FFA800] hover:bg-[#341539] text-xs font-bold transition-all shadow-xs"
             >
               <ShieldCheck className="h-3.5 w-3.5 text-[#FFA800]" />
-              <span className="hidden sm:inline">Admin Master Control</span>
+              <span className="hidden sm:inline">Business workspace</span>
               <span className="sm:hidden">Admin</span>
             </Link>
             <Link
@@ -177,7 +177,7 @@ export default function PlatformDashboardPage() {
                   className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-[#FFA800] bg-[#FFA800]/10 font-bold"
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Admin Master Control</span>
+                  <span>Business workspace</span>
                 </Link>
                 <Link
                   href="/register"
@@ -296,7 +296,7 @@ export default function PlatformDashboardPage() {
               >
                 <div className="flex items-center gap-2.5">
                   <ShieldCheck className="h-4 w-4 text-[#702D7B]" />
-                  <span>Admin Master Control</span>
+                  <span>Business workspace</span>
                 </div>
                 <ArrowRight className="h-3 w-3 text-[#702D7B]" />
               </Link>
@@ -446,7 +446,7 @@ export default function PlatformDashboardPage() {
 
                   <div className="pt-3 border-t border-[#291E29]/10 flex justify-between items-center text-[11px]">
                     <Link href={`/tenant/${t.slug}`} className="font-mono text-[#702D7B] hover:underline">
-                      {t.slug}.luna.com
+                      {t.slug}.withluna.tech
                     </Link>
                     <Link
                       href={`/tenant/${t.slug}/staff/ops-console`}

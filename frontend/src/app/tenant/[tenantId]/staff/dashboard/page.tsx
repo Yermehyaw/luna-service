@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -42,6 +43,13 @@ export default function StaffDashboardPage() {
   const { user } = useAuth();
   const basePath = `/tenant/${tenant.slug}/staff`;
   const firstName = user?.name?.split(' ')[0] || 'there';
+  const [today, setToday] = useState('');
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+
+  useEffect(() => {
+    setToday(new Intl.DateTimeFormat('en-NG', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Lagos' }).format(new Date()));
+    setShowSetupGuide(localStorage.getItem(`luna_setup_guide_dismissed_${tenant.slug}`) !== 'true');
+  }, [tenant.slug]);
 
   return (
     <TenantStaffLayout>
@@ -53,8 +61,8 @@ export default function StaffDashboardPage() {
             <div>
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[#FFC453]">Business home</span>
-                <span className="flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-[10px] font-bold text-emerald-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> All systems operational
+                <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold text-white/70">
+                  Demo workspace · sample activity
                 </span>
               </div>
               <h1 className="max-w-2xl text-3xl font-black tracking-tight sm:text-4xl">Good morning, {firstName}.</h1>
@@ -62,10 +70,20 @@ export default function StaffDashboardPage() {
             </div>
             <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
               <CalendarDays className="h-5 w-5 text-[#FFC453]" />
-              <div><p className="text-[10px] uppercase tracking-wider text-white/45">Today</p><p className="text-xs font-extrabold">Friday, 31 October</p></div>
+              <div><p className="text-[10px] uppercase tracking-wider text-white/45">Today · Lagos time</p><p className="text-xs font-extrabold">{today || 'Today'}</p></div>
             </div>
           </div>
         </section>
+
+        {showSetupGuide && <section className="rounded-2xl border border-[#ded4e1] bg-white p-5 shadow-sm sm:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#702D7B]">Your first steps</p><h2 className="mt-1 text-lg font-semibold text-slate-900">Set up your Luna workspace</h2><p className="mt-1 text-sm text-slate-600">Follow these steps to prepare your business page and learn where daily work happens.</p></div><button type="button" onClick={() => { localStorage.setItem(`luna_setup_guide_dismissed_${tenant.slug}`, 'true'); setShowSetupGuide(false); }} className="text-xs font-semibold text-slate-500 underline">Hide guide</button></div><div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{[
+          { label: 'Personalize your page', detail: 'Logo, colors and contact details', href: `${basePath}/settings` },
+          { label: 'Add your services', detail: 'Prices, booking and documents', href: `${basePath}/services` },
+          { label: 'Prepare Social Studio', detail: 'Install Luna and add up to 2 handles', href: `${basePath}/social-studio` },
+          { label: 'Run customer service', detail: 'Queues, stations and broadcasts', href: `${basePath}/ops-console` },
+          { label: 'Set up payouts', detail: 'Review payment setup', href: `${basePath}/payments` },
+        ].map((step, index) => <Link key={step.label} href={step.href} className="rounded-xl border border-slate-200 p-4 hover:border-[#bba9bf] hover:bg-[#fcf9fe]"><span className="text-[10px] font-bold uppercase tracking-wider text-[#702D7B]">Step {index + 1}</span><h3 className="mt-1 text-sm font-semibold text-slate-900">{step.label}</h3><p className="mt-1 text-xs text-slate-500">{step.detail}</p><span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-[#702D7B]">Open <ArrowRight className="h-3 w-3" /></span></Link>)}</div><p className="mt-3 text-[11px] text-slate-500">Social Studio posts, linked social accounts, and payout transfers are preview features until provider connections are enabled.</p></section>}
+
+        <p className="text-[11px] text-slate-500">Sample dashboard figures · your live activity will appear here when your workspace data is connected.</p>
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[

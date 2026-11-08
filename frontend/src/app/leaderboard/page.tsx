@@ -222,7 +222,7 @@ export default function PlatformLeaderboardPage() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
               >
-                Admin Master Control
+                Business workspace
               </Link>
               <Link
                 href="/dashboard"
@@ -306,7 +306,7 @@ export default function PlatformLeaderboardPage() {
                 <div>
                   <h3 className="font-extrabold text-lg text-[#291E29]">{top3[1].tenant.name}</h3>
                   <span className="text-xs text-[#702D7B] font-mono font-bold">
-                    {top3[1].tenant.slug}.luna.com
+                    {top3[1].tenant.slug}.withluna.tech
                   </span>
                   <p className="text-xs text-slate-500 mt-1">Owner: {top3[1].tenant.ownerName}</p>
                 </div>
@@ -351,7 +351,7 @@ export default function PlatformLeaderboardPage() {
                 <div>
                   <h3 className="font-extrabold text-xl text-[#291E29]">{top3[0].tenant.name}</h3>
                   <span className="text-xs text-[#702D7B] font-mono font-bold">
-                    {top3[0].tenant.slug}.luna.com
+                    {top3[0].tenant.slug}.withluna.tech
                   </span>
                   <p className="text-xs text-slate-600 mt-1">Owner: {top3[0].tenant.ownerName}</p>
                 </div>
@@ -397,7 +397,7 @@ export default function PlatformLeaderboardPage() {
                 <div>
                   <h3 className="font-extrabold text-lg text-[#291E29]">{top3[2].tenant.name}</h3>
                   <span className="text-xs text-[#0057B8] font-mono font-bold">
-                    {top3[2].tenant.slug}.luna.com
+                    {top3[2].tenant.slug}.withluna.tech
                   </span>
                   <p className="text-xs text-slate-500 mt-1">Owner: {top3[2].tenant.ownerName}</p>
                 </div>
@@ -552,7 +552,7 @@ export default function PlatformLeaderboardPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                         <span className="font-mono text-[#702D7B] font-semibold">
-                          {item.tenant.slug}.luna.com
+                          {item.tenant.slug}.withluna.tech
                         </span>
                         <span>·</span>
                         <span>Owner: {item.tenant.ownerName}</span>
@@ -609,7 +609,7 @@ export default function PlatformLeaderboardPage() {
               Want your small business or organization on the leaderboard?
             </h3>
             <p className="text-xs sm:text-sm text-white/75 max-w-xl mx-auto leading-relaxed">
-              Claim your free business subdomain (`yourname.luna.com`) in under 60 seconds. Provide priority arrival windows
+              Claim your free business address (`yourname.withluna.tech`) in under 60 seconds. Provide priority arrival windows
               and eliminate lobby lines today.
             </p>
             <div className="pt-2">

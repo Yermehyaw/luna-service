@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
               <Clock className="h-4 w-4 text-amber-500" /> Avg Wait Duration
             </span>
             <div className="text-2xl font-extrabold text-[#291E29]">4.8 Minutes</div>
-            <p className="text-[11px] text-emerald-700 font-bold">↓ 3.2 min lower than SLA target</p>
+            <p className="text-[11px] text-emerald-700 font-bold">↓ 3.2 min faster than our promised target</p>
           </div>
 
           <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-xs space-y-2">

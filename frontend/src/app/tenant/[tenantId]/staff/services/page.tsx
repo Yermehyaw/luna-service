@@ -61,6 +61,7 @@ export default function StaffServicesPage() {
   const [startTime, setStartTime] = useState('09:00');
   const [endTime, setEndTime] = useState('18:00');
   const [requiresImageUpload, setRequiresImageUpload] = useState(false);
+  const [requiresVerificationDocument, setRequiresVerificationDocument] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Load services for this tenant
@@ -118,6 +119,7 @@ export default function StaffServicesPage() {
     setStartTime('09:00');
     setEndTime('18:00');
     setRequiresImageUpload(tenant.businessScale === 'sme');
+    setRequiresVerificationDocument(false);
     setShowAddModal(true);
   };
 
@@ -169,6 +171,7 @@ export default function StaffServicesPage() {
         startTime,
         endTime,
         requiresImageUpload,
+        requiresVerificationDocument,
         isActive: true,
       });
 
@@ -250,15 +253,14 @@ export default function StaffServicesPage() {
               <h1 className="font-display text-2xl font-extrabold text-[#291E29]">
                 {tenant.businessScale === 'sme'
                   ? 'Services, Menu & Custom Booking'
-                  : 'Service Windows & SLA Operations'}
+                  : 'Services and customer experience'}
               </h1>
               <span className="rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold px-2.5 py-0.5 border border-amber-300">
                 {totalCount} Services
               </span>
             </div>
             <p className="text-xs text-[#291E29]/70 mt-1 max-w-2xl leading-relaxed">
-              Configure custom services with lookbook photo uploads, weekly calendar availability, and morning/afternoon time-of-day slots for{' '}
-              <strong>{tenant.name}</strong>.
+              Shape what customers can book, how they prepare, and how your team supports them at <strong>{tenant.name}</strong>.
             </p>
           </div>
 
@@ -280,6 +282,11 @@ export default function StaffServicesPage() {
               <span>Add Custom Service</span>
             </button>
           </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-5"><span className="text-xs font-semibold uppercase tracking-widest text-purple-700">Free plan</span><h2 className="mt-2 font-semibold">Start connecting</h2><p className="mt-1 text-sm text-slate-600">Your business page, service listings, 10 social posts each month, two social handles, and core customer tools.</p></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5"><span className="text-xs font-semibold uppercase tracking-widest text-purple-700">7-day trial</span><h2 className="mt-2 font-semibold">Unified inbox</h2><p className="mt-1 text-sm text-slate-600">Bring comments and messages into one view, prioritize conversations, and use AI suggested replies with 50 monthly social credits.</p></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-5"><span className="text-xs font-semibold uppercase tracking-widest text-purple-700">Social Studio</span><h2 className="mt-2 font-semibold">Publish and learn</h2><p className="mt-1 text-sm text-slate-600">Plan posts, manage your social presence, and understand reach and engagement.</p><Link href={`/tenant/${tenant.slug}/staff/social-studio`} className="mt-3 inline-block text-sm font-semibold text-purple-700 underline">Open Social Studio</Link></div>
         </div>
 
         {/* Success Alert Banner */}
@@ -491,6 +498,7 @@ export default function StaffServicesPage() {
                           <span>📸 Client style lookbook / fault photo enabled</span>
                         </div>
                       )}
+                      {service.requiresVerificationDocument && <div className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-semibold text-amber-900">Verification document required at booking</div>}
                     </div>
                   </div>
                 </div>
@@ -837,6 +845,7 @@ export default function StaffServicesPage() {
                     className="h-5 w-5 rounded-lg text-[#FFA800] focus:ring-[#FFA800] border-slate-300"
                   />
                 </div>
+                <label className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm"><span><strong>Require verification document</strong><span className="mt-1 block text-xs text-slate-500">Customers must select a document before confirming this service booking.</span></span><input type="checkbox" checked={requiresVerificationDocument} onChange={e => setRequiresVerificationDocument(e.target.checked)} /></label>
 
                 {/* Submit / Cancel Footer */}
                 <div className="flex gap-2 justify-end pt-3 border-t border-slate-100">

@@ -493,7 +493,7 @@ export default function StaffCustomersPage() {
         </div>
 
         {/* Client Cards Grid for Mobile & Tablet */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-3">
           {filtered.length === 0 ? (
             <div className="col-span-full rounded-2xl border border-slate-200 bg-white p-12 text-center text-xs text-slate-400 space-y-2">
               <Users className="h-8 w-8 text-slate-300 mx-auto" />

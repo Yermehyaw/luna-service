@@ -96,7 +96,7 @@ export default function TenantBrandingSettingsPage({
     }
   }, [tenant]);
 
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'withluna.tech';
   const fullSubdomainUrl = `https://${subdomain}.${platformDomain}`;
 
   const handleCopyDomain = () => {

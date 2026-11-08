@@ -51,7 +51,7 @@ export default function RegisterPage() {
   const logoInput = useRef<HTMLInputElement>(null);
   const { login } = useAuth();
   const router = useRouter();
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'withluna.tech';
   const initials = orgName.trim().split(/\s+/).map((word) => word[0]).join('').slice(0, 2).toUpperCase() || 'YN';
   const deriveSlug = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 

@@ -38,7 +38,7 @@ export async function generateSiteCustomizationWithGroq(
   }
 
   const systemPrompt = `You are the Luna AI Website Architect, an elite UI/UX designer and site customization engine similar to Lovable and Replit.
-You help businesses personalize their multi-tenant digital arrival & queue portal on Luna (e.g. victor.luna.com).
+You help businesses personalize their customer service portal on Luna (e.g. victor.withluna.tech).
 
 The user is customizing their portal:
 Business Name: "${currentBusinessName}"

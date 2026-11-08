@@ -45,17 +45,18 @@ export default function TenantCustomerPage({
   const resolvedParams = use(params);
   const { user } = useAuth();
   const [tenant, setTenant] = React.useState<any>(null);
+  const [loaded, setLoaded] = React.useState(false);
   const [authModalOpen, setAuthModalOpen] = React.useState(false);
   const [authDefaultTab, setAuthDefaultTab] = React.useState<'signin' | 'signup'>('signin');
 
   React.useEffect(() => {
-    getTenantBySlug(resolvedParams.tenantId).then((res) => setTenant(res));
+    getTenantBySlug(resolvedParams.tenantId).then((res) => { setTenant(res); setLoaded(true); });
   }, [resolvedParams.tenantId]);
 
   if (!tenant) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-xs text-slate-500 font-semibold">
-        Loading Tenant Portal...
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-sm text-slate-600">
+        {loaded ? <><p>We couldn&apos;t find this business page.</p><Link href="/" className="font-semibold text-purple-700 underline">Return to Luna</Link></> : <p>Opening business page…</p>}
       </div>
     );
   }
@@ -63,7 +64,7 @@ export default function TenantCustomerPage({
   const branches = MOCK_BRANCHES.filter((b) => b.tenantId === tenant.id);
   const services = getTenantServices(tenant.id);
   const basePath = `/tenant/${tenant.slug}`;
-  const subdomainDisplay = `${tenant.slug}.luna.com`;
+  const subdomainDisplay = `${tenant.slug}.withluna.tech`;
 
   // Determine if this storefront should render as an SME Boutique or an Enterprise Institution
   const isSme =

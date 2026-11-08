@@ -182,7 +182,7 @@ export default function Home() {
       <div className="bg-[#291E29] text-[#FFF6E9] py-2 px-4 text-xs font-medium text-center flex items-center justify-center gap-2 flex-wrap border-b border-[#341539]">
         <span className="flex h-2 w-2 rounded-full bg-[#FFA800] animate-pulse shrink-0" />
         <span>
-          <strong>Luna 2.0 is Live:</strong> Multi-tenant real-time queue WebSockets, FastAPI backend, and free subdomains (`yourname.luna.com`).
+          <strong>Luna is here:</strong> Bring customer conversations, publishing, and service operations together at your own business address (`yourname.withluna.tech`).
         </span>
         <Link href="/register" className="underline font-bold text-[#FFA800] hover:text-white ml-1">
           Claim Free Subdomain &rarr;
@@ -297,14 +297,14 @@ export default function Home() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
               >
-                Platform Admin Dashboard
+                Business workspace
               </Link>
               <Link
-                href="/admin"
+                href="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block px-3 py-2.5 rounded-xl text-[#FFA800] bg-[#FFA800]/10 font-bold"
               >
-                Admin Master Control
+                Business workspace
               </Link>
             </nav>
 
@@ -349,7 +349,7 @@ export default function Home() {
               <p className="text-base sm:text-lg text-[#291E29]/75 max-w-2xl leading-relaxed">
                 Whether you run a busy hair salon, auto repair garage, artisan bakery, private clinic, or tier-1 bank:
                 Luna powers timed arrival windows, photo &amp; document pre-clearance, and zero lobby waiting.
-                Run your whole shop directly from any smartphone, tablet, or multi-branch operations console on your <strong>free subdomain</strong> (`yourname.luna.com`).
+                Run your customer experience from any smartphone or tablet on your <strong>business page</strong> (`yourname.withluna.tech`).
               </p>
 
               {/* Subdomain Quick Claim Input */}
@@ -363,7 +363,7 @@ export default function Home() {
                     onChange={(e) => setClaimedName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                     className="bg-transparent font-bold text-[#291E29] focus:outline-none w-full px-1 text-base sm:text-xs"
                   />
-                  <span className="text-slate-400 select-none font-semibold">.luna.com</span>
+                  <span className="text-slate-400 select-none font-semibold">.withluna.tech</span>
                 </div>
                 <Link
                   href={`/register?subdomain=${encodeURIComponent(claimedName || 'mybusiness')}`}
@@ -416,7 +416,7 @@ export default function Home() {
                     <span className="flex h-3 w-3 rounded-full bg-emerald-400 animate-ping" />
                     <div>
                       <h4 className="font-extrabold text-sm text-white">Acme Bank · Lekki Flagship</h4>
-                      <p className="text-[11px] text-[#FFF6E9]/60 font-mono">acme-bank.luna.com</p>
+                      <p className="text-[11px] text-[#FFF6E9]/60 font-mono">acme-bank.withluna.tech</p>
                     </div>
                   </div>
                   <span className="rounded-full bg-[#FFA800] text-[#291E29] text-[10px] font-extrabold px-2.5 py-0.5 uppercase">
@@ -568,7 +568,7 @@ export default function Home() {
               </span>
               <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#291E29] leading-tight">
                 Every business gets a free branded domain:{' '}
-                <span className="text-[#BA68D7]">yourname.luna.com</span>
+                <span className="text-[#BA68D7]">yourname.withluna.tech</span>
               </h2>
               <p className="text-xs sm:text-sm text-[#291E29]/75 leading-relaxed">
                 When you create an account, you instantly claim your own dedicated subdomain. Your customers visit your clean URL to book appointments and track arrival times, while your staff manage queues on private operations consoles.
@@ -579,7 +579,7 @@ export default function Home() {
                   <Globe className="h-5 w-5 text-[#FFA800] shrink-0 mt-0.5" />
                   <div>
                     <h4 className="font-bold text-[#291E29]">Automatic DNS & Multi-Tenant Routing</h4>
-                    <p className="text-slate-500 text-[11px]">Instant provisioning with zero manual setup. Handled transparently by Next.js edge routing.</p>
+                    <p className="text-slate-500 text-[11px]">Your business page is ready to share as soon as setup is complete.</p>
                   </div>
                 </div>
 
@@ -691,7 +691,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Free Custom Subdomain:</strong> Share your branded link (`yoursalon.luna.com`) on Instagram, WhatsApp, or Google Maps.</span>
+                    <span><strong>Business page:</strong> Share your branded link (`yoursalon.withluna.tech`) on Instagram, WhatsApp, or Google Maps.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -716,7 +716,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>SLA &amp; Window Duration Tracking:</strong> Automatic alerts when counter handling times exceed strict SLA targets.</span>
+                    <span><strong>Our promised target:</strong> See when service times need attention so you can keep your promise to customers.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
@@ -792,7 +792,7 @@ export default function Home() {
                       <span>{tenant.icon}</span>
                       <span>{tenant.badge}</span>
                     </span>
-                    <span className="text-xs font-mono text-slate-400">{tenant.slug}.luna.com</span>
+                    <span className="text-xs font-mono text-slate-400">{tenant.slug}.withluna.tech</span>
                   </div>
 
                   <div>
@@ -840,11 +840,10 @@ export default function Home() {
             <div className="space-y-4 md:col-span-2">
               <LunaLogo size={36} variant="light" showTagline />
               <p className="text-xs text-[#FFF6E9]/65 max-w-sm leading-relaxed">
-                Luna is the next-generation multi-tenant platform for queue triage, arrival ticketing, and automated customer operations.
+                Luna brings your customer conversations, social publishing, and everyday service into one workspace.
               </p>
-              <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Backend: FastAPI @ 127.0.0.1:8000</span>
+              <div className="flex flex-wrap gap-3 text-xs text-[#FFF6E9]/75" aria-label="Luna social channels">
+                {['Instagram', 'X', 'LinkedIn', 'TikTok'].map(channel => <span key={channel} className="rounded-md border border-white/20 px-3 py-1.5" title="Profile link coming soon">{channel}</span>)}
               </div>
             </div>
 
@@ -863,7 +862,6 @@ export default function Home() {
               <ul className="space-y-2 text-[#FFF6E9]/75">
                 <li><Link href="/register" className="hover:text-white">Claim Subdomain</Link></li>
                 <li><Link href="/login" className="hover:text-white">Staff Login</Link></li>
-                <li><Link href="/admin" className="hover:text-[#FFA800] font-bold text-[#FFA800]">Admin Master Control</Link></li>
                 <li><Link href="/tenant/acme-bank/staff/settings" className="hover:text-white">8 Theme Customizer</Link></li>
                 <li><Link href="/tenant/acme-bank/staff/ops-console?tab=broadcast" className="hover:text-white">Live Operations Broadcasts</Link></li>
               </ul>
@@ -875,7 +873,7 @@ export default function Home() {
             <div className="flex gap-4">
               <span>Beyond the Expected</span>
               <span>&middot;</span>
-              <span>FastAPI + Next.js</span>
+              <span>withluna.tech</span>
             </div>
           </div>
         </div>

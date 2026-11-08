@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { TenantStaffLayout } from '../../../../../components/layouts/TenantStaffLayout';
 import { useTenant } from '../../../../../lib/tenant-context';
@@ -91,6 +91,27 @@ export default function SocialStudioPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'urgent' | 'resolved'>('all');
   const [channelFilter, setChannelFilter] = useState<'all' | ChannelPlatform>('all');
+  const [trialStarted, setTrialStarted] = useState(false);
+  const [credits, setCredits] = useState(50);
+  const [handles, setHandles] = useState<{ platform: ChannelPlatform; handle: string }[]>([]);
+  const [newPlatform, setNewPlatform] = useState<ChannelPlatform>('instagram');
+  const [newHandle, setNewHandle] = useState('');
+  useEffect(() => {
+    try {
+      const trial = localStorage.getItem(`luna_inbox_trial_${tenant.slug}`);
+      setTrialStarted(Boolean(trial && Date.now() - Number(trial) < 7 * 86400000));
+      setHandles(JSON.parse(localStorage.getItem(`luna_handles_${tenant.slug}`) || '[]'));
+      const month = new Date().toISOString().slice(0, 7);
+      setCredits(Number(localStorage.getItem(`luna_credits_${tenant.slug}_${month}`) ?? 50));
+    } catch { /* Demo state remains available without storage. */ }
+  }, [tenant.slug]);
+  const useCredit = () => {
+    if (credits < 1) { setActionNotice('No social credits remain this month.'); return false; }
+    const next = credits - 1;
+    setCredits(next);
+    try { localStorage.setItem(`luna_credits_${tenant.slug}_${new Date().toISOString().slice(0, 7)}`, String(next)); } catch {}
+    return true;
+  };
 
   // Conversations state
   const [conversations, setConversations] = useState<SocialConversation[]>([
@@ -337,6 +358,7 @@ export default function SocialStudioPage() {
   // AI draft generator
   const handleDraftWithAi = async () => {
     if (!activeConversation) return;
+    if (!useCredit()) return;
     setIsGeneratingAi(true);
     try {
       const prompt = `You are the lead client experience specialist at ${tenant.name} (${tenant.industry}).
@@ -391,6 +413,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
   // Send message
   const handleSendMessage = (resolve: boolean, isAiAssisted: boolean = false) => {
     if (!replyText.trim() || !activeConversation) return;
+    if (!useCredit()) return;
 
     const newMsg: SocialMessage = {
       id: `m-${Date.now()}`,
@@ -463,6 +486,16 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
   return (
     <TenantStaffLayout>
       <div className="space-y-6 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm">
+          <div><strong>Social credits: {credits} / 50</strong><p className="text-xs text-slate-500">Reset monthly. Demo replies and AI drafts use one credit each.</p></div>
+          <div className="text-xs text-slate-600">Free plan · 10 posts/month · 2 connected handles</div>
+        </div>
+        <form onSubmit={event => { event.preventDefault(); const handle = newHandle.trim(); if (!handle || handles.length >= 2) return; const updated = [...handles, { platform: newPlatform, handle }]; setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); setNewHandle(''); }} className="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="text-base font-semibold">Social handles</h2><p className="mt-1 text-xs text-slate-500">Add up to two handles on the free plan, including multiple handles from the same platform. These are saved locally until platform connection is available.</p>
+          <div className="mt-3 flex flex-wrap gap-2">{handles.map((entry, index) => <span key={`${entry.platform}-${entry.handle}-${index}`} className="rounded-md bg-slate-100 px-3 py-2 text-xs">{entry.platform} · {entry.handle} <button type="button" className="ml-2 text-rose-700" aria-label={`Remove ${entry.handle}`} onClick={() => { const updated = handles.filter((_, i) => i !== index); setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); }}>×</button></span>)}</div>
+          <div className="mt-3 flex flex-wrap gap-2"><select aria-label="Platform" value={newPlatform} onChange={e => setNewPlatform(e.target.value as ChannelPlatform)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">{(['instagram','x','facebook','linkedin','tiktok','whatsapp'] as const).map(platform => <option key={platform} value={platform}>{platform}</option>)}</select><input aria-label="Social handle" value={newHandle} onChange={e => setNewHandle(e.target.value)} placeholder="@yourbusiness" className="rounded-md border border-slate-300 px-3 py-2 text-sm" /><button disabled={handles.length >= 2} className="rounded-md bg-[#291e29] px-4 py-2 text-sm text-white disabled:opacity-40">Add handle</button></div>
+          {handles.length >= 2 && <p className="mt-2 text-xs text-purple-700">Free plan limit reached. More handles will be available with a paid plan.</p>}
+        </form>
         {/* ========================================================= */}
         {/* INTELLIGENT SOCIAL STUDIO HEADER BANNER                  */}
         {/* ========================================================= */}
@@ -479,7 +512,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-400/30">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Omnichannel Live
+                  Social Studio preview
                 </span>
               </div>
 
@@ -572,8 +605,9 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
             </div>
           </div>
 
-          {/* Omnichannel Channel Stat Strip */}
+          {/* Preview channel snapshot; live social providers are not connected yet. */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-white/10">
+            <div className="col-span-full -mb-1 text-[11px] text-slate-300">Sample channel snapshot · connect accounts to see live metrics</div>
             <div className="rounded-2xl bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition">
               <div className="flex items-center justify-between text-xs text-slate-300">
                 <span className="flex items-center gap-1.5 font-bold">
@@ -642,7 +676,9 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
         {/* ========================================================= */}
         {/* VIEW 1: UNIFIED OMNICHANNEL INBOX (MASTER-DETAIL)         */}
         {/* ========================================================= */}
-        {activeTab === 'inbox' && (
+        {activeTab === 'inbox' && !trialStarted && <div className="rounded-xl border border-purple-200 bg-[#f7f1f8] p-8 text-center"><span className="text-xs font-semibold uppercase tracking-widest text-purple-700">Unified inbox preview</span><h2 className="mt-2 text-2xl font-semibold">Bring every customer conversation together</h2><p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">Start a 7-day free trial to explore the unified inbox, with 50 social credits each month. Organize comments and messages, route urgent requests, and draft thoughtful replies with AI suggestions. Automated AI replies are planned for a future release.</p><p className="mt-3 text-xs text-amber-800">Direct message replies can be limited to a 24-hour window depending on the platform. Some platforms do not support DMs.</p><button type="button" className="mt-5 rounded-md bg-[#291e29] px-5 py-3 text-sm font-semibold text-white" onClick={() => { localStorage.setItem(`luna_inbox_trial_${tenant.slug}`, String(Date.now())); setTrialStarted(true); }}>Start 7-day trial</button></div>}
+        {activeTab === 'inbox' && trialStarted && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600"><span>DM replies may only be available within 24 hours of a customer message. Availability differs by platform; some channels do not support DMs.</span><button type="button" onClick={() => setActionNotice('This preview has no live social connection yet. New messages will appear when a platform is connected.')} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-2 font-semibold"><RefreshCw className="h-3.5 w-3.5" /> Refresh messages</button></div>}
+        {activeTab === 'inbox' && trialStarted && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* ----------------------------------------------------- */}
             {/* LEFT COLUMN: CONVERSATION LIST (5 COLS ON DESKTOP)     */}
@@ -1172,17 +1208,18 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
         {activeTab === 'analytics' && (
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <h2 className="font-extrabold text-slate-900 text-lg">Omnichannel Service SLA &amp; Sentiments</h2>
+              <h2 className="font-extrabold text-slate-900 text-lg">Social conversations and sentiment</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Real-time sentiment categorization, resolution time, and multi-channel performance.
+                A preview of social metrics from the conversations shown in this workspace. Live reach and growth require connected platform data.
               </p>
             </div>
+            <div className="grid gap-4 md:grid-cols-2"><div className="rounded-xl border border-slate-200 p-5"><h3 className="text-sm font-semibold">Conversations by channel</h3><div className="mt-4 space-y-3">{(['instagram','x','facebook','linkedin','tiktok','whatsapp'] as const).map(platform => { const count = conversations.filter(item => item.platform === platform).length; return <div key={platform} className="grid grid-cols-[85px_1fr_24px] items-center gap-2 text-xs"><span className="capitalize">{platform}</span><div className="h-3 rounded bg-slate-100"><div className="h-3 rounded bg-purple-600" style={{width: `${conversations.length ? count / conversations.length * 100 : 0}%`}} /></div><span>{count}</span></div>; })}</div></div><div className="rounded-xl border border-slate-200 p-5"><h3 className="text-sm font-semibold">Growth and reach</h3><p className="mt-3 text-sm text-slate-500">Connect social platforms to see reach and audience growth over time.</p><div className="mt-5 h-28 rounded-lg border border-dashed border-slate-300 bg-slate-50" aria-label="Growth chart awaiting connected data" /></div></div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-2">
-                <span className="text-xs font-bold text-slate-500">First Response SLA</span>
+                <span className="text-xs font-bold text-slate-500">First response</span>
                 <div className="text-2xl font-extrabold text-slate-900">4.2 min</div>
-                <span className="text-[11px] text-emerald-600 font-bold">▲ 18% faster than SLA target</span>
+                <span className="text-[11px] text-emerald-600 font-bold">▲ 18% faster than our promised target</span>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-2">
