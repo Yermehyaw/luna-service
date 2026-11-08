@@ -573,7 +573,7 @@ export default function TenantBrandingSettingsPage({
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Check className="h-3 w-3 text-emerald-600" />
-                  <span><strong>Strict corporate handling time &amp; SLA compliance</strong></span>
+                  <span><strong>Set business targets for service times</strong></span>
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Check className="h-3 w-3 text-emerald-600" />

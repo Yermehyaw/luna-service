@@ -6,7 +6,7 @@ export type StaffPrivilege =
   | 'approve_documents'    // Review, Approve & Decline KYC / Intake Files
   | 'manage_services'      // Update Services, Prices & Stations
   | 'manage_branches'      // Manage Counters & Branch Stations
-  | 'view_analytics'       // Business Reports & SLA Metrics
+  | 'view_analytics'       // Business reports and targets
   | 'social_studio';       // Social Broadcasts & Customer SMS
 
 export interface StaffAccount {

@@ -111,7 +111,7 @@ export default function AnalyticsPage() {
             {tenant.businessScale === 'sme' ? 'Business Analytics & Customer Sentiment' : 'Branch Analytics & Feedback Intelligence'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Real-time throughput, SLA wait times, and categorized customer reviews for <strong>{tenant.name}</strong>.
+            See how many customers were served, how long they waited, and what they said about <strong>{tenant.name}</strong>.
           </p>
         </div>
 
@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
               <Clock className="h-4 w-4 text-amber-500" /> Avg Wait Duration
             </span>
             <div className="text-2xl font-extrabold text-[#291E29]">4.8 Minutes</div>
-            <p className="text-[11px] text-emerald-700 font-bold">↓ 3.2 min faster than our promised target</p>
+            <p className="text-[11px] text-emerald-700 font-bold">↓ 3.2 min faster than the business target</p>
           </div>
 
           <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-xs space-y-2">

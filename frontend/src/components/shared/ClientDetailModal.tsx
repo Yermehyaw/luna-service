@@ -316,7 +316,7 @@ export function ClientDetailModal({
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 block">
-                        Customer Timed Portal Review &amp; SLA Rating
+                      Customer Portal Review &amp; Business Target Rating
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-0.5">
@@ -348,7 +348,7 @@ export function ClientDetailModal({
                   <div className="text-left sm:text-right">
                     <span className="text-[10px] text-slate-500 uppercase block font-semibold">Door-to-Service Window</span>
                     <span className="font-extrabold text-emerald-700">
-                      ~{client.history[0]?.waitTimeMins || 1.8} mins (On-Time SLA: {client.onTimeScore}%)
+                      ~{client.history[0]?.waitTimeMins || 1.8} mins (On-time business target: {client.onTimeScore}%)
                     </span>
                   </div>
                   <span className="text-slate-300 hidden sm:inline">|</span>

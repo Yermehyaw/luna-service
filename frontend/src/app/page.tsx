@@ -53,7 +53,7 @@ const MODULES = [
     icon: Users,
     title: 'Branch Operations Console',
     tag: 'Staff & Counter',
-    desc: 'Counter officers triage arrivals, call tickets with audio announcements, monitor SLA duration, and skip no-shows in real-time.',
+    desc: 'Staff welcome visitors, call the next person, track waiting times, and mark missed appointments.',
     points: ['Live WebSocket ticket feed', 'Instant audio chime broadcasts', 'Counter & window assignment'],
     href: '/tenant/acme-bank/staff/ops-console',
     cta: 'Open Staff Console',
@@ -65,7 +65,7 @@ const MODULES = [
     title: 'Business Leaderboard & Performance',
     tag: 'Live Rankings',
     desc: 'Rank top-performing salons, auto garages, bakeries, clinics, and banks by fastest wait times, highest 5-star customer ratings, and queue throughput.',
-    points: ['Real-time SME & branch rankings', 'Fastest wait time & SLA tracking', 'Top customer satisfaction badges'],
+    points: ['Branch performance', 'Waiting time tracking', 'Customer feedback'],
     href: '/leaderboard',
     cta: 'View Business Leaderboard',
     accentColor: '#FFA800',
@@ -716,7 +716,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Our promised target:</strong> See when service times need attention so you can keep your promise to customers.</span>
+                    <span><strong>Business targets:</strong> See when service times need attention and keep customers informed.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />

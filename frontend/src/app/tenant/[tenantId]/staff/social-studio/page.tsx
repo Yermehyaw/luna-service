@@ -79,6 +79,16 @@ export interface SocialConversation {
   messages: SocialMessage[];
 }
 
+type ScheduledSocialPost = {
+  id: string;
+  text: string;
+  mediaName: string;
+  mediaUrl: string;
+  handles: string[];
+  scheduledAt: string;
+  status: 'scheduled' | 'posted';
+};
+
 export default function SocialStudioPage() {
   const { tenant } = useTenant();
   const { user } = useAuth();
@@ -96,15 +106,64 @@ export default function SocialStudioPage() {
   const [handles, setHandles] = useState<{ platform: ChannelPlatform; handle: string }[]>([]);
   const [newPlatform, setNewPlatform] = useState<ChannelPlatform>('instagram');
   const [newHandle, setNewHandle] = useState('');
+  const [scheduledPosts, setScheduledPosts] = useState<ScheduledSocialPost[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [postEditorOpen, setPostEditorOpen] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [postText, setPostText] = useState('');
+  const [postHandles, setPostHandles] = useState<string[]>([]);
+  const [postDate, setPostDate] = useState('');
+  const [postTime, setPostTime] = useState('09:00');
+  const [postMediaName, setPostMediaName] = useState('');
+  const [postMediaUrl, setPostMediaUrl] = useState('');
+  const [postSaving, setPostSaving] = useState(false);
   useEffect(() => {
     try {
       const trial = localStorage.getItem(`luna_inbox_trial_${tenant.slug}`);
       setTrialStarted(Boolean(trial && Date.now() - Number(trial) < 7 * 86400000));
       setHandles(JSON.parse(localStorage.getItem(`luna_handles_${tenant.slug}`) || '[]'));
+      setScheduledPosts(JSON.parse(localStorage.getItem(`luna_scheduled_posts_${tenant.slug}`) || '[]'));
       const month = new Date().toISOString().slice(0, 7);
       setCredits(Number(localStorage.getItem(`luna_credits_${tenant.slug}_${month}`) ?? 50));
     } catch { /* Demo state remains available without storage. */ }
   }, [tenant.slug]);
+  const saveScheduledPosts = (posts: ScheduledSocialPost[]) => {
+    setScheduledPosts(posts);
+    try { localStorage.setItem(`luna_scheduled_posts_${tenant.slug}`, JSON.stringify(posts)); } catch { setActionNotice('Could not save this post. Try a smaller media file.'); }
+  };
+  const openPostEditor = (date?: Date, post?: ScheduledSocialPost) => {
+    setEditingPostId(post?.id || null);
+    setPostText(post?.text || '');
+    setPostHandles(post?.handles || handles.map((entry) => `${entry.platform}:${entry.handle}`));
+    const when = post ? new Date(post.scheduledAt) : date || new Date();
+    setPostDate(`${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`);
+    setPostTime(post ? `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}` : '09:00');
+    setPostMediaName(post?.mediaName || '');
+    setPostMediaUrl(post?.mediaUrl || '');
+    setPostEditorOpen(true);
+  };
+  const savePost = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!postText.trim() || postHandles.length === 0 || !postDate || !postTime) return;
+    setPostSaving(true);
+    const scheduledAt = new Date(`${postDate}T${postTime}`).toISOString();
+    const nextPost: ScheduledSocialPost = {
+      id: editingPostId || `post-${Date.now()}`,
+      text: postText.trim(), mediaName: postMediaName, mediaUrl: postMediaUrl,
+      handles: postHandles, scheduledAt, status: 'scheduled',
+    };
+    const updated = editingPostId
+      ? scheduledPosts.map((post) => post.id === editingPostId ? nextPost : post)
+      : [...scheduledPosts, nextPost];
+    saveScheduledPosts(updated);
+    setPostSaving(false);
+    setPostEditorOpen(false);
+    setActiveTab('calendar');
+    setActionNotice('Post saved. Luna will remind you to publish it at the scheduled time.');
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch { /* Reminder remains in the calendar. */ }
+    }
+  };
   const useCredit = () => {
     if (credits < 1) { setActionNotice('No social credits remain this month.'); return false; }
     const next = credits - 1;
@@ -462,6 +521,40 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
     setTimeout(() => setActionNotice(null), 3000);
   };
 
+  const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+  const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+  const calendarStart = new Date(monthStart);
+  calendarStart.setDate(monthStart.getDate() - ((monthStart.getDay() + 6) % 7));
+  const calendarDays = Array.from({ length: Math.ceil(((monthEnd.getDate() + ((monthStart.getDay() + 6) % 7)) / 7)) * 7 }, (_, index) => {
+    const day = new Date(calendarStart);
+    day.setDate(calendarStart.getDate() + index);
+    return day;
+  });
+  const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+  useEffect(() => {
+    const timers = scheduledPosts.filter((post) => post.status === 'scheduled').map((post) => {
+      const delay = new Date(post.scheduledAt).getTime() - Date.now();
+      if (delay <= 0 || delay > 2147480000) return null;
+      return window.setTimeout(async () => {
+        const notifiedKey = `luna_post_reminded_${post.id}`;
+        if (localStorage.getItem(notifiedKey)) return;
+        localStorage.setItem(notifiedKey, '1');
+        const title = 'Time to share your post';
+        const body = post.text.slice(0, 100);
+        try {
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.showNotification(title, { body, icon: '/icon-192.png', data: { url: `/tenant/${tenant.slug}/staff/social-studio` } });
+          } else if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body });
+          }
+        } catch { /* The saved post stays visible in the calendar if notifications are unavailable. */ }
+      }, delay);
+    }).filter((timer): timer is number => timer !== null);
+    return () => timers.forEach(window.clearTimeout);
+  }, [scheduledPosts, tenant.slug]);
+
   // Platform icon helper
   const getPlatformIcon = (platform: ChannelPlatform) => {
     switch (platform) {
@@ -672,6 +765,18 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
             <span>{actionNotice}</span>
           </div>
         )}
+
+        {postEditorOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="post-editor-title">
+          <form onSubmit={savePost} className="max-h-[92vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3"><div><h2 id="post-editor-title" className="text-lg font-bold text-slate-900">{editingPostId ? 'Edit scheduled post' : 'Schedule a post'}</h2><p className="mt-1 text-sm text-slate-500">Choose where and when to share it. Luna will remind you to post.</p></div><button type="button" onClick={() => setPostEditorOpen(false)} className="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Close">✕</button></div>
+            <label className="block text-sm font-semibold text-slate-700">Post text<textarea required rows={4} value={postText} onChange={(event) => setPostText(event.target.value)} maxLength={2200} placeholder="What would you like to share?" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-normal focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100" /></label>
+            <div><label className="block text-sm font-semibold text-slate-700">Photo or video <input type="file" accept="image/*,video/*" className="mt-1.5 block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 2 * 1024 * 1024) { setActionNotice('Please choose a file under 2 MB for this local preview.'); event.target.value = ''; return; } const reader = new FileReader(); reader.onload = () => { setPostMediaName(file.name); setPostMediaUrl(String(reader.result || '')); }; reader.readAsDataURL(file); }} /></label>{postMediaName && <div className="mt-2 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-700">{postMediaName}<button type="button" onClick={() => { setPostMediaName(''); setPostMediaUrl(''); }} className="font-semibold text-rose-700">Remove</button></div>}</div>
+            <fieldset><legend className="text-sm font-semibold text-slate-700">Post to</legend>{handles.length ? <div className="mt-2 grid gap-2 sm:grid-cols-2">{handles.map((entry) => { const value = `${entry.platform}:${entry.handle}`; return <label key={value} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><input type="checkbox" checked={postHandles.includes(value)} onChange={(event) => setPostHandles((prev) => event.target.checked ? [...prev, value] : prev.filter((handle) => handle !== value))} /> <span className="capitalize">{entry.platform}</span><span className="truncate text-slate-500">{entry.handle}</span></label>; })}</div> : <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Add a social handle in Social Studio before scheduling a post.</p>}</fieldset>
+            <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold text-slate-700">Date<input required type="date" value={postDate} onChange={(event) => setPostDate(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label><label className="text-sm font-semibold text-slate-700">Time<input required type="time" value={postTime} onChange={(event) => setPostTime(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label></div>
+            <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-900">We’ll send a browser reminder at this time when Luna is open and notifications are allowed. Posts are not published automatically yet.</p>
+            <div className="flex justify-end gap-2"><button type="button" onClick={() => setPostEditorOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button><button type="submit" disabled={postSaving || handles.length === 0 || postHandles.length === 0} className="rounded-lg bg-[#291E29] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{postSaving ? 'Saving…' : editingPostId ? 'Save changes' : 'Save post'}</button></div>
+          </form>
+        </div>}
 
         {/* ========================================================= */}
         {/* VIEW 1: UNIFIED OMNICHANNEL INBOX (MASTER-DETAIL)         */}
@@ -971,7 +1076,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
                       </div>
 
                       <div className="text-[11px] text-slate-400 font-medium">
-                        Tone matches brand &amp; SLA
+                        Tone matches your brand and business targets
                       </div>
                     </div>
 
@@ -1061,52 +1166,29 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
         {/* VIEW 2: CONTENT CALENDAR                                  */}
         {/* ========================================================= */}
         {activeTab === 'calendar' && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-              <div>
-                <h2 className="font-extrabold text-slate-900 text-lg">Social &amp; Broadcast Calendar</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Scheduled public broadcast announcements, promotions, and branch queue hours.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActionNotice('📅 Scheduled queue announcement added to calendar.')}
-                className="flex items-center gap-2 rounded-xl bg-[#291E29] text-white px-4 py-2.5 text-xs font-bold hover:bg-[#341539] transition"
-              >
-                <Plus className="h-4 w-4 text-[#FFA800]" />
-                <span>Schedule New Broadcast</span>
-              </button>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div><h2 className="text-lg font-bold text-slate-900">Post calendar</h2><p className="mt-1 text-sm text-slate-500">Plan posts and get a reminder when it’s time to share.</p></div>
+              <button type="button" onClick={() => openPostEditor(new Date())} className="inline-flex items-center gap-2 rounded-lg bg-[#291E29] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#40223f]"><Plus className="h-4 w-4 text-[#FFA800]" />Schedule a post</button>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-              {[
-                { day: 'Mon', date: 'Oct 20', events: ['Morning Rush Zero-Wait Alert', 'SME Clinic Spotlight'] },
-                { day: 'Tue', date: 'Oct 21', events: ['VIP Lookbook Showcase', 'Afternoon Open Bay Notice'] },
-                { day: 'Wed', date: 'Oct 22', events: ['Pre-Clearance Reminder'] },
-                { day: 'Thu', date: 'Oct 23', events: ['Lunch Hour Express Lane'] },
-                { day: 'Fri', date: 'Oct 24', events: ['Weekend Prep Announcement', 'Extended Hours Notice'] },
-                { day: 'Sat', date: 'Oct 25', events: ['Full Staff Live On-Duty'] },
-                { day: 'Sun', date: 'Oct 26', events: ['Maintenance & Digital Intake'] },
-              ].map((c) => (
-                <div key={c.day} className="rounded-2xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-2 min-h-[160px]">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-extrabold text-slate-800">{c.day}</span>
-                    <span className="text-[10px] text-slate-400 font-semibold">{c.date}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {c.events.map((ev, i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl bg-white border border-slate-200 p-2 text-[11px] font-semibold text-slate-800 shadow-2xs"
-                      >
-                        {ev}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2"><button type="button" aria-label="Previous month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} className="rounded-md border px-3 py-2 text-slate-700 hover:bg-slate-50">‹</button><h3 className="min-w-36 text-center font-semibold text-slate-900">{calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3><button type="button" aria-label="Next month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} className="rounded-md border px-3 py-2 text-slate-700 hover:bg-slate-50">›</button></div>
+              <button type="button" onClick={() => setCalendarMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} className="rounded-md px-3 py-2 text-sm font-medium text-purple-800 hover:bg-purple-50">Today</button>
             </div>
+            <div className="grid grid-cols-7 border-b border-slate-200 text-center text-xs font-semibold text-slate-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <div key={day} className="py-3">{day}</div>)}</div>
+            <div className="grid grid-cols-7 overflow-hidden rounded-b-xl border-l border-slate-200">
+              {calendarDays.map((day) => {
+                const dayPosts = scheduledPosts.filter((post) => dateKey(new Date(post.scheduledAt)) === dateKey(day)).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+                const inMonth = day.getMonth() === calendarMonth.getMonth();
+                const today = dateKey(day) === dateKey(new Date());
+                return <div key={dateKey(day)} className={`min-h-28 border-b border-r border-slate-200 p-1.5 sm:min-h-36 sm:p-2 ${inMonth ? 'bg-white' : 'bg-slate-50/70'}`}>
+                  <button type="button" onClick={() => openPostEditor(day)} className={`mb-1 flex h-7 w-7 items-center justify-center rounded-full text-xs ${today ? 'bg-[#291E29] font-bold text-white' : inMonth ? 'text-slate-700 hover:bg-amber-100' : 'text-slate-400 hover:bg-slate-200'}`} aria-label={`Add post on ${day.toLocaleDateString()}`}>{day.getDate()}</button>
+                  <div className="space-y-1">{dayPosts.map((post) => <button key={post.id} type="button" onClick={() => openPostEditor(day, post)} className="block w-full truncate rounded-md border border-purple-100 bg-purple-50 px-1.5 py-1 text-left text-[10px] leading-4 text-purple-900 hover:border-purple-300 sm:text-xs"><span className="font-semibold">{new Date(post.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span> {post.text}</button>)}</div>
+                </div>;
+              })}
+            </div>
+            <p className="mt-3 text-xs text-slate-500">Posts are saved here. Luna will remind you to publish them; it won’t post automatically yet.</p>
+            {handles.length === 0 && <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Connect a social handle in Social Studio before scheduling your first post.</div>}
           </div>
         )}
 
@@ -1219,7 +1301,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-2">
                 <span className="text-xs font-bold text-slate-500">First response</span>
                 <div className="text-2xl font-extrabold text-slate-900">4.2 min</div>
-                <span className="text-[11px] text-emerald-600 font-bold">▲ 18% faster than our promised target</span>
+                <span className="text-[11px] text-emerald-600 font-bold">▲ 18% faster than the business target</span>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-2">
