@@ -118,7 +118,7 @@ export function ClientDetailModal({
     return [
       {
         id: `doc_${c.id}_1`,
-        name: isSme ? 'Government ID / Mobile Verification' : 'Government Photo Passport / KYC',
+        name: isSme ? 'Government ID / Phone check' : 'Government photo ID',
         type: 'Identity Proof',
         fileSize: '2.4 MB PDF',
         uploadedAt: 'Today at 09:15 AM',
@@ -169,7 +169,7 @@ export function ClientDetailModal({
 
   const handleApproveDocument = (docId: string) => {
     if (!canApproveDocs) {
-      showToast('🔒 Action Restricted: Staff account requires "Approve KYC Docs" privilege.');
+      showToast('You do not have access to approve documents. Ask your owner for help.');
       return;
     }
     setDocuments((prev) =>
@@ -185,7 +185,7 @@ export function ClientDetailModal({
 
   const handleDeclineDocument = (docId: string) => {
     if (!canApproveDocs) {
-      showToast('🔒 Action Restricted: Staff account requires "Approve KYC Docs" privilege.');
+      showToast('You do not have access to approve documents. Ask your owner for help.');
       return;
     }
     setDocuments((prev) =>
@@ -346,7 +346,7 @@ export function ClientDetailModal({
 
                 <div className="flex items-center gap-3 text-xs self-start sm:self-auto pt-1 sm:pt-0">
                   <div className="text-left sm:text-right">
-                    <span className="text-[10px] text-slate-500 uppercase block font-semibold">Door-to-Service Window</span>
+                    <span className="text-[10px] text-slate-500 uppercase block font-semibold">Time until service</span>
                     <span className="font-extrabold text-emerald-700">
                       ~{client.history[0]?.waitTimeMins || 1.8} mins (On-time business target: {client.onTimeScore}%)
                     </span>
@@ -603,7 +603,7 @@ export function ClientDetailModal({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/10 pb-3">
                 <div>
                   <h3 className="font-extrabold text-sm text-[#291E29]">
-                    Customer Documents &amp; Pre-Clearance
+                    Customer documents
                   </h3>
                   <p className="text-xs text-slate-500">
                     Review and verify documents submitted by {client.name}. Approve or decline each document to clear their arrival pass.

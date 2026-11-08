@@ -236,7 +236,7 @@ export function TenantCustomerLayout({
                 <ExternalLink className="h-3.5 w-3.5 text-[#FFA800]" />
               </Link>
               <p className="text-[10px] text-center text-slate-400">
-                Powered by Luna Multi-Tenant Infrastructure
+                Powered by Luna
               </p>
             </div>
           </div>
@@ -251,7 +251,7 @@ export function TenantCustomerLayout({
         <div className="mx-auto max-w-6xl px-6 space-y-2">
           <div className="flex items-center justify-center gap-2 font-bold text-[#291E29]">
             <LunaIcon size={18} variant="purple" />
-            <span>Powered by Luna Multi-Tenant Infrastructure · Beyond the Expected</span>
+            <span>Powered by Luna · Beyond the Expected</span>
           </div>
           <p className="text-[11px] text-[#291E29]/50">© 2026 {tenant.name}. All rights reserved.</p>
         </div>

@@ -59,12 +59,12 @@ export default function StaffBranchesPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-bold text-slate-900">
-              {tenant.businessScale === 'sme' ? 'Shop & Studio Locations' : 'Branch Network Management'}
+              {tenant.businessScale === 'sme' ? 'Your locations' : 'Your branches'}
             </h1>
             <p className="text-xs text-slate-500">
               {tenant.businessScale === 'sme'
-                ? `Manage your primary studio address, operating hours, and capacity for ${tenant.name}.`
-                : `Configure active locations, hours, and queue load capacity for ${tenant.name}.`}
+                ? `Manage addresses and opening hours for ${tenant.name}.`
+                : `Manage addresses and opening hours for ${tenant.name}.`}
             </p>
           </div>
           <button
@@ -78,7 +78,7 @@ export default function StaffBranchesPage() {
         {tenant.businessScale === 'sme' && (
           <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 text-xs text-sky-900 flex items-center justify-between">
             <span className="font-medium">
-              💡 <strong>Single or Multi-Studio:</strong> Small businesses run smoothly with just 1 active location. Add more branches anytime your brand expands!
+              💡 <strong>Need another location?</strong> You can add one whenever your business grows.
             </span>
           </div>
         )}

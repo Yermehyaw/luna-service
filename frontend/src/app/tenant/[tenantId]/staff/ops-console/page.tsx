@@ -666,7 +666,7 @@ function StaffOpsConsoleContent() {
               Operations overview
             </h1>
             <p className="mt-1.5 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
-              Manage arrivals, service stations, and announcements from one place.
+              See who is waiting, call the next person, and share updates.
             </p>
           </div>
 
@@ -710,7 +710,7 @@ function StaffOpsConsoleContent() {
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                   : 'bg-slate-100 border-slate-200 text-slate-500'
               }`}
-              title="Toggle Browser Voice Synthesis PA Announcements"
+              title="Turn spoken announcements on or off"
             >
               <Volume2 className={`h-4 w-4 ${voiceEnabled ? 'text-emerald-600' : 'text-slate-400'}`} />
               <span>{voiceEnabled ? 'PA Voice On' : 'Voice Off'}</span>
@@ -744,7 +744,7 @@ function StaffOpsConsoleContent() {
               }`}
             >
               <LayoutDashboard className="h-4 w-4 text-[#FFA800]" />
-              <span>Queue Operations</span>
+              <span>Appointments &amp; queue</span>
             </button>
             <button
               type="button"
@@ -778,7 +778,7 @@ function StaffOpsConsoleContent() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold hover:bg-amber-100 transition shadow-2xs"
               >
                 <Megaphone className="h-3.5 w-3.5 text-[#FFA800]" />
-                <span>Open Full Broadcast Studio &rarr;</span>
+              <span>Open broadcasts &rarr;</span>
               </button>
             ) : (
               <button
@@ -790,7 +790,7 @@ function StaffOpsConsoleContent() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition shadow-2xs"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 text-slate-600" />
-                <span>&larr; Back to Queue Operations</span>
+                <span>&larr; Back to appointments</span>
               </button>
             )}
           </div>
@@ -1354,30 +1354,14 @@ function StaffOpsConsoleContent() {
               <div className="relative z-10 space-y-3 max-w-3xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#FFA800] border border-white/10 text-xs font-extrabold uppercase tracking-widest">
                   <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-                  <span>Omnichannel Live Broadcast Center</span>
+                  <span>Live announcements</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                   Broadcast to every customer screen
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Send announcements to customer trackers, lobby displays, and SMS from one workspace.
+                  Share an update with customers on the screens and channels you use.
                 </p>
-
-                {/* Quick stats strip */}
-                <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
-                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
-                    <Tv className="h-4 w-4 text-[#FFA800]" />
-                    <span className="font-bold text-white">3 Lobby Displays Connected</span>
-                  </div>
-                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
-                    <Smartphone className="h-4 w-4 text-emerald-400" />
-                    <span className="font-bold text-white">24 Active Mobile Trackers</span>
-                  </div>
-                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-300" />
-                    <span className="font-bold text-white">&lt; 1s Real-time WebSocket Latency</span>
-                  </div>
-                </div>
               </div>
             </div>
 

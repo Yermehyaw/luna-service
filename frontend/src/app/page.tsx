@@ -40,10 +40,10 @@ const MODULES = [
   {
     id: 'queue',
     icon: Ticket,
-    title: 'Smart Queuing & Timed Tickets',
+    title: 'Appointments & Walk-ins',
     tag: 'Customer Arrival',
-    desc: 'Customers reserve a timed 30-minute priority window from their phone. No crowded lobby lines, no dawn waiting, no wasted hours.',
-    points: ['Timed arrival windows', 'Real-time queue tracking & audio caller', 'One-click walk-in triage'],
+    desc: 'Customers book a visit or join the line from their phone. Your team can see who is next and keep visits moving.',
+    points: ['Online appointments', 'Live waiting list', 'Add walk-in visitors'],
     href: '/tenant/acme-bank/book-queue',
     cta: 'Try Customer Booking',
     accentColor: '#FFA800',
@@ -51,10 +51,10 @@ const MODULES = [
   {
     id: 'ops',
     icon: Users,
-    title: 'Branch Operations Console',
+    title: 'Front Desk',
     tag: 'Staff & Counter',
     desc: 'Staff welcome visitors, call the next person, track waiting times, and mark missed appointments.',
-    points: ['Live WebSocket ticket feed', 'Instant audio chime broadcasts', 'Counter & window assignment'],
+    points: ['See who is waiting', 'Call the next customer', 'Choose a service desk'],
     href: '/tenant/acme-bank/staff/ops-console',
     cta: 'Open Staff Console',
     accentColor: '#BA68D7',
@@ -62,9 +62,9 @@ const MODULES = [
   {
     id: 'leaderboard',
     icon: Trophy,
-    title: 'Business Leaderboard & Performance',
+    title: 'Business Performance',
     tag: 'Live Rankings',
-    desc: 'Rank top-performing salons, auto garages, bakeries, clinics, and banks by fastest wait times, highest 5-star customer ratings, and queue throughput.',
+    desc: 'See how quickly your team serves customers and how customers rate their visits.',
     points: ['Branch performance', 'Waiting time tracking', 'Customer feedback'],
     href: '/leaderboard',
     cta: 'View Business Leaderboard',
@@ -73,10 +73,10 @@ const MODULES = [
   {
     id: 'social',
     icon: Megaphone,
-    title: 'Live Broadcasts & Announcements',
+    title: 'Social Posts & Updates',
     tag: 'Live Announcements',
-    desc: 'Publish instant ticker announcements directly to customer portals, and draft messages with built-in Groq AI presets.',
-    points: ['Public portal announcement tickers', 'Groq AI response & copy generation', 'Broadcast history log'],
+    desc: 'Plan social posts, keep up with customer messages, and share updates with your audience.',
+    points: ['Plan posts on a calendar', 'Reply to customer messages', 'Keep track of shared updates'],
     href: '/tenant/acme-bank/staff/ops-console?tab=broadcast',
     cta: 'Launch Broadcasts',
     accentColor: '#0057B8',
@@ -129,7 +129,7 @@ const TENANTS = [
     name: 'Apex Boutique Dental & Vision',
     slug: 'apex-dental',
     industry: 'Private Dental & Optical Studio',
-    desc: 'Private consultation suites, online insurance pre-clearance, and zero-wait health triage.',
+    desc: 'Book a consultation, share insurance details, and spend less time waiting.',
     badge: 'Small Business · Clinic',
     scale: 'sme',
     color: '#0F766E',
@@ -148,8 +148,8 @@ const TENANTS = [
   {
     name: 'City General Hospital',
     slug: 'city-hospital',
-    industry: 'Healthcare & Clinical Triage',
-    desc: 'Outpatient consultation windows, pre-cleared lab diagnostics, and emergency triage.',
+    industry: 'Healthcare',
+    desc: 'Book a visit, share needed details, and find the right care team.',
     badge: 'Enterprise · Hospital',
     scale: 'enterprise',
     color: '#12A05A',
@@ -348,7 +348,7 @@ export default function Home() {
 
               <p className="text-base sm:text-lg text-[#291E29]/75 max-w-2xl leading-relaxed">
                 Whether you run a busy hair salon, auto repair garage, artisan bakery, private clinic, or tier-1 bank:
-                Luna powers timed arrival windows, photo &amp; document pre-clearance, and zero lobby waiting.
+                Luna helps customers book a visit and share photos or documents before they arrive.
                 Run your customer experience from any smartphone or tablet on your <strong>business page</strong> (`yourname.withluna.tech`).
               </p>
 
@@ -497,13 +497,13 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="text-center max-w-3xl mx-auto space-y-3">
             <span className="text-xs font-bold uppercase tracking-wider text-[#FFA800] bg-[#291E29] px-3.5 py-1 rounded-full">
-              Full-Stack Platform
+              Tools for your business
             </span>
             <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#291E29]">
               Everything businesses need to eliminate queues and delight customers
             </h2>
             <p className="text-xs sm:text-sm text-[#291E29]/70">
-              Each module is fully interactive, multi-tenant enabled, and synchronizes live via WebSocket.
+              One simple place to manage visits, customers, services, and social posts.
             </p>
           </div>
 
@@ -578,7 +578,7 @@ export default function Home() {
                 <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-[#291E29]/10">
                   <Globe className="h-5 w-5 text-[#FFA800] shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-bold text-[#291E29]">Automatic DNS & Multi-Tenant Routing</h4>
+                    <h4 className="font-bold text-[#291E29]">Your own business page</h4>
                     <p className="text-slate-500 text-[11px]">Your business page is ready to share as soon as setup is complete.</p>
                   </div>
                 </div>
@@ -687,7 +687,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Instant Lookbook &amp; Checklist Pre-Clearance:</strong> Let customers upload hair reference photos or vehicle fault checklists before arriving.</span>
+                    <span><strong>Get ready before the visit:</strong> Customers can share style photos or describe a repair before they arrive.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -705,14 +705,14 @@ export default function Home() {
                 <div className="flex items-center gap-3">
                   <span className="text-2xl p-2 rounded-xl bg-white shadow-xs">🏛️</span>
                   <div>
-                    <h4 className="font-bold text-base text-slate-900">For Enterprises &amp; Institutions</h4>
+                    <h4 className="font-bold text-base text-slate-900">For larger teams</h4>
                     <p className="text-[11px] text-slate-500">Commercial banks, general hospitals, telecoms &amp; civic centers</p>
                   </div>
                 </div>
                 <ul className="space-y-2 text-xs text-slate-700">
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Multi-Branch Telemetry:</strong> Live WebSocket feeds across 50+ nationwide branch lobbies with peak load indicators.</span>
+                    <span><strong>All locations in one place:</strong> See what is happening at each of your branches.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
@@ -720,11 +720,11 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Multi-Window Ticket Routing:</strong> Transfer customers seamlessly from intake triage to specialist consultations.</span>
+                    <span><strong>Move visits between teams:</strong> Send each customer to the right person or service desk.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Cryptographic Pre-Clearance:</strong> KYC documents, bank verification, and lab referrals verified before lobby entry.</span>
+                    <span><strong>Check documents before visits:</strong> Ask customers to share needed documents when they book.</span>
                   </li>
                 </ul>
               </div>

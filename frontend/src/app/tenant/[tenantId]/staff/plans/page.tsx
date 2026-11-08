@@ -7,8 +7,8 @@ import type { TenantPlan } from '../../../../../types/tenant';
 const plans: { id: TenantPlan; name: string; summary: string; features: string[] }[] = [
   { id: 'free', name: 'Free', summary: 'Start building your customer workspace.', features: ['Branded business page and service listings', '10 social posts each month', 'Up to 2 connected social handles', '50 social credits each month'] },
   { id: 'basic', name: 'Basic', summary: 'For businesses ready to grow their customer reach.', features: ['More publishing capacity', 'More connected social handles', 'Core customer and service tools'] },
-  { id: 'pro', name: 'Pro', summary: 'For teams managing customer relationships across channels.', features: ['Unified social inbox', 'AI suggested replies', 'Social performance insights'] },
-  { id: 'enterprise', name: 'Enterprise', summary: 'For larger organizations with multiple teams and locations.', features: ['Multi branch operations', 'Organization level reporting', 'Custom setup and support'] },
+  { id: 'pro', name: 'Pro', summary: 'For teams handling messages across social accounts.', features: ['Messages in one inbox', 'Suggested reply drafts', 'Social post results'] },
+  { id: 'enterprise', name: 'Enterprise', summary: 'For larger teams with many locations.', features: ['Manage several locations', 'Reports across your business', 'Help with setup'] },
 ];
 
 function currentPlan(plan?: TenantPlan): TenantPlan {

@@ -108,7 +108,7 @@ const RANKED_DATA: RankedBusiness[] = [
     reviewCount: 512,
     volumeServed: 18500,
     onTimeRate: 97.0,
-    badge: '🏥 Top Outpatient Triage',
+    badge: '🏥 Top customer care',
   },
   {
     rank: 7,
@@ -119,7 +119,7 @@ const RANKED_DATA: RankedBusiness[] = [
     reviewCount: 428,
     volumeServed: 48900,
     onTimeRate: 95.9,
-    badge: '📱 Largest Queue Throughput',
+    badge: '📱 Most customers served',
   },
 ];
 
@@ -268,7 +268,7 @@ export default function PlatformLeaderboardPage() {
           <div className="mx-auto max-w-4xl space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full bg-[#FFA800]/20 border border-[#FFA800]/40 px-4 py-1.5 text-xs font-bold text-[#291E29] shadow-xs">
               <Flame className="h-4 w-4 text-[#FFA800]" />
-              <span>Real-Time Business Performance &amp; Zero-Wait Leaderboard</span>
+              <span>Businesses customers love</span>
             </div>
 
             <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-[#291E29] tracking-tight leading-[1.15]">
@@ -277,8 +277,7 @@ export default function PlatformLeaderboardPage() {
             </h1>
 
             <p className="mx-auto max-w-2xl text-xs sm:text-base text-[#291E29]/75 leading-relaxed font-normal">
-              Every small business (SME), salon, auto garage, clinic, and tier-1 bank on Luna is scored in real-time
-              based on customer arrival punctuality, low wait duration, and verified 5-star ratings.
+              See which businesses help customers quickly and earn great reviews.
             </p>
           </div>
         </section>
@@ -631,7 +630,7 @@ export default function PlatformLeaderboardPage() {
           <div className="flex justify-center">
             <LunaLogo size={28} />
           </div>
-          <p>© 2026 Luna. Beyond the Expected. Multi-Tenant Intelligent Queue Infrastructure.</p>
+          <p>© 2026 Luna. Beyond the Expected. A better way to welcome and serve customers.</p>
         </div>
       </footer>
     </div>

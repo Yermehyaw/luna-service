@@ -690,11 +690,11 @@ export default function BookQueuePage({
                   <Camera className="h-4 w-4 text-purple-600" /> 4. Style Lookbook / Reference Photo
                 </label>
                 <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
-                  Optional Pre-Clearance
+                  Optional photo or notes
                 </span>
               </div>
               <p className="text-[11px] text-purple-800 leading-relaxed">
-                Upload your desired hair braid lookbook, vehicle fault diagram, or cake design. Your {tenant.branding?.serviceUnitName?.toLowerCase() || 'specialist'} will prepare in advance!
+                Share a style photo, repair details, or design idea so your {tenant.branding?.serviceUnitName?.toLowerCase() || 'specialist'} can prepare.
               </p>
 
               {referencePhoto ? (

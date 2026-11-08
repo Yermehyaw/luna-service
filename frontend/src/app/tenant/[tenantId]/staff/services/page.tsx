@@ -252,15 +252,15 @@ export default function StaffServicesPage() {
             <div className="flex items-center gap-2.5">
               <h1 className="font-display text-2xl font-extrabold text-[#291E29]">
                 {tenant.businessScale === 'sme'
-                  ? 'Services, Menu & Custom Booking'
-                  : 'Services and customer experience'}
+                  ? 'Your services'
+                  : 'Services'}
               </h1>
               <span className="rounded-full bg-amber-100 text-amber-900 text-[10px] font-extrabold px-2.5 py-0.5 border border-amber-300">
                 {totalCount} Services
               </span>
             </div>
             <p className="text-xs text-[#291E29]/70 mt-1 max-w-2xl leading-relaxed">
-              Shape what customers can book, how they prepare, and how your team supports them at <strong>{tenant.name}</strong>.
+              Add or update what customers can book at <strong>{tenant.name}</strong>.
             </p>
           </div>
 
@@ -584,7 +584,7 @@ export default function StaffServicesPage() {
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700">Category / Group Tag</label>
+                    <label className="font-bold text-slate-700">Category</label>
                     <input
                       type="text"
                       placeholder="e.g. Hair Treatments, Express Bays, Tasting"
@@ -598,7 +598,7 @@ export default function StaffServicesPage() {
                 {/* 2. Price, Duration & Station */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                   <div>
-                    <label className="font-bold text-slate-700">Price Tag *</label>
+                    <label className="font-bold text-slate-700">Price *</label>
                     <input
                       type="text"
                       required
@@ -609,7 +609,7 @@ export default function StaffServicesPage() {
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700">Estimated Mins *</label>
+                    <label className="font-bold text-slate-700">Time needed (minutes) *</label>
                     <input
                       type="number"
                       min="1"
@@ -621,7 +621,7 @@ export default function StaffServicesPage() {
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700">Assigned Station / Chair</label>
+                    <label className="font-bold text-slate-700">Team member or station</label>
                     <input
                       type="text"
                       placeholder="e.g. Chair 1, Bay 2, Desk 4"
@@ -634,7 +634,7 @@ export default function StaffServicesPage() {
 
                 {/* 3. Description */}
                 <div>
-                  <label className="font-bold text-slate-700">Service Description</label>
+                  <label className="font-bold text-slate-700">What customers get</label>
                   <textarea
                     rows={2}
                     placeholder="Describe what customers receive and prepare for this service..."

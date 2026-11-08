@@ -533,12 +533,16 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
   const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
   useEffect(() => {
-    const timers = scheduledPosts.filter((post) => post.status === 'scheduled').map((post) => {
-      const delay = new Date(post.scheduledAt).getTime() - Date.now();
-      if (delay <= 0 || delay > 2147480000) return null;
-      return window.setTimeout(async () => {
+    const timers: number[] = [];
+    scheduledPosts.filter((post) => post.status === 'scheduled').forEach((post) => {
+      const notifyWhenReady = async () => {
         const notifiedKey = `luna_post_reminded_${post.id}`;
         if (localStorage.getItem(notifiedKey)) return;
+        const remaining = new Date(post.scheduledAt).getTime() - Date.now();
+        if (remaining > 0) {
+          timers.push(window.setTimeout(notifyWhenReady, Math.min(remaining, 2147480000)));
+          return;
+        }
         localStorage.setItem(notifiedKey, '1');
         const title = 'Time to share your post';
         const body = post.text.slice(0, 100);
@@ -550,8 +554,11 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
             new Notification(title, { body });
           }
         } catch { /* The saved post stays visible in the calendar if notifications are unavailable. */ }
-      }, delay);
-    }).filter((timer): timer is number => timer !== null);
+      };
+      const initialDelay = new Date(post.scheduledAt).getTime() - Date.now();
+      if (initialDelay <= 2147480000) timers.push(window.setTimeout(notifyWhenReady, Math.max(initialDelay, 0)));
+      else timers.push(window.setTimeout(notifyWhenReady, 2147480000));
+    });
     return () => timers.forEach(window.clearTimeout);
   }, [scheduledPosts, tenant.slug]);
 
@@ -611,10 +618,10 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
 
               <div>
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-display">
-                  Every channel. One inbox. Zero slow replies.
+                  Social messages and posts
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
-                  Respond to customer inquiries, complaints, and booking requests across Instagram, X, Facebook, LinkedIn, TikTok &amp; WhatsApp in real time with AI drafting.
+                  Check customer messages, write replies, and plan posts for the social accounts you add.
                 </p>
               </div>
 
@@ -626,11 +633,11 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-200 border border-rose-500/30">
                   <AlertCircle className="h-3.5 w-3.5 text-rose-300" />
-                  {urgentCount} need urgent care
+                  {urgentCount} need a reply
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-white/10">
                   <Clock className="h-3.5 w-3.5 text-[#FFA800]" />
-                  Avg first response: <strong className="text-white">4.2 min</strong>
+                  Avg reply time: <strong className="text-white">4.2 min</strong>
                 </span>
               </div>
             </div>

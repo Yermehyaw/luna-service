@@ -8,7 +8,7 @@ const sora = Sora({ subsets: ['latin'], variable: '--font-display' });
 
 export const metadata: Metadata = {
   title: 'Luna — Beyond the Expected | Intelligent Queue & Customer Infrastructure',
-  description: 'Enterprise multi-tenant queueing, arrival windows, and seamless digital service for banks, healthcare, telecom, and education.',
+  description: 'Help customers book visits, share documents, and spend less time waiting.',
   icons: {
     icon: '/brand/luna-icon-purple.png',
     apple: '/brand/luna-icon-purple.png',

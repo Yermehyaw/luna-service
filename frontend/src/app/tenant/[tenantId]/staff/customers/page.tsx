@@ -376,17 +376,17 @@ export default function StaffCustomersPage() {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#FFA800] bg-[#291E29] px-2.5 py-0.5 rounded-full">
-                Business Owner CRM
+                Customer list
               </span>
               <span className="text-xs text-slate-500 font-semibold">
-                {clients.length} Total Registered Clients
+                {clients.length} customers
               </span>
             </div>
             <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#291E29] mt-1">
-              Client Directory &amp; Profiles
+              Customers
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
-              Click on any client below to inspect their complete profile, service history, preferences, and staff notes.
+              Select a customer to view their visits, details, and notes.
             </p>
           </div>
 
@@ -435,7 +435,7 @@ export default function StaffCustomersPage() {
         {/* 💬 Comment Sentiment Categorization Filter Strip */}
         <div className="flex flex-wrap items-center gap-2 p-3 rounded-2xl bg-white border border-black/10 text-xs">
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mr-1 flex items-center gap-1">
-            <MessageSquare className="h-3 w-3 text-slate-400" /> Sentiment:
+            <MessageSquare className="h-3 w-3 text-slate-400" /> Feedback:
           </span>
           <button
             type="button"
@@ -605,7 +605,7 @@ export default function StaffCustomersPage() {
                     </span>
 
                     <span className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#702D7B] group-hover:text-[#FFA800] transition-colors">
-                      <span>Inspect Client File</span>
+                      <span>View customer</span>
                       <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
                     </span>
                   </div>

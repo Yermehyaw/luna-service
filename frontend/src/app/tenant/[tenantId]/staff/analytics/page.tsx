@@ -101,14 +101,14 @@ export default function AnalyticsPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full bg-[#291E29] text-[#FFA800] text-[10px] font-extrabold uppercase px-2.5 py-0.5 tracking-wider">
-              Telemetry &amp; CSAT
+              Business reports
             </span>
             <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 flex items-center gap-1">
               <Check className="h-3 w-3" /> Live Feed
             </span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[#291E29] mt-1">
-            {tenant.businessScale === 'sme' ? 'Business Analytics & Customer Sentiment' : 'Branch Analytics & Feedback Intelligence'}
+            {tenant.businessScale === 'sme' ? 'Business reports' : 'Branch reports'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             See how many customers were served, how long they waited, and what they said about <strong>{tenant.name}</strong>.
@@ -119,7 +119,7 @@ export default function AnalyticsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
           <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-xs space-y-2">
             <span className="text-slate-500 font-semibold flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-blue-600" /> {tenant.businessScale === 'sme' ? 'Peak Hour Throughput' : 'Peak Lobby Throughput'}
+              <Users className="h-4 w-4 text-blue-600" /> Customers served at busiest time
             </span>
             <div className="text-2xl font-extrabold text-[#291E29]">42 Cust / Hr</div>
             <p className="text-[11px] text-emerald-700 font-bold">↑ 14% vs yesterday</p>
@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
 
           <div className="rounded-3xl border border-black/10 bg-white p-5 shadow-xs space-y-2">
             <span className="text-slate-500 font-semibold flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-emerald-600" /> Customer Satisfaction Index
+              <TrendingUp className="h-4 w-4 text-emerald-600" /> Customer rating
             </span>
             <div className="text-2xl font-extrabold text-[#291E29]">98.4%</div>
             <p className="text-[11px] text-slate-400">Based on {counts.total * 48} verified ratings</p>
@@ -151,11 +151,11 @@ export default function AnalyticsPage() {
                   <MessageSquare className="h-4 w-4" />
                 </span>
                 <h2 className="text-base sm:text-lg font-extrabold text-[#291E29]">
-                  Customer Comments &amp; Sentiment Categorization
+                  Customer comments
                 </h2>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Reviews and feedback automatically categorized into <strong>Positive</strong>, <strong>Neutral</strong>, and <strong>Negative</strong> sentiment buckets.
+                See what customers liked and where they need help.
               </p>
             </div>
 
