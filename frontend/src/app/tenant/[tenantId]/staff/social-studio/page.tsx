@@ -104,6 +104,8 @@ export default function SocialStudioPage() {
   const [trialStarted, setTrialStarted] = useState(false);
   const [credits, setCredits] = useState(50);
   const [handles, setHandles] = useState<{ platform: ChannelPlatform; handle: string }[]>([]);
+  const isFreePlan = !tenant.plan || tenant.plan === 'free' || tenant.plan === 'free_subdomain';
+  const handleLimit = isFreePlan ? 2 : Number.POSITIVE_INFINITY;
   const [newPlatform, setNewPlatform] = useState<ChannelPlatform>('instagram');
   const [newHandle, setNewHandle] = useState('');
   const [scheduledPosts, setScheduledPosts] = useState<ScheduledSocialPost[]>([]);
@@ -145,7 +147,6 @@ export default function SocialStudioPage() {
   const savePost = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!postText.trim() || postHandles.length === 0 || !postDate || !postTime) return;
-    const isFreePlan = !tenant.plan || tenant.plan === 'free' || tenant.plan === 'free_subdomain';
     const selectedMonth = postDate.slice(0, 7);
     const postsThisMonth = scheduledPosts.filter((post) => {
       const scheduledDate = new Date(post.scheduledAt);
@@ -169,7 +170,7 @@ export default function SocialStudioPage() {
     setPostSaving(false);
     setPostEditorOpen(false);
     setActiveTab('calendar');
-    setActionNotice('Post saved. Luna will remind you to publish it at the scheduled time.');
+    setActionNotice('Post saved. Luna can remind you while this app is open.');
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       try { await Notification.requestPermission(); } catch { /* Reminder remains in the calendar. */ }
     }
@@ -597,14 +598,14 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
     <TenantStaffLayout>
       <div className="space-y-6 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm">
-          <div><strong>Social credits: {credits} / 50</strong><p className="text-xs text-slate-500">Reset monthly. Demo replies and AI drafts use one credit each.</p></div>
-          <div className="text-xs text-slate-600">Free plan · 10 posts/month · 2 connected handles</div>
+          <div><strong>Social credits: {credits} / 50</strong><p className="text-xs text-slate-500">Resets monthly. Sample replies and AI drafts use credits.</p></div>
+          <div className="text-xs text-slate-600">{isFreePlan ? 'Free plan · 10 posts/month · 2 profile limit' : `${tenant.plan} plan · profile limits depend on plan settings`}</div>
         </div>
-        <form onSubmit={event => { event.preventDefault(); const handle = newHandle.trim(); if (!handle || handles.length >= 2) return; const updated = [...handles, { platform: newPlatform, handle }]; setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); setNewHandle(''); }} className="rounded-xl border border-slate-200 bg-white p-5">
-          <h2 className="text-base font-semibold">Social handles</h2><p className="mt-1 text-xs text-slate-500">Add up to two handles on the free plan, including multiple handles from the same platform. These are saved locally until platform connection is available.</p>
-          <div className="mt-3 flex flex-wrap gap-2">{handles.map((entry, index) => <span key={`${entry.platform}-${entry.handle}-${index}`} className="rounded-md bg-slate-100 px-3 py-2 text-xs">{entry.platform} · {entry.handle} <button type="button" className="ml-2 text-rose-700" aria-label={`Remove ${entry.handle}`} onClick={() => { const updated = handles.filter((_, i) => i !== index); setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); }}>×</button></span>)}</div>
-          <div className="mt-3 flex flex-wrap gap-2"><select aria-label="Platform" value={newPlatform} onChange={e => setNewPlatform(e.target.value as ChannelPlatform)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">{(['instagram','x','facebook','linkedin','tiktok','whatsapp'] as const).map(platform => <option key={platform} value={platform}>{platform}</option>)}</select><input aria-label="Social handle" value={newHandle} onChange={e => setNewHandle(e.target.value)} placeholder="@yourbusiness" className="rounded-md border border-slate-300 px-3 py-2 text-sm" /><button disabled={handles.length >= 2} className="rounded-md bg-[#291e29] px-4 py-2 text-sm text-white disabled:opacity-40">Add handle</button></div>
-          {handles.length >= 2 && <p className="mt-2 text-xs text-purple-700">Free plan limit reached. More handles will be available with a paid plan.</p>}
+        <form onSubmit={event => { event.preventDefault(); const handle = newHandle.trim(); if (!handle || handles.length >= handleLimit) return; const updated = [...handles, { platform: newPlatform, handle }]; setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); setNewHandle(''); }} className="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="text-base font-semibold">Social profiles for reminders</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">Add the profiles you plan to post on. Luna does not connect to these accounts or publish posts yet. Your list is saved in this browser, and you can add more than one profile from the same platform.</p>
+          <div className="mt-3 flex flex-wrap gap-2">{handles.map((entry, index) => <span key={`${entry.platform}-${entry.handle}-${index}`} className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-xs"><span className="capitalize">{entry.platform} · {entry.handle}</span><span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-slate-500">Reminder only</span><button type="button" className="text-rose-700" aria-label={`Remove ${entry.handle}`} onClick={() => { const updated = handles.filter((_, i) => i !== index); setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); }}>×</button></span>)}</div>
+          <div className="mt-3 flex flex-wrap gap-2"><select aria-label="Social platform" value={newPlatform} onChange={e => setNewPlatform(e.target.value as ChannelPlatform)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">{(['instagram','x','facebook','linkedin','tiktok','whatsapp'] as const).map(platform => <option key={platform} value={platform}>{platform}</option>)}</select><input aria-label="Social profile name" value={newHandle} onChange={e => setNewHandle(e.target.value)} placeholder="@yourbusiness" className="rounded-md border border-slate-300 px-3 py-2 text-sm" /><button disabled={handles.length >= handleLimit} className="rounded-md bg-[#291e29] px-4 py-2 text-sm text-white disabled:opacity-40">Add profile</button></div>
+          {isFreePlan && handles.length >= handleLimit && <p className="mt-2 text-xs text-purple-700">You’ve used the Free plan’s 2 profile limit. More profiles are available on a paid plan.</p>}
         </form>
         {/* ========================================================= */}
         {/* INTELLIGENT SOCIAL STUDIO HEADER BANNER                  */}
@@ -788,9 +789,9 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
             <div className="flex items-start justify-between gap-3"><div><h2 id="post-editor-title" className="text-lg font-bold text-slate-900">{editingPostId ? 'Edit scheduled post' : 'Schedule a post'}</h2><p className="mt-1 text-sm text-slate-500">Choose where and when to share it. Luna will remind you to post.</p></div><button type="button" onClick={() => setPostEditorOpen(false)} className="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Close">✕</button></div>
             <label className="block text-sm font-semibold text-slate-700">Post text<textarea required rows={4} value={postText} onChange={(event) => setPostText(event.target.value)} maxLength={2200} placeholder="What would you like to share?" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-normal focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100" /></label>
             <div><label className="block text-sm font-semibold text-slate-700">Photo or video <input type="file" accept="image/*,video/*" className="mt-1.5 block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 2 * 1024 * 1024) { setActionNotice('Please choose a file under 2 MB for this local preview.'); event.target.value = ''; return; } const reader = new FileReader(); reader.onload = () => { setPostMediaName(file.name); setPostMediaUrl(String(reader.result || '')); }; reader.readAsDataURL(file); }} /></label>{postMediaName && <div className="mt-2 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-700">{postMediaName}<button type="button" onClick={() => { setPostMediaName(''); setPostMediaUrl(''); }} className="font-semibold text-rose-700">Remove</button></div>}</div>
-            <fieldset><legend className="text-sm font-semibold text-slate-700">Post to</legend>{handles.length ? <div className="mt-2 grid gap-2 sm:grid-cols-2">{handles.map((entry) => { const value = `${entry.platform}:${entry.handle}`; return <label key={value} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><input type="checkbox" checked={postHandles.includes(value)} onChange={(event) => setPostHandles((prev) => event.target.checked ? [...prev, value] : prev.filter((handle) => handle !== value))} /> <span className="capitalize">{entry.platform}</span><span className="truncate text-slate-500">{entry.handle}</span></label>; })}</div> : <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Add a social handle in Social Studio before scheduling a post.</p>}</fieldset>
+            <fieldset><legend className="text-sm font-semibold text-slate-700">Remind me to share on</legend>{handles.length ? <div className="mt-2 grid gap-2 sm:grid-cols-2">{handles.map((entry) => { const value = `${entry.platform}:${entry.handle}`; return <label key={value} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><input type="checkbox" checked={postHandles.includes(value)} onChange={(event) => setPostHandles((prev) => event.target.checked ? [...prev, value] : prev.filter((handle) => handle !== value))} /> <span className="capitalize">{entry.platform}</span><span className="truncate text-slate-500">{entry.handle}</span></label>; })}</div> : <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Add a social profile above to choose where to share.</p>}</fieldset>
             <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold text-slate-700">Date<input required type="date" value={postDate} onChange={(event) => setPostDate(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label><label className="text-sm font-semibold text-slate-700">Time<input required type="time" value={postTime} onChange={(event) => setPostTime(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label></div>
-            <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-900">We’ll send a browser reminder at this time when Luna is open and notifications are allowed. Posts are not published automatically yet.</p>
+            <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-900">Luna saves this reminder in this browser. It can notify you at the scheduled time while Luna is open and notifications are allowed. You’ll share the post yourself.</p>
             <div className="flex justify-end gap-2"><button type="button" onClick={() => setPostEditorOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button><button type="submit" disabled={postSaving || handles.length === 0 || postHandles.length === 0} className="rounded-lg bg-[#291E29] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{postSaving ? 'Saving…' : editingPostId ? 'Save changes' : 'Save post'}</button></div>
           </form>
         </div>}
@@ -1185,7 +1186,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
         {activeTab === 'calendar' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div><h2 className="text-lg font-bold text-slate-900">Post calendar</h2><p className="mt-1 text-sm text-slate-500">Plan posts and get a reminder when it’s time to share.</p></div>
+              <div><h2 className="text-lg font-bold text-slate-900">Post calendar</h2><p className="mt-1 text-sm text-slate-500">Plan posts and get a reminder when it’s time to share.</p><p className="mt-1 text-xs font-medium text-slate-500">{scheduledPosts.filter((post) => { const d = new Date(post.scheduledAt); return d.getFullYear() === calendarMonth.getFullYear() && d.getMonth() === calendarMonth.getMonth(); }).length}{!tenant.plan || tenant.plan === 'free' || tenant.plan === 'free_subdomain' ? ' of 10 free posts planned this month' : ' posts planned this month'}</p></div>
               <button type="button" onClick={() => openPostEditor(new Date())} className="inline-flex items-center gap-2 rounded-lg bg-[#291E29] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#40223f]"><Plus className="h-4 w-4 text-[#FFA800]" />Schedule a post</button>
             </div>
             <div className="mb-3 flex items-center justify-between">
@@ -1205,7 +1206,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
               })}
             </div>
             <p className="mt-3 text-xs text-slate-500">Posts are saved here. Luna will remind you to publish them; it won’t post automatically yet.</p>
-            {handles.length === 0 && <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Connect a social handle in Social Studio before scheduling your first post.</div>}
+            {handles.length === 0 && <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Add a social profile above before scheduling your first reminder.</div>}
           </div>
         )}
 
