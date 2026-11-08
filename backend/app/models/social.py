@@ -220,7 +220,7 @@ class SocialQuery(UUIDPrimaryKeyMixin, TimestampMixin, Base):
 
 
 class ContentCredit(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Daily idea-generation credits. Basic tier gets a free daily allowance."""
+    """Idea-generation credits. Basic tier gets a free allowance."""
 
     __tablename__ = "content_credits"
 
