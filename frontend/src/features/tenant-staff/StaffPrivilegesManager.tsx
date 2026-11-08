@@ -217,10 +217,10 @@ export function StaffPrivilegesManager({ tenantId, tenantName }: StaffPrivileges
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/10 pb-4">
           <div>
             <h2 className="text-base sm:text-lg font-extrabold text-[#291E29]">
-              Team Logins &amp; Task Privileges
+              Team members and access
             </h2>
             <p className="text-xs text-slate-500">
-              Assign and manage staff logins. <strong>Click any privilege pill</strong> below to instantly grant or revoke task permissions.
+              Add your team and choose which parts of Luna they can use.
             </p>
           </div>
 
@@ -230,7 +230,7 @@ export function StaffPrivilegesManager({ tenantId, tenantName }: StaffPrivileges
             className="flex items-center justify-center gap-2 rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFF6E9] px-4 py-2.5 text-xs font-extrabold shadow-md hover:scale-102 active:scale-98 transition min-h-[44px]"
           >
             <UserPlus className="h-4 w-4 text-[#FFA800]" />
-            <span>Add Staff Login</span>
+            <span>Add team member</span>
           </button>
         </div>
 
@@ -270,11 +270,11 @@ export function StaffPrivilegesManager({ tenantId, tenantName }: StaffPrivileges
           <div className="flex items-center gap-2">
             <KeyRound className="h-4 w-4 text-amber-700 shrink-0" />
             <span>
-              <strong>Tip:</strong> Click on any privilege badge below (e.g. <em>Ops Console</em>, <em>Doc Review</em>, <em>Services</em>) to toggle permissions in real-time.
+              <strong>Tip:</strong> Select the areas each person can use.
             </span>
           </div>
           <span className="text-[10px] font-bold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full shrink-0">
-            Branding &amp; Settings is strictly reserved for Business Admin
+            Only business owners can change business settings
           </span>
         </div>
       </div>

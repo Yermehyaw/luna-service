@@ -512,7 +512,7 @@ export default function TenantCustomerPage({
                   </div>
                 </div>
                 <p className="text-xs text-slate-600 pl-11">
-                  Walk-ins welcome daily. Digital arrival tickets skip the physical line upon arrival.
+                  Walk in or book online to save a place in line.
                 </p>
               </div>
 
@@ -530,7 +530,7 @@ export default function TenantCustomerPage({
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#291E29] px-6 py-3 text-xs font-extrabold text-white hover:bg-[#341539] transition shadow-md min-h-[44px]"
                 >
                   <Ticket className="h-3.5 w-3.5 text-[#FFA800]" />
-                  <span>Get Fast-Track Pass</span>
+                  <span>Book a visit</span>
                 </Link>
               </div>
             </div>
@@ -593,7 +593,7 @@ export default function TenantCustomerPage({
                   className="flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-bold text-slate-800 shadow-sm hover:bg-slate-50 min-h-[48px]"
                 >
                   <Trophy className="h-4 w-4 text-[#FFA800]" />
-                  <span>Service Leaderboard &amp; Ratings</span>
+                  <span>Customer reviews</span>
                 </Link>
               </div>
             </div>

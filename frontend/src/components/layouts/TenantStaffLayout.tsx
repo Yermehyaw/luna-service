@@ -555,8 +555,8 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                   <ArrowRightLeft className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-[#291E29]">Switch Account & Role</h3>
-                  <p className="text-[10px] text-slate-500">Test platform as Business Owner or Staff</p>
+                  <h3 className="font-extrabold text-sm text-[#291E29]">Switch user</h3>
+                  <p className="text-[10px] text-slate-500">Preview as an owner or team member</p>
                 </div>
               </div>
               <button
