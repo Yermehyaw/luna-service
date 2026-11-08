@@ -1,0 +1,362 @@
+---
+title: Analytics
+description: Summarise how your posts performed across accounts, read daily history for accounts, brands, and posts, fetch live post metrics from each platform, and refresh an account's posts with one request.
+---
+
+Analytics in SocialAPI has 3 parts: an overview of how your posts performed across accounts, stored daily history for accounts, brands, and posts, and live reads that fetch current figures from a platform. The overview and history never call a platform, so they answer fast and work when a token has expired. Live reads show the platform's current numbers.
+
+Analytics requests cost no credits. An account needs the `analytics.read` [permission](/guides/permissions) for the overview, its history, its live post metrics, and its platform insights, and the `posts.read` permission for `POST /v1/accounts/{id}/sync`. Platform-specific insight endpoints, such as Instagram's account summary and Google Business Profile performance metrics, are on the platform pages linked in [Platform insights](#platform-insights).
+
+## Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/v1/analytics/overview` | How the posts published in a range performed, across accounts |
+| `GET` | `/v1/accounts/{id}/analytics` | Stored daily history for one connected account |
+| `GET` | `/v1/brands/{id}/analytics` | Stored daily history for a brand, summed across its accounts |
+| `GET` | `/v1/posts/{pid}/analytics` | Stored daily history for one published post |
+| `GET` | `/v1/posts/{pid}/metrics` | Live engagement figures for a published post |
+| `POST` | `/v1/accounts/{id}/sync` | Start refreshing an account's posts and their counts |
+| `GET` | `/v1/accounts/{id}/sync` | Read the state of an account's post sync |
+
+## Read an overview
+
+`GET /v1/analytics/overview` summarises the posts published in a date range: totals against the previous range, engagement per publish day, breakdowns by platform and media type, the top posts, the hours your posts did best in, and the replies, DMs, and moderation SocialAPI performed. It covers every account your key can read, or one account, brand, or platform.
+
+| Parameter | Description |
+|---|---|
+| `from` | First day, `YYYY-MM-DD`, inclusive, in `tz`. Default: 29 days before `to`, so the default window is 30 days |
+| `to` | Last day, `YYYY-MM-DD`, inclusive, in `tz`. Default: today in `tz` |
+| `tz` | IANA time zone that days and hours are cut in, such as `Europe/Paris`. Default: `UTC` |
+| `account_id` | Narrows the overview to one connected account |
+| `brand_id` | Narrows the overview to one brand |
+| `platform` | Narrows the overview to one platform, such as `instagram` |
+| `sort` | Order of `top_posts`: `engagements` (default), `likes`, `comments`, `shares`, or `views` |
+
+```bash
+curl "https://api.social-api.ai/v1/analytics/overview?from=2026-11-03&to=2026-11-05&tz=Europe/Paris" \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+Response (HTTP 200), with `top_posts` and `activity` trimmed to one entry:
+
+```json
+{
+  "data": {
+    "from": "2026-11-03",
+    "to": "2026-11-05",
+    "tz": "Europe/Paris",
+    "metrics_synced_at": "2026-11-05T14:00:00Z",
+    "totals": { "posts": 6, "engagements": 492, "likes": 410, "comments": 52, "shares": 21, "saves": 9, "views": 10400 },
+    "previous": { "posts": 5, "engagements": 411, "likes": 350, "comments": 40, "shares": 15, "saves": 6, "views": 8800 },
+    "by_day": [
+      { "day": "2026-11-03", "posts": 2, "engagements": 140 },
+      { "day": "2026-11-04", "posts": 0, "engagements": 0 },
+      { "day": "2026-11-05", "posts": 4, "engagements": 352 }
+    ],
+    "by_platform": [
+      { "platform": "instagram", "posts": 4, "engagements": 412, "likes": 350, "comments": 40, "shares": 15, "saves": 7, "views": 9600 },
+      { "platform": "tiktok", "posts": 2, "engagements": 80, "likes": 60, "comments": 12, "shares": 6, "saves": 2, "views": 800 }
+    ],
+    "by_format": [
+      { "media_type": "reel", "posts": 3, "engagements": 380 },
+      { "media_type": "video", "posts": 2, "engagements": 80 },
+      { "media_type": "image", "posts": 1, "engagements": 32 }
+    ],
+    "top_posts": [
+      {
+        "post_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+        "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+        "platform": "instagram",
+        "text": "Our autumn menu is here",
+        "permalink": "https://www.instagram.com/p/C1a2b3c4d5/",
+        "thumbnail": "https://scontent.cdninstagram.com/v/t51.29350-15/456_n.jpg",
+        "media_type": "reel",
+        "published_at": "2026-11-05T08:30:00Z",
+        "metrics": { "engagements": 230, "likes": 190, "comments": 25, "shares": 10, "saves": 5, "views": 4100 }
+      }
+    ],
+    "best_times": {
+      "posts_considered": 6,
+      "cells": [
+        { "weekday": 2, "hour": 18, "posts": 2, "avg_engagements": 70 },
+        { "weekday": 4, "hour": 9, "posts": 3, "avg_engagements": 105 },
+        { "weekday": 4, "hour": 19, "posts": 1, "avg_engagements": 37 }
+      ]
+    },
+    "activity": [
+      {
+        "metric": "replies_sent",
+        "kind": "flow",
+        "source": "owned",
+        "day_tz": "UTC",
+        "points": [
+          { "day": "2026-11-03", "value": 4, "subjects_counted": 2 },
+          { "day": "2026-11-04", "value": 1, "subjects_counted": 1 },
+          { "day": "2026-11-05", "value": 7, "subjects_counted": 2 }
+        ]
+      }
+    ],
+    "accounts_excluded": 0
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `from`, `to`, `tz` | The range and time zone SocialAPI used, including the defaults |
+| `metrics_synced_at` | The most recent counter refresh among the posts in range. Absent when none has been refreshed yet |
+| `totals` | `posts`, `engagements`, `likes`, `comments`, `shares`, `saves`, and `views` for the posts published in range |
+| `previous` | The same figures for the range of equal length that ends the day before `from`. Compare it with `totals` for the change |
+| `by_day` | Every day of the range, oldest first, with the posts published that day and the engagements they have earned since. A day with no posts is `0` |
+| `by_platform` | One entry per platform, with the `totals` fields, highest `engagements` first |
+| `by_format` | One entry per media type, with `posts` and `engagements`, highest `engagements` first. `media_type` is the platform's own kind, lowercased (`image`, `video`, `reel`, `carousel_album`), or `unknown` when the platform did not say |
+| `top_posts` | Up to 10 posts in the order `sort` asks for. A tie goes to the newer post. `post_id` is the SocialAPI post ID. `thumbnail` is the platform's link and expires |
+| `best_times.posts_considered` | How many posts the cells are drawn from |
+| `best_times.cells[]` | One entry per weekday and hour in which a post was published: `weekday` (`1` Monday to `7` Sunday), `hour` (`0` to `23`), `posts`, and `avg_engagements`. Hours with no post do not appear |
+| `activity` | Daily counts of the replies, DMs, and moderation SocialAPI performed for the accounts in scope, in the same series shape as [stored history](#read-stored-history): `replies_sent`, `private_replies_sent`, `dms_sent`, `mentions_answered`, `reviews_answered`, `comments_moderated`, and `replies_failed` |
+| `accounts_excluded` | How many accounts in scope were left out because they lack the `analytics.read` permission |
+
+- **Engagements:** `engagements` is `likes` + `comments` + `shares` + `saves`. `views` is reported apart, because only some platforms report it. See which platforms report each figure in [Read live post metrics](#read-live-post-metrics).
+- **Counters:** the figures are the counters SocialAPI last synced. The overview makes no platform call and costs no credits. To refresh an account's counters first, call [`POST /v1/accounts/{id}/sync`](#refresh-an-accounts-posts).
+- **Posts counted:** every published target in range, including posts published outside SocialAPI that account sync imported. A post published to 2 accounts counts as 2 posts and can appear twice in `top_posts`. Posts whose `hidden` field is `true` are left out. Posts of accounts you disconnected stay in.
+- **Time zone:** `from`, `to`, `by_day`, and `best_times` are cut in `tz`, and today is today in `tz`. `activity` days are UTC, as in stored history.
+- **Best times:** `best_times` describes when your past posts did well. It does not say when your audience is online.
+- **Excluded accounts:** an account without `analytics.read` is left out of every figure and counted in `accounts_excluded`. Check it before you compare 2 overviews.
+- **Brand-restricted keys:** a [brand-restricted key](/guides/scoped-keys) sees its own brands only. An `account_id` or `brand_id` outside them returns `404`.
+
+A `tz` that is not an IANA time zone name returns `400 validation.tz_invalid`, and an unknown `sort` returns `400 validation.sort_invalid`. The range rules are those of stored history: `400 validation.from_invalid`, `validation.to_invalid`, `validation.range_inverted`, or `validation.range_too_wide` past 400 days. An unknown account returns `404 account.not_found` and an unknown brand returns `404 resource.not_found`.
+
+## Read stored history
+
+All 3 history endpoints take the same query parameters and return the same shape.
+
+| Parameter | Description |
+|---|---|
+| `from` | First day, `YYYY-MM-DD`, inclusive. Default: 29 days before `to`, so the default window is 30 days |
+| `to` | Last day, `YYYY-MM-DD`, inclusive. Default: today (UTC) |
+| `metrics` | Comma-separated metric names. Default: every stored metric |
+| `page_id` | Account endpoint only. Narrows the result to one Facebook Page of the account |
+
+```bash
+curl "https://api.social-api.ai/v1/posts/7c9e6679-7425-40de-944b-e07fc1f90ae7/analytics?from=2026-10-01&to=2026-10-03" \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+Response (HTTP 200):
+
+```json
+{
+  "data": {
+    "from": "2026-10-01",
+    "to": "2026-10-03",
+    "series": [
+      {
+        "metric": "post_likes",
+        "kind": "gauge",
+        "source": "sampled",
+        "day_tz": "UTC",
+        "points": [
+          { "day": "2026-10-01", "value": 40, "subjects_counted": 2 },
+          { "day": "2026-10-02", "value": 52, "change": 12, "days_spanned": 1, "subjects_counted": 2 },
+          { "day": "2026-10-03", "value": 61, "change": 9, "days_spanned": 1, "subjects_counted": 2 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `from`, `to` | The range SocialAPI used, including the defaults |
+| `series[].metric` | The metric name |
+| `series[].kind` | `gauge` is a level you diff for growth. `flow` is a per-day count you sum for a period total |
+| `series[].source` | `reported` (the platform attributes the value to that day), `sampled` (SocialAPI read the value on that day), `owned` (SocialAPI counted its own actions), or `mixed` (a sum combines more than one) |
+| `series[].day_tz` | The time zone the days were cut on, or `mixed` |
+| `points[].day` | The day, oldest first |
+| `points[].value` | The figure for the day |
+| `points[].change` | The difference from the previous point. Present on a `gauge` only, and absent on the first point |
+| `points[].days_spanned` | How many days `change` covers. Larger than 1 when a day is missing. Divide `change` by it before you chart growth |
+| `points[].subjects_counted` | How many accounts, Pages, or post targets the value sums. At least 1 |
+
+Read `subjects_counted` before you chart a sum. A day on which fewer subjects reported adds up lower, and without the count a gap looks like a decline.
+
+A range longer than 400 days returns `400 validation.range_too_wide`. A `from` or `to` that is not `YYYY-MM-DD` returns `400 validation.from_invalid` or `400 validation.to_invalid`, and `to` before `from` returns `400 validation.range_inverted`. A `metrics` name SocialAPI does not store returns no series for it. A range with no stored points returns `"series": []`.
+
+### What SocialAPI stores
+
+| Metric | Kind | Source | Endpoints | Meaning |
+|---|---|---|---|---|
+| `post_likes`, `post_comments`, `post_shares` | `gauge` | `sampled` | Post | The post's lifetime like, comment, and share counts, as read on that day. Days are UTC. The last reading of a day is kept |
+| `replies_sent` | `flow` | `owned` | Account, brand | Public replies to comments that SocialAPI sent for the account |
+| `mentions_answered` | `flow` | `owned` | Account, brand | Public replies to mentions |
+| `private_replies_sent` | `flow` | `owned` | Account, brand | Private replies to commenters |
+| `dms_sent` | `flow` | `owned` | Account, brand | DMs |
+| `reviews_answered` | `flow` | `owned` | Account, brand | Replies to reviews |
+| `replies_failed` | `flow` | `owned` | Account, brand | Replies, private replies, DMs, review replies, and mention replies that failed |
+| `comments_moderated` | `flow` | `owned` | Account, brand | Comments you hid, showed again, deleted, liked, or unliked |
+
+- **Post history:** SocialAPI adds a point each time it syncs the post's account: when you connect it, and when you call `POST /v1/accounts/{id}/sync`. An account without `analytics.read` adds no points. On every platform except X, LinkedIn member profiles, WhatsApp, and Pinterest, post history also gains points without a sync call. History starts when SocialAPI first tracks the post, so a post that was published long ago has no earlier points. A post with 2 or more targets returns one series per metric, summed across its targets. Pinterest posts are not synced, so they have no history.
+- **Action counts:** SocialAPI counts the replies, DMs, and moderation actions you send through the API, MCP tools, and Automations, per account and per day (UTC). Today's count can be up to 24 hours behind. An account without `analytics.read` is not counted.
+- **Platform metrics:** follower, reach, and view history from the platforms is not stored. Read current figures from the platform insight endpoints below.
+
+### Account, brand, and post history
+
+- **Account:** `GET /v1/accounts/{id}/analytics` returns the account's series and, for an account with Pages, the series of its Pages summed. Add `page_id` for one Page. An unknown account returns `404 account.not_found`, an unknown Page returns `404 resource.not_found`, and an account without `analytics.read` returns `403 account.permission_missing`.
+- **Brand:** `GET /v1/brands/{id}/analytics` sums every account and Page in the brand per metric and day. The sum includes accounts you disconnected, so history does not disappear when an account disconnects. An account without `analytics.read` is left out of the sum. A brand-restricted key reads only its own brands. An unknown brand returns `404 resource.not_found`. `day_tz` is `mixed` when platforms cut days differently.
+- **Post:** `GET /v1/posts/{pid}/analytics` takes the SocialAPI post ID (a UUID), not the platform's post ID. A post that does not exist, or one your key cannot see, returns `404 resource.not_found`. A target whose account lacks `analytics.read` is left out of the total, and a post with no target left returns `403 account.permission_missing`.
+
+## Read live post metrics
+
+`GET /v1/posts/{pid}/metrics` asks each platform for the post's current figures. It accepts the SocialAPI post ID or a platform post ID. A platform post ID that matches more than one post returns `409 ambiguous_post_id`: use the SocialAPI post ID.
+
+```bash
+curl https://api.social-api.ai/v1/posts/7c9e6679-7425-40de-944b-e07fc1f90ae7/metrics \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+Response (HTTP 200):
+
+```json
+{
+  "data": {
+    "post_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "targets": [
+      {
+        "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+        "platform": "tiktok",
+        "status": "",
+        "metrics": {
+          "likes": 142,
+          "comments": 23,
+          "shares": 8,
+          "saves": 0,
+          "views": 5120,
+          "extra": { "views": 5120 }
+        },
+        "metrics_synced_at": "2026-10-13T09:30:00Z"
+      },
+      {
+        "account_id": "acc_01HZ9X4T6B8C2D5F7G9H1J3K",
+        "platform": "pinterest",
+        "error": {
+          "code": "resource.not_supported",
+          "message": "Pinterest does not report engagement counts on the pin list, so metrics cannot be refreshed",
+          "category": "resource",
+          "caused_by": "platform"
+        }
+      }
+    ]
+  }
+}
+```
+
+Each published target has `metrics` or, when its platform cannot report them, an `error`. The HTTP status stays 200 whatever the targets return. A target whose `status` is not `published` does not appear. The figures are written to the post, so `GET /v1/posts/{pid}` shows the latest values and `metrics_synced_at`.
+
+| Platform | Figures |
+|---|---|
+| Instagram | `likes`, `comments`, and insights such as `views`, `reach`, `interactions`, `saves`, and `shares`. See [Instagram live metrics](/platforms/instagram/publishing#live-metrics-and-insights) |
+| Facebook | `likes` (reactions), `comments`, `shares` |
+| Threads | `likes`, `comments` (replies). Both stay `0` for an account connected before 2026-10-17 until it is reconnected |
+| TikTok | `likes`, `comments`, `shares`, `saves` (always `0`), `views`, `extra.views` |
+| YouTube | `likes`, `comments`, `views`, `extra.views` |
+| X / Twitter | `likes`, `comments` (replies) |
+| Bluesky | `likes`, `comments` (replies), `shares` (reposts) |
+| Zalo | `shares`, `views`, `extra.views` |
+| LinkedIn | Not available: the target returns `501 resource.not_supported`. Account-level figures are in [LinkedIn insights](/platforms/linkedin#insights) |
+| Pinterest | Not available: the target returns `501 resource.not_supported` |
+| Google Business Profile | Local posts report no engagement counts, so every count is `0`. Use [performance metrics](/platforms/google#performance-metrics) |
+
+A figure a platform does not report is `0`, except Instagram insights, which are absent when Instagram does not report them. A target that cannot be read returns the platform's error, for example `404 resource.not_found` when the platform no longer returns the post. A target whose account lacks `analytics.read` returns `resource.not_found` in its `error`, with a message that says the account could not be loaded.
+
+## Refresh an account's posts
+
+`POST /v1/accounts/{id}/sync` starts pulling the account's posts from the platform, so new posts and fresh counts appear without waiting for the background sync. It returns at once with HTTP 202 while the sync runs.
+
+```bash
+curl -X POST https://api.social-api.ai/v1/accounts/acc_01HZ9X3Q4R5M6N7P8V2K0W1J/sync \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+Response (HTTP 202):
+
+```json
+{
+  "data": {
+    "state": "syncing",
+    "started_at": "2026-11-05T16:00:00Z",
+    "finished_at": null,
+    "last_synced_at": null,
+    "error": ""
+  }
+}
+```
+
+To wait for the result, poll `GET /v1/accounts/{id}/sync` until `state` is no longer `syncing`, then read the posts again. A finished sync is `idle` with a newer `last_synced_at`. A sync that failed is `failed`, and `error` says why.
+
+```bash
+curl https://api.social-api.ai/v1/accounts/acc_01HZ9X3Q4R5M6N7P8V2K0W1J/sync \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+- **Depth:** Instagram covers up to the 500 most recent posts, Facebook up to the 500 most recent per Page, TikTok and Zalo the 20 most recent, and other platforms the 25 most recent. The TikTok platform route has its own cooldown: see [TikTok](/platforms/tiktok#sync-videos).
+- **Already running:** a `POST` for an account that is already syncing returns that sync and starts no second one. Connecting an account starts a sync too.
+- **Cooldown:** SocialAPI allows 1 sync per account every 15 minutes. The window starts when you connect the account and when a sync starts. A request inside the window returns `429 accounts.sync_rate_limited`, with `Retry-After` and `error.meta.retry_after_seconds` set to the seconds left.
+- **Daily limit:** each day, your plan allows 10 syncs for every brand it includes, so Side Hustle allows 100, Full Send 500 (500 more per Profile pack), and Enterprise has no limit. The count resets at midnight UTC. A request past it returns `429 accounts.sync_daily_limit`, with `Retry-After` and `error.meta.retry_after_seconds` set to the seconds until midnight UTC, and `error.meta.limit` set to your plan's daily limit. SocialAPI already refreshes every account's recent posts in the background, so most integrations never need the limit.
+- **Unsupported platforms:** a platform that cannot list posts, such as a LinkedIn member profile or WhatsApp, returns `501 resource.not_supported`.
+- **Pinterest:** a sync starts and refreshes nothing: Pins are read live.
+- **Other errors:** `404 account.not_found` for an account your key cannot reach, and `403 account.permission_missing` for an account without `posts.read`. A platform failure during the sync leaves `state` at `failed` with the reason in `error`.
+
+TikTok and YouTube also have their own sync routes. See [TikTok](/platforms/tiktok#sync-videos) and [YouTube](/platforms/youtube).
+
+## Platform insights
+
+These endpoints return live figures from one platform:
+
+| Platform | What you get |
+|---|---|
+| Facebook | Page followers, views, reach, and post engagements, as a 30-day summary and a daily series. See [Facebook Page insights](/platforms/facebook#page-insights) |
+| Instagram | Profile counts and 30-day insight totals. See [Instagram account summary](/platforms/instagram#account-summary) |
+| Threads | Post-level and account-level insights. See [Threads insights](/platforms/threads#insights) |
+| TikTok | Profile and counts. See [TikTok account summary](/platforms/tiktok#account-summary) |
+| YouTube | Channel counts. See [YouTube channel stats](/platforms/youtube#read-videos-and-channel-stats) |
+| Pinterest | Profile counts. See [Pinterest account summary](/platforms/pinterest#account-summary) |
+| Google Business Profile | Daily performance metrics and search keywords. See [Google performance metrics](/platforms/google#performance-metrics) |
+| LinkedIn | Follower count and per-post counts for a company Page or a member profile. `GET /v1/platforms/linkedin/insights`. See [LinkedIn insights](/platforms/linkedin#insights) |
+
+## Scopes
+
+| Scope | Grants |
+|---|---|
+| `accounts:read` | `GET /v1/accounts/{id}/analytics` and `GET /v1/brands/{id}/analytics`, and the platform account summaries |
+| `posts:read` | `GET /v1/analytics/overview`, `GET /v1/posts/{pid}/analytics`, and `GET /v1/posts/{pid}/metrics` |
+| `accounts:manage` | `POST /v1/accounts/{id}/sync` |
+| `analytics:read` | The events log, exports, Threads insights, Threads profile lookups, and LinkedIn insights, not history. Refused to brand-restricted keys |
+
+A brand-restricted key can read the overview and history for its own brands only. See [Scoped API keys](/guides/scoped-keys).
+
+## Exports
+
+Analytics exports build a report of an account's videos and their metrics. Exports per billing period, videos per export, and the wait between exports depend on your plan. See [History and export allowances](/guides/plans#history-and-export-allowances).
+
+## Use from an AI agent
+
+| Tool | What it does |
+|---|---|
+| `social_api_get_analytics_overview` | Summarises how the posts published in a range performed |
+| `social_api_get_account_analytics` | Reads an account's daily history |
+| `social_api_get_brand_analytics` | Reads a brand's daily history |
+| `social_api_get_post_analytics` | Reads a post's daily history |
+| `social_api_get_post_metrics` | Reads a post's live figures |
+
+`POST /v1/accounts/{id}/sync` has no tool. See [MCP tools](/integrations/tools).
+
+## Related
+
+- [Track post delivery](/guides/delivery): post and target fields, including `metrics`
+- [Publish a post](/guides/publishing): create the posts you measure
+- [Plans and usage](/guides/plans): export allowances
+- [Account permissions](/guides/permissions): the `analytics.read` and `posts.read` permissions
+- [Scoped API keys](/guides/scoped-keys): scopes for analytics
+- [Errors](/guides/errors): every analytics error code

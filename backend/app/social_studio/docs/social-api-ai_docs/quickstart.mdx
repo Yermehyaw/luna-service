@@ -1,0 +1,278 @@
+---
+title: Quickstart
+description: Get an API key, connect an Instagram account, read and reply to a comment, and publish a post with the SocialAPI REST API in about 10 minutes.
+icon: rocket
+---
+
+This quickstart takes you from a new SocialAPI account to a connected Instagram account, a comment you read and answer, and a post you publish, all with `curl`. It takes about 10 minutes.
+
+## Before you start
+
+- **A SocialAPI account.** Sign up at [app.social-api.ai](https://app.social-api.ai). The Free plan is enough: this walkthrough costs 1 post credit and 1 interaction credit. See [Plans and usage](/guides/plans).
+- **An Instagram Business or Creator account** that you can sign in to. A personal Instagram account cannot be connected.
+- **A comment on one of that account's posts**, written from another Instagram account, for step 4.
+- **A public image URL** (JPEG) for step 5.
+
+<Steps>
+  <Step title="Create an API key">
+    In the [dashboard](https://app.social-api.ai/api-configuration?tab=keys), open **API Keys**, click **Create API Key**, name it, and click **Create key**.
+
+    <Warning>
+      The dashboard shows the key once. If you lose it, revoke it and create another. It starts with `sapi_key_`.
+    </Warning>
+
+    Store it in your environment:
+
+    ```bash
+    export SOCAPI_KEY="sapi_key_your_key_here"
+    ```
+
+    To check that it works, list your accounts. A new SocialAPI account has none:
+
+    ```bash
+    curl https://api.social-api.ai/v1/accounts \
+      -H "Authorization: Bearer $SOCAPI_KEY"
+    ```
+
+    Response (HTTP 200):
+
+    ```json
+    { "data": [], "count": 0 }
+    ```
+
+    A `401` means the key is wrong: see [Authentication](/guides/authentication).
+  </Step>
+
+  <Step title="Connect an Instagram account">
+    Start the connection. SocialAPI's own app connects Instagram, so you register nothing with Meta:
+
+    ```bash
+    curl -X POST https://api.social-api.ai/v1/accounts/connect \
+      -H "Authorization: Bearer $SOCAPI_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"platform": "instagram"}'
+    ```
+
+    Response (HTTP 202):
+
+    ```json
+    {
+      "auth_url": "https://www.instagram.com/oauth/authorize/?client_id=1234567890&redirect_uri=https%3A%2F%2Fapi.social-api.ai%2Foauth%2Fcallback%2Finstagram&response_type=code&state=4a8f2c1e9b3d7f06a5c2e8b4d1f3a7e2#weblink",
+      "state": "4a8f2c1e9b3d7f06a5c2e8b4d1f3a7e2",
+      "message": "Open this link to connect your instagram account. Once you've authorized, the account will be connected automatically."
+    }
+    ```
+
+    Open `auth_url` in your browser, sign in to Instagram, and approve. You have 1 hour from this request. SocialAPI creates a brand named after the account to hold it.
+
+    Check that it worked:
+
+    ```bash
+    curl https://api.social-api.ai/v1/accounts \
+      -H "Authorization: Bearer $SOCAPI_KEY"
+    ```
+
+    Response (HTTP 200):
+
+    ```json
+    {
+      "data": [
+        {
+          "id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+          "platform": "instagram",
+          "name": "Acme Corp",
+          "username": "acmecorp",
+          "brand_id": "1c9f6f0e-2b3a-4c5d-8e7f-0a1b2c3d4e5f",
+          "status": "active",
+          "permissions": null,
+          "effective_permissions": ["posts.read", "posts.write", "comments.read", "comments.write", "messages.read", "messages.write", "analytics.read"]
+        }
+      ],
+      "count": 1
+    }
+    ```
+
+    Copy the account's `id`. An empty `data` means the approval did not finish: run this step again. Other platforms, and the slug each one uses, are listed in [Platform slugs](/guides/connect-accounts#platform-slugs). X, Telegram, Bluesky, and App Store Connect use your own app or credentials: see [Platform apps](/guides/platform-credentials).
+  </Step>
+
+  <Step title="List the posts that have comments">
+    ```bash
+    curl "https://api.social-api.ai/v1/inbox/comments?account_id=acc_01HZ9X3Q4R5M6N7P8V2K0W1J&min_comments=1" \
+      -H "Authorization: Bearer $SOCAPI_KEY"
+    ```
+
+    Response (HTTP 200):
+
+    ```json
+    {
+      "data": [
+        {
+          "user_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+          "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+          "platform": "instagram",
+          "id": "17895695668004550",
+          "content": "Spring collection is live",
+          "thumbnail": "https://scontent.cdninstagram.com/v/t51/spring.jpg",
+          "permalink": "https://www.instagram.com/p/C8xY2AbC/",
+          "comment_count": 4,
+          "like_count": 87,
+          "published_at": "2026-10-12T09:00:00Z",
+          "created_at": "2026-10-12T09:00:05Z",
+          "updated_at": "2026-10-13T14:30:00Z"
+        }
+      ],
+      "pagination": { "has_more": false }
+    }
+    ```
+
+    The `id` is the platform's ID of the post. An empty `data` means no post has comments yet: write a comment from another Instagram account and run the request again.
+  </Step>
+
+  <Step title="Read and reply to a comment">
+    Read the comments on that post. `account_id` is required:
+
+    ```bash
+    curl "https://api.social-api.ai/v1/inbox/comments/17895695668004550?account_id=acc_01HZ9X3Q4R5M6N7P8V2K0W1J" \
+      -H "Authorization: Bearer $SOCAPI_KEY"
+    ```
+
+    Response (HTTP 200):
+
+    ```json
+    {
+      "data": [
+        {
+          "id": "sapi_cmt_GXRM4BNTW7KFYSD3HAEV6QJZ2CLP9U1I",
+          "platform_id": "17858893269577012",
+          "platform": "instagram",
+          "text": "Love this product!",
+          "author_id": "17841400008460056",
+          "author_name": "Jane Smith",
+          "author_username": "janesmith",
+          "author_picture": "",
+          "is_owner": false,
+          "like_count": 2,
+          "reply_count": 1,
+          "has_replies": true,
+          "liked_by_viewer": false,
+          "is_hidden": false,
+          "parent_id": null,
+          "created_at": "2026-10-13T14:30:00Z",
+          "capabilities": {
+            "can_reply": true,
+            "can_delete": true,
+            "can_hide": true,
+            "can_like": false,
+            "can_private_reply": true
+          }
+        }
+      ],
+      "pagination": { "has_more": false, "next_cursor": "" }
+    }
+    ```
+
+    Reply with the comment's `id`. This costs 1 interaction credit:
+
+    ```bash
+    curl -X POST "https://api.social-api.ai/v1/inbox/comments/17895695668004550" \
+      -H "Authorization: Bearer $SOCAPI_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+        "comment_id": "sapi_cmt_GXRM4BNTW7KFYSD3HAEV6QJZ2CLP9U1I",
+        "text": "Thank you, Jane!"
+      }'
+    ```
+
+    Response (HTTP 200):
+
+    ```json
+    {
+      "success": true,
+      "comment_id": "sapi_cmt_TT974YVQH4RAHNN2HY2DJSNY9111D7LMTP1X"
+    }
+    ```
+
+    The reply is public on Instagram. `comment_id` is the new reply's ID. A `501 resource.not_supported` means the platform does not allow that action: check `capabilities.can_reply` on the comment first.
+  </Step>
+
+  <Step title="Publish a post">
+    Publish an image to the account. Replace the `source` URL with a public JPEG URL. Instagram needs `content_type` when you publish, and `publish_now: true` is what publishes: without `publish_now` or `scheduled_at`, the request only saves a draft.
+
+    ```bash
+    curl -X POST https://api.social-api.ai/v1/posts \
+      -H "Authorization: Bearer $SOCAPI_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "text": "Our spring collection is live.",
+        "publish_now": true,
+        "media": [
+          { "source_type": "url", "source": "https://cdn.example.com/launch.jpg" }
+        ],
+        "platform_data": { "instagram": { "content_type": "feed" } },
+        "targets": [ { "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J" } ]
+      }'
+    ```
+
+    Response (HTTP 201):
+
+    ```json
+    {
+      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "text": "Our spring collection is live.",
+      "status": "publishing",
+      "hidden": false,
+      "retry_count": 0,
+      "created_at": "2026-10-13T12:00:00Z",
+      "updated_at": "2026-10-13T12:00:00Z",
+      "targets": [
+        {
+          "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+          "platform": "instagram",
+          "status": "publishing"
+        }
+      ]
+    }
+    ```
+
+    A `201` means SocialAPI accepted the post, not that Instagram published it. Read the post until its `status` is `published`, `partial`, or `failed`:
+
+    ```bash
+    curl https://api.social-api.ai/v1/posts/7c9e6679-7425-40de-944b-e07fc1f90ae7 \
+      -H "Authorization: Bearer $SOCAPI_KEY"
+    ```
+
+    When it worked, the post's `status` is `published` and the target has a `platform_post_id` and a `permalink`. When it failed, the reason is in `targets[].error`. To upload a file instead of linking one, see [Media](/guides/media).
+  </Step>
+</Steps>
+
+## What you built
+
+You now have an API key, a connected Instagram account, a comment you read and answered, and a post you published. The same calls work on every platform that supports them: [Supported platforms](/platforms/overview) shows which.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Core concepts" icon="diagram-project" href="/guides/concepts">
+    Brand, account, post, interaction, and capability.
+  </Card>
+  <Card title="Unified inbox" icon="inbox" href="/guides/inbox">
+    Comments, DMs, reviews, and mentions.
+  </Card>
+  <Card title="Automations" icon="bolt" href="/guides/automations">
+    Answer matching comments and DMs with no code on your side.
+  </Card>
+  <Card title="Publishing" icon="paper-plane" href="/guides/publishing">
+    Fields every platform shares, scheduling, and media.
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/guides/webhooks">
+    Receive new comments, messages, and post results on your server.
+  </Card>
+</CardGroup>
+
+## Related
+
+- [Authentication](/guides/authentication) for scoped keys, key rotation, and OAuth tokens
+- [Connect accounts](/guides/connect-accounts) for brands, reconnecting, and letting someone else connect
+- [Errors](/guides/errors) for every error code and how to handle it
+- [Plans and usage](/guides/plans) for allowances and what costs a credit

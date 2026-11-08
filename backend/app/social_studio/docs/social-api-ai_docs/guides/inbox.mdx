@@ -1,0 +1,162 @@
+---
+title: Unified inbox
+description: Read and answer comments, direct messages, reviews, and mentions from every connected platform through one inbox API with one set of IDs and cursors.
+---
+
+The unified inbox is SocialAPI's REST API for reading and answering what people send to your connected accounts: comments, direct messages (DMs), reviews, and mentions. Each area has its own endpoints. All of them use the same API key, the same [IDs](/guides/ids), the same cursor [pagination](/guides/pagination), and the same `501 resource.not_supported` answer when a platform lacks a feature.
+
+Replies and DMs cost interaction credits, and reads cost nothing. Which platforms support which action is in the [capability matrix](/platforms/overview).
+
+An account needs the matching [permission](/guides/permissions) for each area: `comments.read` and `comments.write`, `messages.read` and `messages.write`, or `reviews.read` and `reviews.write`. A call without it returns `403 account.permission_missing` (the lists of stored comments, conversations, and messages and `GET /v1/inbox/reviews` are the exceptions: see [Account permissions](/guides/permissions#what-an-account-can-do-right-now)), and the account's events for that area do not arrive.
+
+## The four areas
+
+| Area | What it covers | Guide |
+|---|---|---|
+| Comments | Comments and replies on your posts: list, reply, private reply, hide, delete, like | [Comments](/guides/comments) |
+| Direct messages | Conversations and messages: list, send text, attachments, and buttons, react, mark as read | [Direct messages](/guides/direct-messages) |
+| Reviews | Reviews of a business location or an app, and the business's public reply | [Reviews](/guides/reviews) |
+| Mentions | Posts and comments that tag your account, and replies to them | [Mentions](/guides/mentions) |
+
+Answer Instagram and Facebook comments and DMs that match keywords without running a webhook handler by using an [Automation](/guides/automations).
+
+## The interaction shape
+
+An `Interaction` is the one object that webhook events and `GET /v1/accounts/{id}/mentions` use for a comment, DM, or mention. This is one item of that mentions list:
+
+```json
+{
+  "id": "sapi_mnt_GXRM4BNTW7KFYSD3HAEV6QJZ2CLP9U1I",
+  "platform": "instagram",
+  "type": "mention",
+  "author": { "username": "janesmith" },
+  "content": {
+    "text": "Loving the new range from @acmecorp",
+    "media": [{ "url": "https://scontent.cdninstagram.com/v/t51/range.jpg", "type": "image" }]
+  },
+  "metadata": {
+    "media_id": "17895695668004550",
+    "permalink": "https://www.instagram.com/p/C8xY2AbC/",
+    "media_type": "IMAGE",
+    "like_count": 12,
+    "comments_count": 3
+  },
+  "received_at": "2026-10-13T14:35:00Z",
+  "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J"
+}
+```
+
+`id` starts with `sapi_cmt_`, `sapi_dm_`, or `sapi_mnt_` by type. Every field is in [Interaction payload](/guides/webhook-events#interaction-payload). The list endpoints of the other areas return their own item shapes, described in each guide: comments with a `capabilities` object, conversations and messages, and reviews with a `reply`. IDs have one format everywhere: see [IDs](/guides/ids).
+
+## Receive new items
+
+SocialAPI sends new inbound items to your server as [webhook events](/guides/webhook-events) when the platform reports them to SocialAPI.
+
+| Area | Events |
+|---|---|
+| Comments | `comment.received` |
+| Direct messages | `dm.received`, `dm.sent`, `dm.deleted`, `dm.referral`, `dm.postback`, and `dm.status.sent`, `dm.status.delivered`, `dm.status.read`, `dm.status.failed` |
+| Reviews | `review.received`, `review.updated` |
+| Mentions | `mention.received` |
+
+Which platform emits which event is stated per event on [Webhook events](/guides/webhook-events). X, YouTube, Bluesky, Pinterest, LinkedIn, and App Store Connect send nothing to SocialAPI. Where they support comments, DMs, mentions, or reviews, read them with the list endpoints. [Register an endpoint](/guides/webhooks#register-an-endpoint) once to receive the events of the other platforms.
+
+## Costs
+
+Interaction credits count the replies and DMs you send. A plan with an interaction allowance returns `429 validation.interaction_limit_exhausted` when it is used up.
+
+- **1 credit:** a public reply to a comment, a reply to a review, a reply to a mention, and one DM request, however many messages it sends.
+- **No credit:** every read, private replies, hiding, liking, and deleting a comment, message reactions, and a manual sync.
+
+[Plans and usage](/guides/plans#what-counts-as-a-post-or-interaction) is the home of these rules.
+
+## Fetch an inbound attachment
+
+`GET /v1/inbox/media/{id}` returns the bytes of an attachment that arrived with a WhatsApp or Telegram message. On every other platform, the attachment URL on a message is the platform's own URL: you fetch it directly, and it expires when the platform says.
+
+WhatsApp and Telegram files can be downloaded only with the connected account's own credentials, which your API key cannot present. For those two platforms, `attachment_url` on the message and `content.media[].url` on the `dm.received` event are a SocialAPI URL of the form `https://api.social-api.ai/v1/inbox/media/{id}`. SocialAPI starts fetching the file when the message arrives. It stays available for 30 days, then returns `410`.
+
+```bash
+curl "https://api.social-api.ai/v1/inbox/media/7f3c1e2a-9b4d-4e5f-8a6b-1c2d3e4f5a6b" \
+  -H "Authorization: Bearer $SOCAPI_KEY" \
+  -o attachment
+```
+
+| Status | Meaning |
+|---|---|
+| `200` | The attachment bytes, with `Content-Type` set to the original media type |
+| `404` | The media ID is unknown, or it belongs to another SocialAPI account |
+| `410` | The file is gone for good: it expired, or the platform reported the source unrecoverable. Stop retrying |
+| `503` | Too many requests are waiting for files. The response carries `Retry-After: 1`. Retry after 1 second |
+| `504` | SocialAPI is still fetching the file. Send the request again until you get `200` or `410`: this is not a failure |
+
+A request for a file that is still being fetched waits up to 15 seconds for it before it returns `504`. `410` and `504` mean opposite things: `410` means stop, `504` means keep retrying. A file that cannot be downloaded at all, such as a Telegram file over 20 MB, returns `410`.
+
+## Refresh the inbox manually
+
+Use `POST /v1/inbox/sync` to refresh conversations and messages on demand, for example to load a thread before you open it.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/v1/inbox/sync` | Start a sync for one account's conversation list, or for one thread |
+| `GET` | `/v1/inbox/sync` | Read the sync state of a target |
+
+With only `account_id`, the sync refreshes that account's conversation list, then loads the messages of up to 20 of its most recent conversations that were never loaded. Add `conversation_id` to refresh that one thread's messages instead.
+
+```bash
+curl -X POST https://api.social-api.ai/v1/inbox/sync \
+  -H "Authorization: Bearer $SOCAPI_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J" }'
+```
+
+Response (HTTP 202):
+
+```json
+{
+  "data": {
+    "state": "syncing",
+    "started_at": "2026-10-13T14:30:00Z",
+    "finished_at": null,
+    "last_synced_at": null,
+    "error": "",
+    "synced": 0
+  }
+}
+```
+
+| Field | Description |
+|---|---|
+| `account_id` | Request body and `GET` query parameter. Required. The connected account to sync |
+| `conversation_id` | Request body and `GET` query parameter. Optional. The thread to sync instead of the conversation list |
+| `state` | `idle`, `syncing`, or `failed` |
+| `started_at` | When the current or most recent job started |
+| `finished_at` | When the job finished. `null` while `state` is `syncing` |
+| `last_synced_at` | When this target last completed a sync. `null` in the `POST` response: read it from `GET` |
+| `error` | The reason the last job failed. Empty otherwise |
+| `synced` | Conversations added for a list sync, or messages added for a thread sync. For display only |
+
+To wait for the result, poll `GET /v1/inbox/sync` with the same `account_id` and `conversation_id` until `state` is no longer `syncing`, then read the conversation or message list again:
+
+```bash
+curl "https://api.social-api.ai/v1/inbox/sync?account_id=acc_01HZ9X3Q4R5M6N7P8V2K0W1J" \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+A `POST` for a target that is already syncing returns that running job and starts no second one. Each target accepts 1 sync you start every 5 minutes. A second attempt inside that time returns `429 inbox.sync_rate_limited` with a `Retry-After` header holding the seconds to wait, and `error.meta.retry_after_seconds` repeats it. Reads of the inbox never use this allowance.
+
+`GET /v1/inbox/conversations` and `GET /v1/inbox/conversations/{id}/messages` also return `sync_state` and `last_synced_at`, so a client that already polls them does not need `GET /v1/inbox/sync`. An unknown `account_id` or `conversation_id` returns `404`, and a missing `account_id` returns `400 validation.field_required`.
+
+## Scopes
+
+A scoped key needs the scope that each guide lists for an operation: `inbox:read`, `inbox:write`, `dms:read`, or `dms:send`. Starting or reading a sync needs `dms:read`. [Scoped API keys](/guides/scoped-keys#scopes) lists what each scope grants.
+
+## Related
+
+- [Comments](/guides/comments): list, reply to, moderate, and privately answer comments.
+- [Direct messages](/guides/direct-messages): conversations, messages, attachments, and buttons.
+- [Reviews](/guides/reviews): read Google Business Profile and App Store Connect reviews and reply.
+- [Mentions](/guides/mentions): list the posts that tag your account and reply.
+- [Webhook events](/guides/webhook-events): every inbox event and its payload.
+- [Account permissions](/guides/permissions): limit what a connected account can read and send.
+- [Plans and usage](/guides/plans): interaction credits and allowances.
