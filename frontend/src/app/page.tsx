@@ -30,10 +30,10 @@ import {
 import { LunaLogo } from '../components/shared/LunaMark';
 
 const STATS = [
-  { value: '480,000+', label: 'Tickets Issued' },
-  { value: '3.8 mins', label: 'Average Wait Time' },
-  { value: '94.2%', label: 'On-Time Arrival Rate' },
-  { value: '100% Free', label: 'Custom Subdomain & Themes' },
+  { value: 'Free', label: 'to get started' },
+  { value: '10', label: 'social posts each month' },
+  { value: '2', label: 'social profiles on Free' },
+  { value: 'withluna.tech', label: 'your business address' },
 ];
 
 const MODULES = [
@@ -73,12 +73,12 @@ const MODULES = [
   {
     id: 'social',
     icon: Megaphone,
-    title: 'Social Posts & Updates',
-    tag: 'Live Announcements',
+    title: 'Social Studio',
+    tag: 'Posts & messages',
     desc: 'Plan social posts, keep up with customer messages, and share updates with your audience.',
     points: ['Plan posts on a calendar', 'Reply to customer messages', 'Keep track of shared updates'],
-    href: '/tenant/acme-bank/staff/ops-console?tab=broadcast',
-    cta: 'Launch Broadcasts',
+    href: '/tenant/kemis-lounge/staff/social-studio',
+    cta: 'Open Social Studio',
     accentColor: '#0057B8',
   },
 ];
@@ -99,7 +99,7 @@ const TENANTS = [
     name: "Kemi's Hair & Beauty Lounge",
     slug: 'kemis-lounge',
     industry: 'Hair Salon, Nails & Spa',
-    desc: 'Boutique styling chairs, braiding stations, lookbook pre-selection, and zero-wait VIP lounge.',
+    desc: 'Book a salon visit, choose a service, and see when it’s your turn.',
     badge: 'Small Business · Salon',
     scale: 'sme',
     color: '#831843',
@@ -109,7 +109,7 @@ const TENANTS = [
     name: 'QuickFix AutoCare Garage',
     slug: 'quickfix-auto',
     industry: 'Auto Repair & Oil Lube Bays',
-    desc: 'Timed service bays, vehicle fault checklist pre-upload, and live mechanic status tracking.',
+    desc: 'Book a repair visit and share what’s wrong with your vehicle before you arrive.',
     badge: 'Small Business · Auto',
     scale: 'sme',
     color: '#1E293B',
@@ -182,10 +182,10 @@ export default function Home() {
       <div className="bg-[#291E29] text-[#FFF6E9] py-2 px-4 text-xs font-medium text-center flex items-center justify-center gap-2 flex-wrap border-b border-[#341539]">
         <span className="flex h-2 w-2 rounded-full bg-[#FFA800] animate-pulse shrink-0" />
         <span>
-          <strong>Luna is here:</strong> Bring customer conversations, publishing, and service operations together at your own business address (`yourname.withluna.tech`).
+          <strong>One home for your business:</strong> Manage appointments, customers, and social posts with Luna.
         </span>
         <Link href="/register" className="underline font-bold text-[#FFA800] hover:text-white ml-1">
-          Claim Free Subdomain &rarr;
+          Start for free &rarr;
         </Link>
       </div>
 
@@ -199,20 +199,10 @@ export default function Home() {
 
             <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-[#291E29]/80">
               <a href="#features" className="hover:text-[#291E29] transition-colors">
-                Solutions
-              </a>
-              <Link href="/leaderboard" className="text-[#291E29] hover:text-[#FFA800] transition-colors flex items-center gap-1 font-bold">
-                <Trophy className="h-3 w-3 text-[#FFA800]" />
-                <span>Leaderboard</span>
-              </Link>
-              <a href="#subdomains" className="hover:text-[#291E29] transition-colors">
-                Free Subdomains
-              </a>
-              <a href="#themes" className="hover:text-[#291E29] transition-colors">
-                8 Themes
+                What you can do
               </a>
               <a href="#tenants" className="hover:text-[#291E29] transition-colors">
-                Live Portals
+                Examples
               </a>
             </nav>
           </div>
@@ -228,7 +218,7 @@ export default function Home() {
               href="/register"
               className="flex items-center gap-1.5 rounded-xl bg-[#291E29] px-4 py-2.5 text-xs font-extrabold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[#4a264e] sm:px-5"
             >
-              <span>Get Started</span>
+              <span>Start free</span>
               <ArrowRight className="h-3.5 w-3.5 text-[#FFA800]" />
             </Link>
             <button
@@ -272,40 +262,12 @@ export default function Home() {
                 Solutions &amp; Modules
               </a>
               <a
-                href="#subdomains"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
-              >
-                Free Subdomain Registry
-              </a>
-              <a
-                href="#themes"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
-              >
-                8 Curated Themes
-              </a>
-              <a
                 href="#tenants"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
               >
-                Live SME &amp; Enterprise Portals
+                Examples
               </a>
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
-              >
-                Business workspace
-              </Link>
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-xl text-[#FFA800] bg-[#FFA800]/10 font-bold"
-              >
-                Business workspace
-              </Link>
             </nav>
 
             <div className="pt-4 border-t border-[#341539] mt-auto space-y-2">
@@ -321,7 +283,7 @@ export default function Home() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#FFA800] text-xs font-extrabold text-[#291E29] shadow-md"
               >
-                <span>Get Started Free</span>
+                <span>Start free</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -330,30 +292,27 @@ export default function Home() {
       )}
 
       {/* 3. HERO SECTION */}
-      <section className="relative overflow-hidden pt-12 pb-20 lg:pt-20 lg:pb-28">
+      <section className="relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_rgba(186,104,215,0.14),_transparent_38%)] pt-12 pb-16 lg:pt-20 lg:pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-12 items-center">
+          <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
             {/* Left Column: Hero Text */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#291E29]/5 border border-[#291E29]/10 px-4 py-1.5 text-xs font-bold text-[#291E29]">
+            <div className="space-y-6 lg:col-span-6">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-[#291E29]/10 px-4 py-1.5 text-xs font-semibold text-[#291E29]/80 shadow-sm">
                 <Sparkles className="h-3.5 w-3.5 text-[#FFA800]" />
-                <span>Next-Gen Smart Queues for SMEs, Local Shops &amp; Enterprises</span>
+                <span>Appointments, customer care, and social tools</span>
               </div>
 
-              <h1 className="font-display text-4xl sm:text-6xl font-extrabold text-[#291E29] leading-[1.08] tracking-tight">
-                Integrated customer service.{' '}
-                <span className="text-[#FFA800]">Never queue again.</span>{' '}
-                Keep your day.
+              <h1 className="max-w-2xl font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-[#291E29] sm:text-6xl">
+                Give every customer visit{' '}
+                <span className="text-[#702D7B]">a better start.</span>
               </h1>
 
-              <p className="text-base sm:text-lg text-[#291E29]/75 max-w-2xl leading-relaxed">
-                Whether you run a busy hair salon, auto repair garage, artisan bakery, private clinic, or tier-1 bank:
-                Luna helps customers book a visit and share photos or documents before they arrive.
-                Run your customer experience from any smartphone or tablet on your <strong>business page</strong> (`yourname.withluna.tech`).
+              <p className="max-w-xl text-base leading-relaxed text-[#291E29]/75 sm:text-lg">
+                Let customers book, help your team stay organized, and keep up with social messages from one simple workspace.
               </p>
 
               {/* Subdomain Quick Claim Input */}
-              <div className="p-2 sm:p-2.5 rounded-2xl bg-white border border-[#291E29]/15 shadow-xl flex flex-col sm:flex-row gap-2 max-w-xl">
+              <div className="flex max-w-xl flex-col gap-2 rounded-2xl border border-[#291E29]/10 bg-white p-2 shadow-lg sm:flex-row sm:p-2.5">
                 <div className="flex-1 flex items-center px-3 py-2.5 bg-slate-50 rounded-xl text-base sm:text-xs font-mono min-h-[44px]">
                   <span className="text-slate-400 select-none">https://</span>
                   <input
@@ -370,33 +329,33 @@ export default function Home() {
                   className="rounded-xl bg-[#291E29] px-6 py-3 text-xs font-extrabold text-[#FFF6E9] hover:bg-[#341539] transition flex items-center justify-center gap-2 shadow-md shrink-0 min-h-[44px]"
                 >
                   <Globe className="h-4 w-4 text-[#FFA800]" />
-                  <span>Claim Free Domain</span>
+                  <span>Start with this address</span>
                 </Link>
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-3 pt-2">
                 <Link
-                  href="/tenant/acme-bank"
+                  href="/tenant/kemis-lounge"
                   className="inline-flex items-center gap-2 rounded-xl bg-[#291E29] px-5 py-3 text-xs font-extrabold text-[#FFF6E9] shadow-md hover:bg-[#341539] transition"
                 >
                   <Ticket className="h-4 w-4 text-[#FFA800]" />
-                  <span>Explore Acme Bank Portal</span>
+                  <span>View customer page</span>
                 </Link>
                 <Link
-                  href="/tenant/acme-bank/staff/ops-console"
+                  href="/tenant/kemis-lounge/staff/dashboard"
                   className="inline-flex items-center gap-2 rounded-xl border border-[#291E29]/20 bg-white px-5 py-3 text-xs font-bold text-[#291E29] shadow-xs hover:bg-slate-50 transition"
                 >
                   <Laptop className="h-4 w-4 text-[#BA68D7]" />
-                  <span>Open Staff Ops Console</span>
+                  <span>Preview business home</span>
                 </Link>
               </div>
 
               {/* Stat badges */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-[#291E29]/10">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-[#291E29]/10 pt-5 sm:grid-cols-4">
                 {STATS.map((s, idx) => (
                   <div key={idx} className="space-y-0.5">
-                    <div className="text-xl sm:text-2xl font-extrabold text-[#291E29] font-display">
+                    <div className="break-words font-display text-xl font-extrabold text-[#291E29] sm:text-2xl">
                       {s.value}
                     </div>
                     <div className="text-[11px] text-[#291E29]/65 font-medium">{s.label}</div>
@@ -406,8 +365,8 @@ export default function Home() {
             </div>
 
             {/* Right Column: Interactive App Preview Card */}
-            <div className="lg:col-span-5">
-              <div className="rounded-3xl border-2 border-[#291E29] bg-[#291E29] text-[#FFF6E9] p-6 sm:p-7 shadow-2xl space-y-6 relative overflow-hidden">
+            <div className="lg:col-span-6">
+              <div className="relative space-y-5 overflow-hidden rounded-[28px] border border-[#291E29]/10 bg-[#291E29] p-5 text-[#FFF6E9] shadow-2xl sm:p-7">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-[#FFA800]/10 rounded-full blur-3xl pointer-events-none" />
 
                 {/* Card Header */}
@@ -415,12 +374,12 @@ export default function Home() {
                   <div className="flex items-center gap-3">
                     <span className="flex h-3 w-3 rounded-full bg-emerald-400 animate-ping" />
                     <div>
-                      <h4 className="font-extrabold text-sm text-white">Acme Bank · Lekki Flagship</h4>
-                      <p className="text-[11px] text-[#FFF6E9]/60 font-mono">acme-bank.withluna.tech</p>
+                      <h4 className="font-extrabold text-sm text-white">Kemi&apos;s Hair &amp; Beauty Lounge</h4>
+                      <p className="text-[11px] text-[#FFF6E9]/60 font-mono">kemis-lounge.withluna.tech</p>
                     </div>
                   </div>
                   <span className="rounded-full bg-[#FFA800] text-[#291E29] text-[10px] font-extrabold px-2.5 py-0.5 uppercase">
-                    Live Queue
+                    Sample preview
                   </span>
                 </div>
 
@@ -428,17 +387,17 @@ export default function Home() {
                 <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3">
                   <div className="flex justify-between items-center text-xs">
                     <span className="text-[#FFA800] font-bold flex items-center gap-1.5">
-                      <Radio className="h-3.5 w-3.5 animate-pulse" /> Counter 1 · Now Serving
+                      <Radio className="h-3.5 w-3.5" /> Next customer
                     </span>
                     <span className="text-white/60 font-mono text-[10px]">Just Now</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="font-mono text-3xl font-extrabold text-[#FFA800] bg-black/40 px-3 py-1.5 rounded-xl border border-white/10">
-                      AC-9BY3B
+                      KE-024
                     </span>
                     <div>
-                      <div className="font-bold text-white text-sm">Ada Lovelace</div>
-                      <div className="text-[11px] text-[#FFF6E9]/70">Teller & Cash Deposit (~5 min)</div>
+                      <div className="font-bold text-white text-sm">Funke Adeleke</div>
+                      <div className="text-[11px] text-[#FFF6E9]/70">Gel manicure · 10:10</div>
                     </div>
                   </div>
                 </div>
@@ -446,44 +405,44 @@ export default function Home() {
                 {/* Live Waiting Queue List */}
                 <div className="space-y-2">
                   <div className="text-xs font-bold text-white/70 flex justify-between">
-                    <span>Up Next in Lobby</span>
-                    <span className="text-[#FFA800]">2 Waiting</span>
+                    <span>Today&apos;s appointments</span>
+                    <span className="text-[#FFA800]">2 next</span>
                   </div>
 
                   <div className="flex items-center justify-between rounded-xl bg-white/5 p-3 text-xs border border-white/5">
                     <div className="flex items-center gap-3">
                       <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-1 rounded-lg">
-                        AC-102
+                        KE-025
                       </span>
-                      <span>Babajide Cole</span>
+                      <span>Fatima Bello</span>
                     </div>
-                    <span className="text-[11px] text-white/60">~4 mins wait</span>
+                    <span className="text-[11px] text-white/60">11:50</span>
                   </div>
 
                   <div className="flex items-center justify-between rounded-xl bg-white/5 p-3 text-xs border border-white/5">
                     <div className="flex items-center gap-3">
                       <span className="font-mono font-bold text-slate-300 bg-white/10 px-2 py-1 rounded-lg">
-                        AC-103
+                        KE-023
                       </span>
-                      <span>Chidinma Vance</span>
+                      <span>Mariam Yusuf</span>
                     </div>
-                    <span className="text-[11px] text-white/60">~9 mins wait</span>
+                    <span className="text-[11px] text-white/60">13:20</span>
                   </div>
                 </div>
 
                 {/* Quick Action Links inside Hero Preview */}
                 <div className="pt-2 flex gap-3">
                   <Link
-                    href="/tenant/acme-bank/book-queue"
+                    href="/tenant/kemis-lounge/book-queue"
                     className="flex-1 rounded-xl bg-[#FFA800] py-2.5 text-xs font-extrabold text-[#291E29] text-center shadow-md hover:bg-[#ffb31a] transition"
                   >
-                    Book Priority Ticket
+                    Book a visit
                   </Link>
                   <Link
-                    href="/tenant/acme-bank/track"
+                    href="/tenant/kemis-lounge/track"
                     className="flex-1 rounded-xl bg-white/10 py-2.5 text-xs font-bold text-white text-center hover:bg-white/15 transition border border-white/10"
                   >
-                    Track Live Position
+                    Track your place
                   </Link>
                 </div>
               </div>
@@ -493,17 +452,15 @@ export default function Home() {
       </section>
 
       {/* 4. PLATFORM MODULES / SOLUTIONS */}
-      <section id="features" className="py-20 bg-white border-y border-[#291E29]/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center max-w-3xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#FFA800] bg-[#291E29] px-3.5 py-1 rounded-full">
-              Tools for your business
-            </span>
-            <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#291E29]">
-              Everything businesses need to eliminate queues and delight customers
+      <section id="features" className="border-y border-[#291E29]/10 bg-white py-20">
+        <div className="mx-auto max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
+          <div className="mx-auto max-w-2xl space-y-3 text-center">
+            <span className="rounded-full bg-[#f3eaf5] px-3.5 py-1 text-xs font-bold text-[#702D7B]">A simpler workday</span>
+            <h2 className="font-display text-3xl font-bold text-[#291E29] sm:text-4xl">
+              The tools behind a great customer visit.
             </h2>
-            <p className="text-xs sm:text-sm text-[#291E29]/70">
-              One simple place to manage visits, customers, services, and social posts.
+            <p className="text-sm text-[#291E29]/70">
+              Help customers book, support them while they wait, and stay in touch.
             </p>
           </div>
 
@@ -513,12 +470,12 @@ export default function Home() {
               return (
                 <div
                   key={m.id}
-                  className="rounded-3xl border border-[#291E29]/10 bg-[#FFF6E9]/40 p-6 flex flex-col justify-between hover:border-[#291E29]/30 transition-all shadow-sm hover:shadow-md group"
+                  className="group flex flex-col justify-between rounded-2xl border border-[#291E29]/10 bg-[#fcfbf8] p-5 transition hover:border-[#bba9bf] hover:bg-white"
                 >
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <div
-                        className="rounded-2xl p-3 text-white shadow-md"
+                        className="rounded-xl p-2.5 text-white"
                         style={{ backgroundColor: m.accentColor }}
                       >
                         <Icon className="h-6 w-6" />
@@ -528,13 +485,13 @@ export default function Home() {
                       </span>
                     </div>
 
-                    <h3 className="font-display text-lg font-bold text-[#291E29]">{m.title}</h3>
-                    <p className="text-xs text-[#291E29]/75 leading-relaxed">{m.desc}</p>
+                    <h3 className="font-display text-base font-bold text-[#291E29]">{m.title}</h3>
+                    <p className="text-sm leading-6 text-[#291E29]/75">{m.desc}</p>
 
                     <ul className="space-y-2 pt-2 border-t border-[#291E29]/10 text-xs">
                       {m.points.map((pt, i) => (
-                        <li key={i} className="flex items-center gap-2 text-[#291E29]/80 text-[11px]">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <li key={i} className="flex items-center gap-2 text-xs text-[#291E29]/80">
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                           <span>{pt}</span>
                         </li>
                       ))}
@@ -853,17 +810,17 @@ export default function Home() {
                 <li><Link href="/tenant/acme-bank" className="hover:text-white">Banking & Financial</Link></li>
                 <li><Link href="/tenant/city-hospital" className="hover:text-white">Healthcare & Clinics</Link></li>
                 <li><Link href="/tenant/luna-telecom" className="hover:text-white">Telecom & Flagships</Link></li>
-                <li><Link href="/tenant/acme-bank/staff/ops-console" className="hover:text-white">Staff Ops Console</Link></li>
+                <li><Link href="/tenant/acme-bank/staff/ops-console" className="hover:text-white">Front desk</Link></li>
               </ul>
             </div>
 
             <div className="space-y-3 text-xs">
               <h4 className="font-bold text-[#FFA800] uppercase tracking-wider text-[11px]">Platform</h4>
               <ul className="space-y-2 text-[#FFF6E9]/75">
-                <li><Link href="/register" className="hover:text-white">Claim Subdomain</Link></li>
-                <li><Link href="/login" className="hover:text-white">Staff Login</Link></li>
-                <li><Link href="/tenant/acme-bank/staff/settings" className="hover:text-white">8 Theme Customizer</Link></li>
-                <li><Link href="/tenant/acme-bank/staff/ops-console?tab=broadcast" className="hover:text-white">Live Operations Broadcasts</Link></li>
+                <li><Link href="/register" className="hover:text-white">Start free</Link></li>
+                <li><Link href="/login" className="hover:text-white">Sign in</Link></li>
+                <li><Link href="/tenant/acme-bank/staff/settings" className="hover:text-white">Business page design</Link></li>
+                <li><Link href="/tenant/kemis-lounge/staff/social-studio" className="hover:text-white">Social Studio</Link></li>
               </ul>
             </div>
           </div>
