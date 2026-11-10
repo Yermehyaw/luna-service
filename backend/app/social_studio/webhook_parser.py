@@ -32,6 +32,8 @@ def parse_webhook_payload(
     msg_id = str(uuid.uuid4())
     business_id = fallback_business_id or "default"
     platform = "instagram"
+    query_type = "dm"
+    post_id = None
     author_handle = "@customer"
     author_name = None
     body = ""
@@ -46,6 +48,15 @@ def parse_webhook_payload(
         author_name = data.get("sender_name")
         body = data.get("text", data.get("body", ""))
         media_url = data.get("media_url")
+        event = payload.get("event", "")
+        if "comment" in event or "comment" in data.get("type", ""):
+            query_type = "comment"
+            post_id = data.get("postId")
+        elif "mention" in event or "mention" in data.get("type", ""):
+            query_type = "mention"
+            post_id = data.get("mediaId") or data.get("postId")
+        else:
+            query_type = "dm"
 
     elif prov in ("socialapi", "socialapi_ai"):
         # SocialAPI webhook event shape or interaction payload
@@ -53,6 +64,18 @@ def parse_webhook_payload(
         msg_id = event_data.get("id", payload.get("message_id", msg_id))
         business_id = event_data.get("account_id", payload.get("business_id", business_id))
         platform = event_data.get("platform", payload.get("network", "instagram"))
+
+        event_type = payload.get("event_type", payload.get("type", ""))
+        if "comment" in event_type or "comment" in event_data.get("type", "") or str(msg_id).startswith("sapi_cmt"):
+            query_type = "comment"
+            post_id = event_data.get("post_id") or payload.get("post_id")
+        elif "mention" in event_type or "mention" in event_data.get("type", "") or str(msg_id).startswith("sapi_mnt"):
+            query_type = "mention"
+            metadata = event_data.get("metadata")
+            if isinstance(metadata, dict):
+                post_id = metadata.get("media_id")
+        else:
+            query_type = "dm"
 
         author_obj = event_data.get("author")
         if isinstance(author_obj, dict) and author_obj:
@@ -79,6 +102,14 @@ def parse_webhook_payload(
         author_handle = payload.get("handle", "@customer")
         body = payload.get("content", payload.get("text", ""))
         media_url = payload.get("media_url")
+        p_type = payload.get("type", payload.get("event", ""))
+        if "comment" in p_type:
+            query_type = "comment"
+            post_id = payload.get("post_id")
+        elif "mention" in p_type:
+            query_type = "mention"
+        else:
+            query_type = "dm"
 
     elif prov == "postproxy":
         msg = payload.get("message", payload)
@@ -88,6 +119,14 @@ def parse_webhook_payload(
         author_handle = msg.get("from", "@customer")
         body = msg.get("content", msg.get("text", ""))
         media_url = msg.get("attachment_url")
+        event = payload.get("event", "")
+        if "comment" in event or "comment" in payload:
+            query_type = "comment"
+            post_id = payload.get("post_id")
+        elif "mention" in event or payload.get("type") == "mention":
+            query_type = "mention"
+        else:
+            query_type = "dm"
 
     else:
         # Generic envelope normalization
@@ -97,11 +136,15 @@ def parse_webhook_payload(
         author_handle = payload.get("author", payload.get("sender", payload.get("from", "@customer")))
         body = payload.get("body", payload.get("text", payload.get("content", "")))
         media_url = payload.get("media_url")
+        query_type = payload.get("type", "dm")
+        post_id = payload.get("post_id")
 
     return LunaMessage(
         id=str(msg_id),
         business_id=str(business_id),
         platform=str(platform),
+        query_type=query_type,
+        post_id=str(post_id) if post_id else None,
         author_handle=str(author_handle),
         author_name=author_name,
         body=str(body),
@@ -141,6 +184,8 @@ async def ingest_webhook_message(
     query = SocialQuery(
         business_id=message.business_id,
         account_id=str(account.id),
+        query_type=message.query_type,
+        post_id=message.post_id,
         author_handle=message.author_handle,
         body=message.body,
         media_url=message.media_url,
@@ -166,6 +211,8 @@ async def ingest_webhook_message(
                     "business_id": query.business_id,
                     "account_id": query.account_id,
                     "platform": message.platform,
+                    "query_type": query.query_type,
+                    "post_id": query.post_id,
                     "author_handle": query.author_handle,
                     "body": query.body,
                     "media_url": query.media_url,

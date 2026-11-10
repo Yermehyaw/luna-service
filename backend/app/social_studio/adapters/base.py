@@ -61,6 +61,8 @@ class BaseSocialAdapter(ISocialProvider):
             business_id=q.business_id,
             account_id=q.account_id,
             platform=platform,
+            query_type=getattr(q, "query_type", "dm") or "dm",
+            post_id=getattr(q, "post_id", None),
             author_handle=q.author_handle,
             body=q.body,
             media_url=getattr(q, "media_url", None),
@@ -69,7 +71,7 @@ class BaseSocialAdapter(ISocialProvider):
             sentiment_score=q.sentiment_score,
             intent=q.intent,
             suggested_reply=q.suggested_reply,
-            status=q.status,
+            status=q.status or "open",
             raw_payload={
                 "response_body": q.response_body,
                 "answered_at": q.answered_at.isoformat() if q.answered_at else None,
@@ -80,6 +82,7 @@ class BaseSocialAdapter(ISocialProvider):
         self,
         business_id: str,
         status_filter: str | None = None,
+        inbox_type: str | None = "all",
         limit: int = 50,
         offset: int = 0,
     ) -> list[LunaMessage]:
@@ -90,8 +93,91 @@ class BaseSocialAdapter(ISocialProvider):
         stmt = select(SocialQuery).where(SocialQuery.business_id == business_id)
         if status_filter:
             stmt = stmt.where(SocialQuery.status == status_filter)
+        if inbox_type and inbox_type != "all":
+            stmt = stmt.where(SocialQuery.query_type == inbox_type)
         stmt = stmt.order_by(desc(SocialQuery.created_at)).offset(offset).limit(limit)
 
         result = await self.db.execute(stmt)
         queries = result.scalars().all()
         return [self._query_to_luna_message(q) for q in queries]
+
+    async def _fetch_db_analytics(
+        self,
+        business_id: str,
+        platform: str | None = None,
+        time_range: str = "7d",
+    ) -> SocialAnalyticsData:
+        """Compute real analytics metrics from local database (0 fake placeholders)."""
+        if not self.db:
+            return SocialAnalyticsData(
+                business_id=business_id,
+                platform=platform or "all",
+                period=time_range,
+                total_followers=0,
+                impressions=0,
+                reach=0,
+                engagement_rate=0.0,
+                queries_received=0,
+                average_response_time_minutes=0.0,
+                sentiment_breakdown={"positive": 0, "neutral": 0, "negative": 0},
+                top_topics=[],
+            )
+
+        from app.models.social import SocialAccount
+        from sqlalchemy import func
+
+        # 1. Total followers across connected accounts
+        acc_stmt = select(func.coalesce(func.sum(SocialAccount.follower_count), 0)).where(
+            SocialAccount.business_id == business_id
+        )
+        if platform and platform != "all":
+            acc_stmt = acc_stmt.where(SocialAccount.platform == platform)
+        acc_res = await self.db.execute(acc_stmt)
+        followers = int(acc_res.scalar() or 0)
+
+        # 2. Total queries received
+        q_stmt = select(func.count(SocialQuery.id)).where(SocialQuery.business_id == business_id)
+        q_res = await self.db.execute(q_stmt)
+        queries_count = int(q_res.scalar() or 0)
+
+        # 3. Sentiment breakdown
+        sent_stmt = (
+            select(SocialQuery.sentiment, func.count(SocialQuery.id))
+            .where(SocialQuery.business_id == business_id)
+            .group_by(SocialQuery.sentiment)
+        )
+        sent_res = await self.db.execute(sent_stmt)
+        sentiment_map = {"positive": 0, "neutral": 0, "negative": 0}
+        for s_val, count in sent_res.all():
+            if s_val in sentiment_map:
+                sentiment_map[s_val] = count
+
+        # 4. Average response time in minutes for answered queries
+        time_stmt = select(
+            SocialQuery.created_at, SocialQuery.answered_at
+        ).where(
+            SocialQuery.business_id == business_id,
+            SocialQuery.answered_at.isnot(None),
+            SocialQuery.created_at.isnot(None),
+        )
+        time_res = await self.db.execute(time_stmt)
+        rows = time_res.all()
+        avg_resp_mins = 0.0
+        if rows:
+            durations = [(r.answered_at - r.created_at).total_seconds() / 60.0 for r in rows if r.answered_at > r.created_at]
+            if durations:
+                avg_resp_mins = round(sum(durations) / len(durations), 1)
+
+        return SocialAnalyticsData(
+            business_id=business_id,
+            platform=platform or "all",
+            period=time_range,
+            total_followers=followers,
+            impressions=0,
+            reach=0,
+            engagement_rate=0.0,
+            queries_received=queries_count,
+            average_response_time_minutes=avg_resp_mins,
+            sentiment_breakdown=sentiment_map,
+            top_topics=[],
+        )

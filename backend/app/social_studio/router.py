@@ -127,6 +127,7 @@ DEMO_SEED_DATA = [
         "author_handle": "@jide.fx",
         "author_name": "jide.fx",
         "platform": "instagram",
+        "query_type": "dm",
         "body": "Your app says my document verification failed but I uploaded a clear scan. What exactly is wrong with it??",
         "sentiment": "negative",
         "sentiment_score": 0.2,
@@ -138,6 +139,7 @@ DEMO_SEED_DATA = [
         "author_handle": "@daniel_o",
         "author_name": "Daniel O.",
         "platform": "x",
+        "query_type": "mention",
         "body": "Been waiting 2hrs at your branch?? This is unacceptable. Ticket A118 and the board has not moved...",
         "sentiment": "negative",
         "sentiment_score": 0.1,
@@ -149,6 +151,7 @@ DEMO_SEED_DATA = [
         "author_handle": "Chiamaka Eze",
         "author_name": "Chiamaka Eze",
         "platform": "linkedin",
+        "query_type": "comment",
         "body": "Interested in your SME loan clinic for our staff cooperative. Who can we speak with about a session?",
         "sentiment": "neutral",
         "sentiment_score": 0.6,
@@ -160,6 +163,7 @@ DEMO_SEED_DATA = [
         "author_handle": "+234 803 441 9022",
         "author_name": "Fatima Al-Hassan",
         "platform": "whatsapp",
+        "query_type": "dm",
         "body": "Hi! Can I reschedule my appointment for tomorrow afternoon? My flight landed late.",
         "sentiment": "neutral",
         "sentiment_score": 0.5,
@@ -171,6 +175,7 @@ DEMO_SEED_DATA = [
         "author_handle": "@dele_b",
         "author_name": "Dele B.",
         "platform": "tiktok",
+        "query_type": "comment",
         "body": "Just tried the mobile queue booking! Walked straight into Chair 2 and out in 20 mins. Incredible experience 🔥",
         "sentiment": "positive",
         "sentiment_score": 0.95,
@@ -208,6 +213,7 @@ async def _seed_demo_conversations_if_empty(db: AsyncSession, business_id: str) 
             business_id=business_id,
             account_id=str(account.id),
             author_handle=item["author_handle"],
+            query_type=item.get("query_type", "dm"),
             body=item["body"],
             status=QueryStatus.OPEN.value,
             sentiment=item["sentiment"],
@@ -225,6 +231,7 @@ async def get_inbox(
     business_id: str = Query(min_length=1),
     platform: str | None = None,
     status_filter: str | None = Query(default=None, alias="status"),
+    inbox_type: str = Query(default="all", alias="type", description="Filter by inbox type: all, dm, comment, mention"),
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     provider: ISocialProvider = Depends(get_social_provider),
@@ -234,6 +241,7 @@ async def get_inbox(
         business_id=business_id,
         platform=platform,
         status=status_filter,
+        inbox_type=inbox_type,
         limit=limit,
         offset=offset,
     )
@@ -244,6 +252,7 @@ async def list_conversations(
     business_id: str = Query(min_length=1),
     platform: str | None = None,
     status_filter: str | None = Query(default=None, alias="status"),
+    inbox_type: str = Query(default="all", alias="type", description="Filter by inbox type: all, dm, comment, mention"),
     search: str | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
@@ -252,12 +261,14 @@ async def list_conversations(
     """Fetch structured conversation threads conforming to the frontend Social Studio contract.
     
     0 Social Credits consumed (Free Inbound Read).
+    Supports filtering across all, dm, comment, and mention.
     """
     await _seed_demo_conversations_if_empty(db, business_id)
 
     stmt = select(SocialQuery).where(SocialQuery.business_id == business_id)
+    if inbox_type and inbox_type != "all":
+        stmt = stmt.where(SocialQuery.query_type == inbox_type)
     if platform and platform != "all":
-        # match query platform through account or default
         pass
     if status_filter and status_filter != "all":
         if status_filter == "resolved":
@@ -319,10 +330,14 @@ async def list_conversations(
         elif "daniel" in q.author_handle.lower():
             detected_platform = "x"
 
+        q_type = getattr(q, "query_type", "dm") or "dm"
         conversations.append(
             SocialConversationSummary(
                 id=str(q.id),
                 platform=detected_platform,
+                query_type=q_type,
+                inbox_type=q_type,
+                post_id=getattr(q, "post_id", None),
                 authorName=q.author_handle.lstrip("@"),
                 authorHandle=q.author_handle,
                 avatarColor=avatar_colors.get(detected_platform, "#291E29"),

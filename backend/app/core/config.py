@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     # --- Social Studio (Hexagonal Ports & Adapters) ---
     DEFAULT_SOCIAL_PROVIDER: str = "socialapi"
     ZERNIO_API_KEY: str = ""
-    ZERNIO_BASE_URL: str = "https://api.zernio.com/v1"
+    ZERNIO_BASE_URL: str = "https://zernio.com/api"
     SOCIALAPI_AI_KEY: str = ""
     SOCIALAPI_BASE_URL: str = "https://api.social-api.ai/v1"
     POSTPROXY_API_KEY: str = ""

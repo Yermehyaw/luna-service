@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from typing import Any
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,15 +42,22 @@ class PlanVortexAdapter(BaseSocialAdapter):
         business_id: str,
         platform: str | None = None,
         status: str | None = None,
+        inbox_type: str | None = "all",
         limit: int = 50,
         offset: int = 0,
     ) -> list[LunaMessage]:
+        target_type = (inbox_type or "all").lower()
+
         if self.api_key:
             try:
                 async with self._get_client() as client:
+                    params: dict[str, Any] = {"limit": limit, "offset": offset, "type": target_type}
+                    if platform and platform != "all":
+                        params["platform"] = platform
+
                     resp = await client.get(
-                        f"/v1/organizations/{business_id}/inbox",
-                        params={"limit": limit, "offset": offset, "platform": platform or ""},
+                        f"/organizations/{business_id}/inbox",
+                        params=params,
                     )
                     if resp.status_code == 200:
                         data = resp.json()
@@ -60,6 +68,8 @@ class PlanVortexAdapter(BaseSocialAdapter):
                                     id=item.get("id"),
                                     business_id=business_id,
                                     platform=item.get("platform", "x"),
+                                    query_type=item.get("type", "dm"),
+                                    post_id=item.get("post_id"),
                                     author_handle=item.get("sender_handle", "@customer"),
                                     body=item.get("content", ""),
                                     timestamp=datetime.fromisoformat(
@@ -72,7 +82,13 @@ class PlanVortexAdapter(BaseSocialAdapter):
             except Exception as e:
                 logger.warning(f"[PlanVortexAdapter] Remote inbox call failed: {e}")
 
-        return await self._fetch_db_inbox(business_id, status_filter=status, limit=limit, offset=offset)
+        return await self._fetch_db_inbox(
+            business_id,
+            status_filter=status,
+            inbox_type=target_type,
+            limit=limit,
+            offset=offset,
+        )
 
     async def send_dm_reply(
         self,
@@ -86,7 +102,7 @@ class PlanVortexAdapter(BaseSocialAdapter):
             try:
                 async with self._get_client() as client:
                     resp = await client.post(
-                        f"/v1/organizations/{business_id}/messages/{message_id}/reply",
+                        f"/organizations/{business_id}/messages/{message_id}/reply",
                         json={"text": reply_text},
                     )
                     if resp.status_code in (200, 201):
@@ -123,19 +139,44 @@ class PlanVortexAdapter(BaseSocialAdapter):
         platform: str | None = None,
         time_range: str = "7d",
     ) -> SocialAnalyticsData:
-        return SocialAnalyticsData(
-            business_id=business_id,
-            platform=platform or "all",
-            period=time_range,
-            total_followers=1630,
-            impressions=17400,
-            reach=11800,
-            engagement_rate=4.1,
-            queries_received=19,
-            average_response_time_minutes=3.8,
-            sentiment_breakdown={"positive": 14, "neutral": 4, "negative": 1},
-            top_topics=["Holiday Hours", "Booking Slots", "Service Catalog"],
-        )
+        """Fetch analytics without hardcoded placeholder fabrication."""
+        if self.api_key:
+            try:
+                async with self._get_client() as client:
+                    resp = await client.get(f"/organizations/{business_id}/analytics")
+                    if resp.status_code == 200:
+                        d = resp.json()
+                        followers = d.get("total_followers", 0) or 0
+                        impressions = d.get("impressions", 0) or 0
+                        engagements = d.get("engagements", 0) or 0
+                        eng_rate = round((engagements / impressions) * 100, 2) if impressions > 0 else 0.0
+
+                        return SocialAnalyticsData(
+                            business_id=business_id,
+                            platform=platform or "all",
+                            period=time_range,
+                            total_followers=followers,
+                            impressions=impressions,
+                            reach=d.get("reach", 0) or 0,
+                            engagement_rate=eng_rate,
+                            queries_received=d.get("queries_count", 0) or 0,
+                            average_response_time_minutes=0.0,
+                            sentiment_breakdown={"positive": 0, "neutral": 0, "negative": 0},
+                            top_topics=[],
+                            raw_metrics=d,
+                        )
+                    else:
+                        raise HTTPException(
+                            status_code=resp.status_code,
+                            detail=f"PlanVortex analytics failed: {resp.text}",
+                        )
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"[PlanVortexAdapter] Analytics fetch failed: {e}")
+                raise HTTPException(status_code=502, detail=f"Failed to fetch PlanVortex analytics: {e}")
+
+        return await self._fetch_db_analytics(business_id, platform=platform, time_range=time_range)
 
     async def schedule_post(
         self,

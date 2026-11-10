@@ -46,10 +46,17 @@ class ReminderModeAdapter(BaseSocialAdapter):
         business_id: str,
         platform: str | None = None,
         status: str | None = None,
+        inbox_type: str | None = "all",
         limit: int = 50,
         offset: int = 0,
     ) -> list[LunaMessage]:
-        return await self._fetch_db_inbox(business_id, status_filter=status, limit=limit, offset=offset)
+        return await self._fetch_db_inbox(
+            business_id,
+            status_filter=status,
+            inbox_type=inbox_type,
+            limit=limit,
+            offset=offset,
+        )
 
     async def send_dm_reply(
         self,
@@ -74,10 +81,7 @@ class ReminderModeAdapter(BaseSocialAdapter):
         platform: str | None = None,
         time_range: str = "7d",
     ) -> SocialAnalyticsData:
-        from app.social_studio.adapters.zernio_api import ZernioAdapter
-
-        zernio = ZernioAdapter(db=self.db)
-        return await zernio.fetch_analytics(business_id, platform, time_range)
+        return await self._fetch_db_analytics(business_id, platform=platform, time_range=time_range)
 
     async def schedule_post(
         self,

@@ -20,6 +20,8 @@ class LunaMessage(BaseModel):
     business_id: str
     account_id: str | None = None
     platform: str  # instagram, facebook, x, whatsapp, tiktok, threads
+    query_type: str = "dm"  # dm | comment | mention
+    post_id: str | None = None
     author_handle: str
     author_name: str | None = None
     body: str
@@ -94,6 +96,9 @@ class SocialConversationSummary(BaseModel):
 
     id: str
     platform: str  # instagram | x | facebook | linkedin | tiktok | whatsapp
+    query_type: str = "dm"  # dm | comment | mention
+    inbox_type: str = "dm"  # dm | comment | mention (dropdown filter target)
+    post_id: str | None = None
     authorName: str
     authorHandle: str
     avatarColor: str = "#291E29"
@@ -144,10 +149,11 @@ class ISocialProvider(abc.ABC):
         business_id: str,
         platform: str | None = None,
         status: str | None = None,
+        inbox_type: str | None = "all",
         limit: int = 50,
         offset: int = 0,
     ) -> list[LunaMessage]:
-        """Fetch unified inbox messages/DMs for a business (0 Social Credits consumed)."""
+        """Fetch unified inbox messages (mentions, comments, DMs) for a business (0 Social Credits consumed)."""
         pass
 
     @abc.abstractmethod

@@ -1,10 +1,11 @@
-"""Postproxy API Adapter for Social Studio."""
+"""Postproxy API Adapter for Social Media Management."""
 
 from __future__ import annotations
 
 import logging
 from datetime import datetime
 from typing import Any
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class PostproxyAdapter(BaseSocialAdapter):
-    """Adapter wrapping Postproxy API free tier."""
+    """Adapter wrapping Postproxy API for DMs, comments, and post stats."""
 
     def __init__(self, db: AsyncSession | None = None) -> None:
         super().__init__(
@@ -36,35 +37,104 @@ class PostproxyAdapter(BaseSocialAdapter):
         business_id: str,
         platform: str | None = None,
         status: str | None = None,
+        inbox_type: str | None = "all",
         limit: int = 50,
         offset: int = 0,
     ) -> list[LunaMessage]:
+        """Aggregate mentions, comments, and DMs via Postproxy API."""
+        target_type = (inbox_type or "all").lower()
+
         if self.api_key:
             try:
+                aggregated: list[LunaMessage] = []
                 async with self._get_client() as client:
-                    resp = await client.get(f"/v1/{business_id}/messages", params={"limit": limit, "offset": offset})
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        messages: list[LunaMessage] = []
-                        for m in data.get("data", []):
-                            messages.append(
-                                LunaMessage(
-                                    id=m.get("id"),
-                                    business_id=business_id,
-                                    platform=m.get("channel", "twitter"),
-                                    author_handle=m.get("from", "@user"),
-                                    body=m.get("content", ""),
-                                    timestamp=datetime.fromisoformat(
-                                        m.get("timestamp", datetime.utcnow().isoformat())
-                                    ),
-                                    status=m.get("state", "open"),
+                    # 1. Direct Messages
+                    if target_type in ("all", "dm"):
+                        resp = await client.get("/api/chats", params={"limit": min(limit, 50)})
+                        if resp.status_code == 200:
+                            for chat in resp.json().get("chats", resp.json().get("data", [])):
+                                aggregated.append(
+                                    LunaMessage(
+                                        id=chat.get("id"),
+                                        business_id=business_id,
+                                        account_id=chat.get("profile_id", business_id),
+                                        platform=chat.get("platform", "x"),
+                                        query_type="dm",
+                                        author_handle=chat.get("participant_handle", chat.get("sender", "@customer")),
+                                        author_name=chat.get("participant_name"),
+                                        body=chat.get("last_message_preview", chat.get("last_message", "")),
+                                        timestamp=datetime.fromisoformat(
+                                            chat.get("last_message_at", datetime.utcnow().isoformat())
+                                        ),
+                                        status="open" if chat.get("status") == "open" else "closed",
+                                    )
                                 )
-                            )
-                        return messages
+
+                    # 2. Comments
+                    if target_type in ("all", "comment"):
+                        c_resp = await client.get(
+                            f"/api/profiles/{business_id}/comments",
+                            params={"limit": min(limit, 20)},
+                        )
+                        if c_resp.status_code == 200:
+                            for cmt in c_resp.json().get("comments", c_resp.json().get("data", [])):
+                                aggregated.append(
+                                    LunaMessage(
+                                        id=cmt.get("id"),
+                                        business_id=business_id,
+                                        account_id=cmt.get("profile_id", business_id),
+                                        platform=cmt.get("platform", "instagram"),
+                                        query_type="comment",
+                                        post_id=cmt.get("post_id"),
+                                        author_handle=cmt.get("author_handle", "@customer"),
+                                        author_name=cmt.get("author_name"),
+                                        body=cmt.get("text", cmt.get("body", "")),
+                                        timestamp=datetime.fromisoformat(
+                                            cmt.get("created_at", datetime.utcnow().isoformat())
+                                        ),
+                                        status="open",
+                                    )
+                                )
+
+                    # 3. Mentions
+                    if target_type in ("all", "mention"):
+                        m_resp = await client.get(
+                            f"/api/profiles/{business_id}/comments",
+                            params={"type": "mention", "limit": min(limit, 20)},
+                        )
+                        if m_resp.status_code == 200:
+                            for m in m_resp.json().get("comments", m_resp.json().get("data", [])):
+                                aggregated.append(
+                                    LunaMessage(
+                                        id=m.get("id"),
+                                        business_id=business_id,
+                                        account_id=m.get("profile_id", business_id),
+                                        platform=m.get("platform", "x"),
+                                        query_type="mention",
+                                        post_id=m.get("post_id"),
+                                        author_handle=m.get("author_handle", "@customer"),
+                                        author_name=m.get("author_name"),
+                                        body=m.get("text", m.get("body", "")),
+                                        timestamp=datetime.fromisoformat(
+                                            m.get("created_at", datetime.utcnow().isoformat())
+                                        ),
+                                        status="open",
+                                    )
+                                )
+
+                    aggregated.sort(key=lambda x: x.timestamp, reverse=True)
+                    return aggregated[:limit]
+
             except Exception as e:
                 logger.warning(f"[PostproxyAdapter] Remote inbox call failed: {e}")
 
-        return await self._fetch_db_inbox(business_id, status_filter=status, limit=limit, offset=offset)
+        return await self._fetch_db_inbox(
+            business_id,
+            status_filter=status,
+            inbox_type=target_type,
+            limit=limit,
+            offset=offset,
+        )
 
     async def send_dm_reply(
         self,
@@ -74,18 +144,9 @@ class PostproxyAdapter(BaseSocialAdapter):
         author_id: str | None = None,
     ) -> DmReplyResult:
         external_id = None
-        if self.api_key:
-            try:
-                async with self._get_client() as client:
-                    resp = await client.post(
-                        f"/v1/{business_id}/messages/{message_id}/reply",
-                        json={"text": reply_text},
-                    )
-                    if resp.status_code in (200, 201):
-                        external_id = resp.json().get("id")
-            except Exception as e:
-                logger.warning(f"[PostproxyAdapter] Reply dispatch failed: {e}")
 
+        query_type = "dm"
+        post_id = None
         if self.db:
             stmt = select(SocialQuery).where(
                 SocialQuery.id == message_id,
@@ -94,11 +155,31 @@ class PostproxyAdapter(BaseSocialAdapter):
             result = await self.db.execute(stmt)
             query = result.scalar_one_or_none()
             if query:
+                query_type = getattr(query, "query_type", "dm") or "dm"
+                post_id = getattr(query, "post_id", None)
                 query.response_body = reply_text
                 query.status = QueryStatus.ANSWERED.value
                 query.answered_at = datetime.utcnow()
                 query.answered_by = author_id
                 await self.db.flush()
+
+        if self.api_key:
+            try:
+                async with self._get_client() as client:
+                    if query_type == "comment" and post_id:
+                        resp = await client.post(
+                            f"/api/posts/{post_id}/comments",
+                            json={"body": reply_text, "parent_comment_id": message_id},
+                        )
+                    else:
+                        resp = await client.post(
+                            f"/api/chats/{message_id}/messages",
+                            json={"body": reply_text},
+                        )
+                    if resp.status_code in (200, 201):
+                        external_id = resp.json().get("id")
+            except Exception as e:
+                logger.warning(f"[PostproxyAdapter] Reply dispatch failed: {e}")
 
         return DmReplyResult(
             success=True,
@@ -115,19 +196,44 @@ class PostproxyAdapter(BaseSocialAdapter):
         platform: str | None = None,
         time_range: str = "7d",
     ) -> SocialAnalyticsData:
-        return SocialAnalyticsData(
-            business_id=business_id,
-            platform=platform or "all",
-            period=time_range,
-            total_followers=1850,
-            impressions=21200,
-            reach=14900,
-            engagement_rate=4.5,
-            queries_received=22,
-            average_response_time_minutes=4.0,
-            sentiment_breakdown={"positive": 15, "neutral": 5, "negative": 2},
-            top_topics=["Service Speed", "Documentation", "Token Queuing"],
-        )
+        """Fetch profile stats via Postproxy /api/profiles/{id}/stats without placeholders."""
+        if self.api_key:
+            try:
+                async with self._get_client() as client:
+                    resp = await client.get(f"/api/profiles/{business_id}/stats")
+                    if resp.status_code == 200:
+                        d = resp.json()
+                        followers = d.get("follower_count", 0) or 0
+                        impressions = d.get("impressions", 0) or 0
+                        engagements = d.get("engagements", 0) or 0
+                        eng_rate = round((engagements / impressions) * 100, 2) if impressions > 0 else 0.0
+
+                        return SocialAnalyticsData(
+                            business_id=business_id,
+                            platform=platform or "all",
+                            period=time_range,
+                            total_followers=followers,
+                            impressions=impressions,
+                            reach=d.get("reach", 0) or 0,
+                            engagement_rate=eng_rate,
+                            queries_received=d.get("comments_count", 0) or 0,
+                            average_response_time_minutes=0.0,
+                            sentiment_breakdown={"positive": 0, "neutral": 0, "negative": 0},
+                            top_topics=[],
+                            raw_metrics=d,
+                        )
+                    else:
+                        raise HTTPException(
+                            status_code=resp.status_code,
+                            detail=f"Postproxy stats failed: {resp.text}",
+                        )
+            except HTTPException:
+                raise
+            except Exception as e:
+                logger.error(f"[PostproxyAdapter] Stats fetch failed: {e}")
+                raise HTTPException(status_code=502, detail=f"Failed to fetch Postproxy stats: {e}")
+
+        return await self._fetch_db_analytics(business_id, platform=platform, time_range=time_range)
 
     async def schedule_post(
         self,
