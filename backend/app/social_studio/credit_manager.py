@@ -14,7 +14,121 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.tenant import Business
-from app.social_studio.interfaces import ProviderCapabilities
+from app.social_studio.interfaces import PlatformCapability, ProviderCapabilities
+
+
+DEFAULT_PLATFORM_CAPABILITIES: dict[str, PlatformCapability] = {
+    "instagram": PlatformCapability(
+        platform="instagram",
+        supports_dm=True,
+        supports_comments=True,
+        supports_mentions=True,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=True,
+        dm_window_hours=24,
+        notes="Mentions are read-only; DMs require customer interaction within trailing 24h",
+    ),
+    "facebook": PlatformCapability(
+        platform="facebook",
+        supports_dm=True,
+        supports_comments=True,
+        supports_mentions=True,
+        can_reply_mentions=False,
+        supports_reviews=True,
+        supports_analytics=True,
+        dm_window_hours=24,
+        notes="Page-level DMs only; Recommendations supported; Mentions cannot be replied to",
+    ),
+    "x": PlatformCapability(
+        platform="x",
+        supports_dm=True,
+        supports_comments=True,
+        supports_mentions=True,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=True,
+        dm_window_hours=None,
+        notes="Encrypted X Chat not accessible via API; Mentions are read-only",
+    ),
+    "linkedin": PlatformCapability(
+        platform="linkedin",
+        supports_dm=False,
+        supports_comments=True,
+        supports_mentions=True,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=True,
+        dm_window_hours=None,
+        notes="Company Pages only; personal profiles cannot list comments or mentions",
+    ),
+    "tiktok": PlatformCapability(
+        platform="tiktok",
+        supports_dm=False,
+        supports_comments=True,
+        supports_mentions=False,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=True,
+        dm_window_hours=None,
+        notes="Business Accounts only; Creator accounts lack comments and mentions",
+    ),
+    "whatsapp": PlatformCapability(
+        platform="whatsapp",
+        supports_dm=True,
+        supports_comments=False,
+        supports_mentions=False,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=False,
+        dm_window_hours=24,
+        notes="24h customer care window; outbound outside window requires approved template",
+    ),
+    "google": PlatformCapability(
+        platform="google",
+        supports_dm=False,
+        supports_comments=False,
+        supports_mentions=False,
+        can_reply_mentions=False,
+        supports_reviews=True,
+        supports_analytics=True,
+        dm_window_hours=None,
+        notes="Google Business Profile reviews and location analytics",
+    ),
+    "youtube": PlatformCapability(
+        platform="youtube",
+        supports_dm=False,
+        supports_comments=True,
+        supports_mentions=False,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=True,
+        dm_window_hours=None,
+        notes="Video comments and channel analytics",
+    ),
+    "pinterest": PlatformCapability(
+        platform="pinterest",
+        supports_dm=False,
+        supports_comments=False,
+        supports_mentions=False,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=True,
+        dm_window_hours=None,
+        notes="Publishing and board analytics only",
+    ),
+    "telegram": PlatformCapability(
+        platform="telegram",
+        supports_dm=True,
+        supports_comments=False,
+        supports_mentions=False,
+        can_reply_mentions=False,
+        supports_reviews=False,
+        supports_analytics=False,
+        dm_window_hours=None,
+        notes="Bot messaging only; user must initiate contact",
+    ),
+}
 
 
 class InsufficientCreditsError(HTTPException):
@@ -93,6 +207,7 @@ async def get_tenant_capabilities(db: AsyncSession, business_id: str) -> Provide
         tier=tier,
         is_trial_active=balance > 0,
         is_locked=balance <= 0 and tier == "free",
+        platform_capabilities=DEFAULT_PLATFORM_CAPABILITIES,
     )
 
 

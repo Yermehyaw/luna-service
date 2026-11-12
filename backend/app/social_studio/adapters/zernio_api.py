@@ -146,11 +146,17 @@ class ZernioAdapter(BaseSocialAdapter):
         message_id: str,
         reply_text: str,
         author_id: str | None = None,
+        query_type: str | None = None,
     ) -> DmReplyResult:
         """Send reply via Zernio conforming to OpenAPI spec."""
         external_id: str | None = None
 
-        query_type = "dm"
+        if query_type == "mention":
+            raise HTTPException(
+                status_code=400,
+                detail="Mentions cannot be replied to due to strict social media API usage policies.",
+            )
+
         post_id = None
         if self.db:
             stmt = select(SocialQuery).where(
@@ -160,13 +166,25 @@ class ZernioAdapter(BaseSocialAdapter):
             result = await self.db.execute(stmt)
             query = result.scalar_one_or_none()
             if query:
-                query_type = getattr(query, "query_type", "dm") or "dm"
+                db_q_type = getattr(query, "query_type", "dm") or "dm"
+                if db_q_type == "mention":
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Mentions cannot be replied to due to strict social media API usage policies.",
+                    )
+                query_type = db_q_type
                 post_id = getattr(query, "post_id", None)
                 query.response_body = reply_text
                 query.status = QueryStatus.ANSWERED.value
                 query.answered_at = datetime.utcnow()
                 query.answered_by = author_id
                 await self.db.flush()
+
+        if query_type == "mention":
+            raise HTTPException(
+                status_code=400,
+                detail="Mentions cannot be replied to due to strict social media API usage policies.",
+            )
 
         if self.api_key:
             try:

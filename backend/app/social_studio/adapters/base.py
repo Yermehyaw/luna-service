@@ -56,13 +56,19 @@ class BaseSocialAdapter(ISocialProvider):
         if q.account and hasattr(q.account, "platform") and q.account.platform:
             platform = q.account.platform
 
+        q_type = getattr(q, "query_type", "dm") or "dm"
+        can_rep = q_type != "mention"
+        restriction = "Mentions cannot be replied to due to strict usage policies" if not can_rep else None
+
         return LunaMessage(
             id=str(q.id),
             business_id=q.business_id,
             account_id=q.account_id,
             platform=platform,
-            query_type=getattr(q, "query_type", "dm") or "dm",
+            query_type=q_type,
             post_id=getattr(q, "post_id", None),
+            can_reply=can_rep,
+            reply_restriction_reason=restriction,
             author_handle=q.author_handle,
             body=q.body,
             media_url=getattr(q, "media_url", None),

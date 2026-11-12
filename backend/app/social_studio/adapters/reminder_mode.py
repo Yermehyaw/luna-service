@@ -64,6 +64,7 @@ class ReminderModeAdapter(BaseSocialAdapter):
         message_id: str,
         reply_text: str,
         author_id: str | None = None,
+        query_type: str | None = None,
     ) -> DmReplyResult:
         from app.social_studio.adapters.zernio_api import ZernioAdapter
 
@@ -73,6 +74,7 @@ class ReminderModeAdapter(BaseSocialAdapter):
             message_id=message_id,
             reply_text=reply_text,
             author_id=author_id,
+            query_type=query_type,
         )
 
     async def fetch_analytics(

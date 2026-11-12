@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.social import QueryStatus, SocialQuery
+from app.models.social import QueryStatus, SocialAccount, SocialQuery
 from app.social_studio.adapters.base import BaseSocialAdapter
 from app.social_studio.interfaces import (
     DmReplyResult,
@@ -162,11 +162,17 @@ class SocialApiAdapter(BaseSocialAdapter):
         message_id: str,
         reply_text: str,
         author_id: str | None = None,
+        query_type: str | None = None,
     ) -> DmReplyResult:
         external_id = None
         remaining_interactions = None
 
-        query_type = "dm"
+        if query_type == "mention":
+            raise HTTPException(
+                status_code=400,
+                detail="Mentions cannot be replied to due to strict social media API usage policies.",
+            )
+
         post_id = None
         if self.db:
             stmt = select(SocialQuery).where(
@@ -176,13 +182,25 @@ class SocialApiAdapter(BaseSocialAdapter):
             result = await self.db.execute(stmt)
             query = result.scalar_one_or_none()
             if query:
-                query_type = getattr(query, "query_type", "dm") or "dm"
+                db_q_type = getattr(query, "query_type", "dm") or "dm"
+                if db_q_type == "mention":
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Mentions cannot be replied to due to strict social media API usage policies.",
+                    )
+                query_type = db_q_type
                 post_id = getattr(query, "post_id", None)
                 query.response_body = reply_text
                 query.status = QueryStatus.ANSWERED.value
                 query.answered_at = datetime.utcnow()
                 query.answered_by = author_id
                 await self.db.flush()
+
+        if query_type == "mention":
+            raise HTTPException(
+                status_code=400,
+                detail="Mentions cannot be replied to due to strict social media API usage policies.",
+            )
 
         if self.api_key:
             try:
@@ -191,11 +209,6 @@ class SocialApiAdapter(BaseSocialAdapter):
                         resp = await client.post(
                             f"/inbox/comments/{post_id}",
                             json={"account_id": business_id, "comment_id": message_id, "text": reply_text},
-                        )
-                    elif query_type == "mention":
-                        resp = await client.post(
-                            f"/accounts/{business_id}/mentions/reply",
-                            json={"media_id": message_id, "text": reply_text},
                         )
                     else:
                         resp = await client.post(
@@ -238,11 +251,10 @@ class SocialApiAdapter(BaseSocialAdapter):
         platform: str | None = None,
         time_range: str = "7d",
     ) -> SocialAnalyticsData:
-        """Fetch analytics overview via SocialAPI.ai.
+        """Fetch analytics overview and platform follower metrics via SocialAPI.ai.
         
-        Per SocialAPI official schema, /analytics/overview totals contains:
-        posts, engagements, likes, comments, shares, saves, views.
-        Followers is NOT part of overview totals — returns 0 (never fake placeholder values).
+        Overview totals provides post engagement, views, likes, comments, and shares.
+        Follower counts are obtained by querying the specific /platforms/{platform}/accounts/{id}/summary endpoints.
         """
         if self.api_key:
             try:
@@ -261,11 +273,45 @@ class SocialApiAdapter(BaseSocialAdapter):
                         comments = totals.get("comments", 0) or 0
                         eng_rate = round((engagements / views) * 100, 2) if views > 0 else 0.0
 
+                        # Query platform summary endpoints to fetch real follower metrics
+                        total_followers = 0
+                        if self.db:
+                            acc_stmt = select(SocialAccount).where(
+                                SocialAccount.business_id == business_id,
+                                SocialAccount.is_connected == True,
+                            )
+                            if platform and platform != "all":
+                                acc_stmt = acc_stmt.where(SocialAccount.platform == platform)
+                            acc_res = await self.db.execute(acc_stmt)
+                            accounts = acc_res.scalars().all()
+
+                            for acc in accounts:
+                                p_name = acc.platform.lower()
+                                if p_name in ("instagram", "facebook", "tiktok", "youtube", "pinterest"):
+                                    try:
+                                        p_resp = await client.get(f"/platforms/{p_name}/accounts/{acc.id}/summary")
+                                        if p_resp.status_code == 200:
+                                            p_data = p_resp.json()
+                                            f_count = (
+                                                p_data.get("follower_count")
+                                                or p_data.get("subscriber_count")
+                                                or 0
+                                            )
+                                            total_followers += f_count
+                                            acc.follower_count = f_count
+                                        else:
+                                            total_followers += (acc.follower_count or 0)
+                                    except Exception:
+                                        total_followers += (acc.follower_count or 0)
+                                else:
+                                    total_followers += (acc.follower_count or 0)
+                            await self.db.flush()
+
                         return SocialAnalyticsData(
                             business_id=business_id,
                             platform=platform or "all",
                             period=time_range,
-                            total_followers=0,  # Overview totals does not contain followers per official spec
+                            total_followers=total_followers,
                             impressions=views,
                             reach=views,
                             engagement_rate=eng_rate,
@@ -287,7 +333,7 @@ class SocialApiAdapter(BaseSocialAdapter):
                 logger.error(f"[SocialApiAdapter] Analytics fetch failed: {e}")
                 raise HTTPException(status_code=502, detail=f"Failed to fetch SocialAPI analytics: {e}")
 
-        # Local Database fallback (calculates real DB metrics, 0 placeholder fabrication)
+        # Local Database fallback (calculates real DB metrics from PostgreSQL)
         return await self._fetch_db_analytics(business_id, platform=platform, time_range=time_range)
 
     async def schedule_post(

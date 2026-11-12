@@ -11,10 +11,11 @@ Hexagonal architecture with dynamic dependency injection:
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import json
 from typing import Annotated, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect, status
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -31,12 +32,14 @@ from app.social_studio.adapters import (
     ZernioAdapter,
 )
 from app.social_studio.interfaces import (
+    ConnectSocialAccountRequest,
     DmReplyResult,
     ISocialProvider,
     LunaMessage,
     PostConfirmationResult,
     ProviderCapabilities,
     ScheduleResult,
+    SocialAccountResponse,
     SocialAnalyticsData,
     SocialConversationSummary,
     SocialMessageItem,
@@ -331,6 +334,12 @@ async def list_conversations(
             detected_platform = "x"
 
         q_type = getattr(q, "query_type", "dm") or "dm"
+        can_rep = q_type != "mention"
+        restriction = (
+            "Mentions cannot be replied to due to strict usage policies"
+            if not can_rep
+            else None
+        )
         conversations.append(
             SocialConversationSummary(
                 id=str(q.id),
@@ -338,6 +347,8 @@ async def list_conversations(
                 query_type=q_type,
                 inbox_type=q_type,
                 post_id=getattr(q, "post_id", None),
+                can_reply=can_rep,
+                reply_restriction_reason=restriction,
                 authorName=q.author_handle.lstrip("@"),
                 authorHandle=q.author_handle,
                 avatarColor=avatar_colors.get(detected_platform, "#291E29"),
@@ -366,6 +377,20 @@ async def send_dm_reply(
     Consumes 1 Social Credit (SC). Raises HTTP 402 if credit balance < 1.
     Automatically captures AI feedback telemetry when AI assistance is used.
     """
+    # 0. Check whether target message is a mention (strictly non-replyable)
+    query_check = await db.execute(
+        select(SocialQuery).where(
+            SocialQuery.id == payload.message_id,
+            SocialQuery.business_id == payload.business_id,
+        )
+    )
+    target_query = query_check.scalar_one_or_none()
+    if target_query and getattr(target_query, "query_type", "dm") == "mention":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mentions cannot be replied to due to strict social media API usage policies.",
+        )
+
     # 1. Enforce credit validation & decrement balance
     remaining_credits = await credit_manager.validate_and_deduct_credits(
         db,
@@ -653,3 +678,184 @@ async def handle_vendor_webhook(
         "business_id": query.business_id,
         "author": query.author_handle,
     }
+
+
+# --- Connected Accounts Management (Pro-Tier Gated for Multiple Accounts) ---
+
+@router.get("/accounts", response_model=list[SocialAccountResponse])
+async def list_social_accounts(
+    business_id: str = Query(min_length=1),
+    db: DbSession = None,
+) -> list[SocialAccountResponse]:
+    """List connected social accounts for a business tenant."""
+    stmt = (
+        select(SocialAccount)
+        .where(SocialAccount.business_id == business_id)
+        .order_by(SocialAccount.platform, SocialAccount.created_at)
+    )
+    result = await db.execute(stmt)
+    accounts = result.scalars().all()
+    return [
+        SocialAccountResponse(
+            id=str(acc.id),
+            business_id=acc.business_id,
+            platform=acc.platform,
+            handle=acc.handle,
+            display_name=acc.display_name,
+            is_connected=acc.is_connected,
+            follower_count=acc.follower_count or 0,
+            created_at=acc.created_at,
+        )
+        for acc in accounts
+    ]
+
+
+@router.post("/accounts/connect", response_model=SocialAccountResponse)
+async def connect_social_account(
+    payload: ConnectSocialAccountRequest,
+    db: DbSession,
+) -> SocialAccountResponse:
+    """Connect a social account for a tenant.
+    
+    Pro Tier Gating:
+    Free and Basic plans support at most 1 connected account per platform.
+    Connecting multiple accounts on the same platform requires Pro or Enterprise tier.
+    """
+    business = await credit_manager.get_tenant_business(db, payload.business_id)
+    tier = (getattr(business, "tier", "free") or "free").lower()
+    platform_clean = payload.platform.lower().strip()
+
+    # Check existing connected accounts on this platform
+    stmt = select(SocialAccount).where(
+        SocialAccount.business_id == payload.business_id,
+        SocialAccount.platform == platform_clean,
+        SocialAccount.is_connected == True,
+    )
+    res = await db.execute(stmt)
+    existing_accounts = res.scalars().all()
+
+    # If already connected on this platform and not Pro/Enterprise, reject
+    if len(existing_accounts) >= 1 and tier not in ("pro", "enterprise"):
+        is_same = any(acc.handle.lower() == payload.handle.lower() for acc in existing_accounts)
+        if not is_same:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "pro_tier_required",
+                    "message": "Connecting multiple accounts per platform is a paid feature available on Pro and Enterprise tiers.",
+                    "current_tier": tier,
+                    "required_tier": "pro",
+                    "platform": platform_clean,
+                },
+            )
+
+    # Check if handle already exists for this tenant
+    find_stmt = select(SocialAccount).where(
+        SocialAccount.business_id == payload.business_id,
+        SocialAccount.platform == platform_clean,
+        SocialAccount.handle == payload.handle,
+    )
+    find_res = await db.execute(find_stmt)
+    account = find_res.scalar_one_or_none()
+
+    if not account:
+        account = SocialAccount(
+            business_id=payload.business_id,
+            platform=platform_clean,
+            handle=payload.handle,
+            display_name=payload.display_name or payload.handle,
+            is_connected=True,
+            follower_count=payload.follower_count,
+        )
+        db.add(account)
+    else:
+        account.is_connected = True
+        account.display_name = payload.display_name or account.display_name
+        account.follower_count = payload.follower_count or account.follower_count
+
+    await db.commit()
+    await db.refresh(account)
+
+    return SocialAccountResponse(
+        id=str(account.id),
+        business_id=account.business_id,
+        platform=account.platform,
+        handle=account.handle,
+        display_name=account.display_name,
+        is_connected=account.is_connected,
+        follower_count=account.follower_count or 0,
+        created_at=account.created_at,
+    )
+
+
+@router.delete("/accounts/{account_id}")
+async def disconnect_social_account(
+    account_id: str,
+    business_id: str = Query(min_length=1),
+    db: DbSession = None,
+) -> dict[str, Any]:
+    """Disconnect a social account from a tenant."""
+    stmt = select(SocialAccount).where(
+        SocialAccount.id == account_id,
+        SocialAccount.business_id == business_id,
+    )
+    res = await db.execute(stmt)
+    account = res.scalar_one_or_none()
+    if not account:
+        raise HTTPException(status_code=404, detail="Social account not found.")
+
+    account.is_connected = False
+    await db.commit()
+    return {
+        "account_id": account_id,
+        "business_id": business_id,
+        "is_connected": False,
+        "message": f"Successfully disconnected {account.platform} account ({account.handle}).",
+    }
+
+
+# --- Manual Refresh & Live WebSocket Feeds ---
+
+@router.post("/inbox/sync")
+async def sync_inbox(
+    business_id: str = Query(min_length=1),
+    platform: str | None = None,
+    provider: ISocialProvider = Depends(get_social_provider),
+    db: DbSession = None,
+) -> dict[str, Any]:
+    """Manually trigger inbox sync/refresh across connected channels (0 SC cost)."""
+    synced_messages = await provider.get_inbox(business_id=business_id, platform=platform, limit=50)
+    return {
+        "business_id": business_id,
+        "status": "synced",
+        "platform": platform or "all",
+        "message_count": len(synced_messages),
+        "synced_at": datetime.utcnow().isoformat(),
+    }
+
+
+@router.websocket("/ws/{business_id}")
+async def social_inbox_ws(
+    websocket: WebSocket,
+    business_id: str,
+) -> None:
+    """Live WebSocket feed for Social Studio inbox auto-updates."""
+    from app.realtime import manager
+    from app.realtime.channels import social_inbox_channel
+
+    await websocket.accept()
+    channel = social_inbox_channel(business_id)
+    await manager.connect(channel, websocket)
+    try:
+        await websocket.send_text(
+            json.dumps({"type": "connected", "channel": channel, "timestamp": datetime.utcnow().isoformat()})
+        )
+        while True:
+            text = await websocket.receive_text()
+            if text == "ping":
+                await websocket.send_text(json.dumps({"type": "pong"}))
+    except WebSocketDisconnect:
+        pass
+    finally:
+        manager.disconnect(channel, websocket)
+

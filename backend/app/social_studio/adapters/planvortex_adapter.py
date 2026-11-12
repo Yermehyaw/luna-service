@@ -96,7 +96,14 @@ class PlanVortexAdapter(BaseSocialAdapter):
         message_id: str,
         reply_text: str,
         author_id: str | None = None,
+        query_type: str | None = None,
     ) -> DmReplyResult:
+        if query_type == "mention":
+            raise HTTPException(
+                status_code=400,
+                detail="Mentions cannot be replied to due to strict social media API usage policies.",
+            )
+
         external_id = None
         if self.api_key:
             try:
@@ -118,6 +125,11 @@ class PlanVortexAdapter(BaseSocialAdapter):
             result = await self.db.execute(stmt)
             query = result.scalar_one_or_none()
             if query:
+                if getattr(query, "query_type", "dm") == "mention":
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Mentions cannot be replied to due to strict social media API usage policies.",
+                    )
                 query.response_body = reply_text
                 query.status = QueryStatus.ANSWERED.value
                 query.answered_at = datetime.utcnow()

@@ -22,6 +22,8 @@ class LunaMessage(BaseModel):
     platform: str  # instagram, facebook, x, whatsapp, tiktok, threads
     query_type: str = "dm"  # dm | comment | mention
     post_id: str | None = None
+    can_reply: bool = True
+    reply_restriction_reason: str | None = None
     author_handle: str
     author_name: str | None = None
     body: str
@@ -99,6 +101,8 @@ class SocialConversationSummary(BaseModel):
     query_type: str = "dm"  # dm | comment | mention
     inbox_type: str = "dm"  # dm | comment | mention (dropdown filter target)
     post_id: str | None = None
+    can_reply: bool = True
+    reply_restriction_reason: str | None = None
     authorName: str
     authorHandle: str
     avatarColor: str = "#291E29"
@@ -111,6 +115,22 @@ class SocialConversationSummary(BaseModel):
     status: str = "open"  # open | urgent | resolved
     assignee: str = "Unassigned"
     messages: list[SocialMessageItem] = Field(default_factory=list)
+
+
+class PlatformCapability(BaseModel):
+    """Platform-specific API capabilities, constraints and messaging window rules."""
+
+    platform: str
+    supports_dm: bool = True
+    supports_comments: bool = True
+    supports_mentions: bool = True
+    can_reply_mentions: bool = False  # Mentions cannot be replied to due to strict policies
+    supports_reviews: bool = False
+    supports_analytics: bool = True
+    supports_publishing: bool = True
+    can_publish: bool = True
+    dm_window_hours: int | None = None
+    notes: str = ""
 
 
 class ProviderCapabilities(BaseModel):
@@ -129,6 +149,31 @@ class ProviderCapabilities(BaseModel):
     tier: str = "free"
     is_trial_active: bool = True
     is_locked: bool = False
+    platform_capabilities: dict[str, PlatformCapability] = Field(default_factory=dict)
+
+
+class SocialAccountResponse(BaseModel):
+    """Connected social account representation."""
+
+    id: str
+    business_id: str
+    platform: str
+    handle: str
+    display_name: str | None = None
+    is_connected: bool = True
+    follower_count: int = 0
+    created_at: datetime | None = None
+
+
+class ConnectSocialAccountRequest(BaseModel):
+    """Payload to connect a new social account."""
+
+    business_id: str = Field(min_length=1)
+    platform: str = Field(min_length=1)
+    handle: str = Field(min_length=1)
+    display_name: str | None = None
+    follower_count: int = Field(default=0, ge=0)
+    external_id: str | None = None
 
 
 class PostConfirmationResult(BaseModel):
@@ -163,6 +208,7 @@ class ISocialProvider(abc.ABC):
         message_id: str,
         reply_text: str,
         author_id: str | None = None,
+        query_type: str | None = None,
     ) -> DmReplyResult:
         """Send an outbound reply to a customer DM/comment (Consumes 1 Social Credit)."""
         pass

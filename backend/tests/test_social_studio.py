@@ -477,4 +477,173 @@ async def test_social_inbox_aggregated_types():
     types = {m.query_type for m in all_inbox}
     assert types == {"dm", "comment", "mention"}
 
+    # Verify mention has can_reply=False and restriction reason
+    mention_msg = next(m for m in all_inbox if m.query_type == "mention")
+    assert mention_msg.can_reply is False
+    assert "strict usage policies" in (mention_msg.reply_restriction_reason or "")
+
+
+# --- Mention Reply Restrictions & Platform Capabilities ---
+
+@pytest.mark.asyncio
+async def test_mention_reply_rejected_across_adapters():
+    """Verify core social media policy: mentions strictly cannot be replied to."""
+    s_adapter = SocialApiAdapter(db=None)
+    z_adapter = ZernioAdapter(db=None)
+    p_adapter = PostproxyAdapter(db=None)
+    pv_adapter = PlanVortexAdapter(db=None)
+
+    for adapter in (s_adapter, z_adapter, p_adapter, pv_adapter):
+        with pytest.raises(HTTPException) as exc_info:
+            await adapter.send_dm_reply(
+                business_id="biz-123",
+                message_id="msg-mnt-1",
+                reply_text="Thanks for mentioning us!",
+                query_type="mention",
+            )
+        assert exc_info.value.status_code == 400
+        assert "strict" in exc_info.value.detail.lower()
+
+
+@pytest.mark.asyncio
+async def test_capabilities_includes_granular_platform_matrix():
+    """Verify platform capabilities matrix reflects varying platform support and restrictions."""
+    biz = Business(
+        name="Victoria Island Branch",
+        subdomain="vi-branch",
+        social_credits=50,
+        active_social_provider="socialapi",
+        tier="pro",
+    )
+    db = MockAsyncDbSession(biz)
+    caps = await credit_manager.get_tenant_capabilities(db, str(biz.id))
+
+    assert hasattr(caps, "platform_capabilities")
+    p_caps = caps.platform_capabilities
+
+    # Check key platforms exist
+    for plat in ("instagram", "facebook", "x", "linkedin", "tiktok", "whatsapp"):
+        assert plat in p_caps
+        # Mentions cannot be replied to across all platforms per core API policies
+        assert p_caps[plat].can_reply_mentions is False
+        assert p_caps[plat].can_publish is True
+
+    # Check platform-specific DM windows and restrictions
+    assert p_caps["instagram"].dm_window_hours == 24
+    assert p_caps["whatsapp"].dm_window_hours == 24
+    assert p_caps["x"].dm_window_hours is None  # no strict 24h template window
+    assert p_caps["linkedin"].supports_dm is False  # InMail not open via standard API
+
+
+# --- Connected Accounts Gating (Free vs Pro Tier) ---
+
+@pytest.mark.asyncio
+async def test_connected_accounts_tier_gating():
+    from app.models.social import SocialAccount
+    from app.social_studio.interfaces import ConnectSocialAccountRequest
+    from app.social_studio.router import connect_social_account
+
+    # 1. Free tier business with 1 existing Instagram account
+    existing_ig = SocialAccount(
+        id=str(uuid.uuid4()),
+        business_id="biz-free-1",
+        platform="instagram",
+        handle="@primary_store",
+        display_name="Primary Store",
+        is_connected=True,
+    )
+    biz_free = Business(
+        name="Free Tier Shop",
+        subdomain="free-shop",
+        tier="free",
+        social_credits=10,
+    )
+
+    class AccountMockSession:
+        def __init__(self, business, accounts):
+            self.business = business
+            self.accounts = list(accounts)
+            self.added = []
+
+        async def execute(self, stmt):
+            stmt_str = str(stmt)
+            class Res:
+                def __init__(self, items, single=None):
+                    self.items = items
+                    self.single = single
+                def scalar_one_or_none(self):
+                    return self.single
+                def scalars(self):
+                    class Sc:
+                        def __init__(self, it):
+                            self.it = it
+                        def all(self):
+                            return self.it
+                    return Sc(self.items)
+
+            if "businesses" in stmt_str:
+                return Res([], single=self.business)
+            elif "social_accounts" in stmt_str:
+                # If checking specific handle
+                if "social_accounts.handle = :handle_1" in stmt_str:
+                    match = next((a for a in self.accounts if a.handle == "@second_store"), None)
+                    return Res([], single=match)
+                return Res(self.accounts)
+            return Res([])
+
+        def add(self, obj):
+            self.added.append(obj)
+            self.accounts.append(obj)
+
+        async def commit(self):
+            pass
+
+        async def refresh(self, obj):
+            if not getattr(obj, "id", None):
+                obj.id = str(uuid.uuid4())
+            if not getattr(obj, "created_at", None):
+                obj.created_at = datetime.utcnow()
+
+    # Attempting to add 2nd Instagram account on Free tier -> HTTP 403 pro_tier_required
+    db_free = AccountMockSession(biz_free, [existing_ig])
+    req_second = ConnectSocialAccountRequest(
+        business_id="biz-free-1",
+        platform="instagram",
+        handle="@second_store",
+        display_name="Secondary Outlet",
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await connect_social_account(req_second, db=db_free)
+
+    assert exc_info.value.status_code == 403
+    assert exc_info.value.detail["error"] == "pro_tier_required"
+
+    # 2. Pro tier business allows connecting second account on the same platform
+    biz_pro = Business(
+        name="Pro Enterprise Store",
+        subdomain="pro-store",
+        tier="pro",
+        social_credits=100,
+    )
+    db_pro = AccountMockSession(biz_pro, [existing_ig])
+    res_connected = await connect_social_account(req_second, db=db_pro)
+    assert res_connected.handle == "@second_store"
+    assert res_connected.platform == "instagram"
+    assert res_connected.is_connected is True
+
+
+# --- Manual Refresh / Inbox Sync ---
+
+@pytest.mark.asyncio
+async def test_manual_inbox_sync():
+    from app.social_studio.router import sync_inbox
+
+    adapter = ZernioAdapter(db=None)
+    sync_res = await sync_inbox(business_id="biz-sync-1", platform="all", provider=adapter)
+    assert sync_res["business_id"] == "biz-sync-1"
+    assert sync_res["status"] == "synced"
+    assert "synced_at" in sync_res
+    assert isinstance(sync_res["message_count"], int)
+
+
 
