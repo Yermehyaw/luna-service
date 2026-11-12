@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check } from 'lucide-react';
-import { Nav, Footer, CtaBand, Reveal, PRIMARY, SIGN_UP, WRAP } from '@/components/marketing/Chrome';
+import { Nav, Footer, CtaBand, Reveal, PRIMARY, SIGN_UP, WRAP } from '@/components/Chrome';
 
 const FOR = ['Salons and barbers', 'Caterers', 'Tutors and training centres', 'Photographers', 'Event planners', 'Clinics', 'Fitness studios'];
 const OUTCOMES = [

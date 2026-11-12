@@ -32,8 +32,14 @@ export class ApiClient {
       Accept: 'application/json',
     };
 
-    if (token) {
-      defaultHeaders['Authorization'] = `Bearer ${token}`;
+    const effectiveToken =
+      token ||
+      (typeof window !== 'undefined'
+        ? localStorage.getItem('luna_auth_jwt') || undefined
+        : undefined);
+
+    if (effectiveToken) {
+      defaultHeaders['Authorization'] = `Bearer ${effectiveToken}`;
     }
 
     try {

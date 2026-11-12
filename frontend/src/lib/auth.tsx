@@ -31,6 +31,33 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+async function refreshJwtToken(u: User): Promise<string | null> {
+  try {
+    const res = await fetch('/api/auth/jwt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sub: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        tenantId: u.tenantId,
+        privileges: u.privileges,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('luna_auth_jwt', data.token);
+        return data.token;
+      }
+    }
+  } catch (err) {
+    console.warn('[BetterAuth] JWT minting error:', err);
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -74,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           setUser(restoredUser);
           localStorage.setItem('luna_mock_user', JSON.stringify(restoredUser));
+          refreshJwtToken(restoredUser);
           setIsLoading(false);
           return;
         }
@@ -180,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(authUser);
     localStorage.setItem('luna_mock_user', JSON.stringify(authUser));
+    await refreshJwtToken(authUser);
     setIsLoading(false);
   };
 
@@ -207,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(staffUser);
     localStorage.setItem('luna_mock_user', JSON.stringify(staffUser));
+    await refreshJwtToken(staffUser);
   };
 
   const hasPrivilege = (privilege: StaffPrivilege): boolean => {
@@ -256,6 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(customerUser);
     localStorage.setItem('luna_mock_user', JSON.stringify(customerUser));
+    await refreshJwtToken(customerUser);
 
     // Also save in customer tenant storage
     try {
@@ -279,6 +310,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null);
     localStorage.removeItem('luna_mock_user');
+    localStorage.removeItem('luna_auth_jwt');
   };
 
   return (

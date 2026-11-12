@@ -481,8 +481,17 @@ async def send_dm_reply(
 async def schedule_social_post(
     payload: PostScheduleRequest,
     db: DbSession,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> ScheduleResult:
     """Schedule a social post via PWA Reminder Mode (0 API cost, zero app review blocker)."""
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required to schedule posts",
+            )
+
     # Track monthly post count
     business = await credit_manager.get_tenant_business(db, payload.business_id)
     current_posts = getattr(business, "posts_used_this_month", 0) or 0
@@ -545,8 +554,17 @@ async def confirm_reminder_published(
 async def assign_conversation(
     payload: ConversationAssignRequest,
     db: DbSession,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> dict[str, Any]:
     """Assign a staff member to an open conversation thread."""
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required",
+            )
+
     stmt = select(SocialQuery).where(
         SocialQuery.id == payload.conversation_id,
         SocialQuery.business_id == payload.business_id,
@@ -580,8 +598,11 @@ async def get_social_analytics(
     platform: str | None = None,
     period: str = Query(default="7d"),
     provider: ISocialProvider = Depends(get_social_provider),
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> SocialAnalyticsData:
     """Fetch aggregated cross-platform social analytics (0 Social Credits consumed - FREE)."""
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
     return await provider.fetch_analytics(
         business_id=business_id,
         platform=platform,

@@ -17,6 +17,11 @@ from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import (
+    AuthenticatedUser,
+    enforce_tenant_isolation,
+    get_optional_current_user,
+)
 from app.models.payment import GatewayProvider, Transaction, TransactionStatus
 from app.models.tenant import Business
 from app.payments.adapters.paypal_adapter import PaypalAdapter
@@ -61,6 +66,7 @@ async def initialize_checkout(
     db: DbSession,
     paypal: PaypalAdapter = Depends(get_paypal_adapter),
     paystack: PaystackAdapter = Depends(get_paystack_adapter),
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> CheckoutInitResult:
     """Initialize a payment checkout session.
     
@@ -73,6 +79,13 @@ async def initialize_checkout(
     completely bypassed, entitlements are fulfilled instantly, and the transaction
     is saved as DISCOUNTED in the ledger.
     """
+    if current_user and payload.transaction_type in ("subscription", "credits_topup", "trial_tokenization"):
+        enforce_tenant_isolation(payload.tenant_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required to manage subscriptions or credits",
+            )
     # 1. Verify tenant exists
     stmt = select(Business).where(Business.id == payload.tenant_id)
     res = await db.execute(stmt)
@@ -263,8 +276,17 @@ async def setup_payout_subaccount(
     payload: CreateSubaccountRequest,
     db: DbSession,
     paystack: PaystackAdapter = Depends(get_paystack_adapter),
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> CreateSubaccountResult:
     """Provision a Paystack subaccount for a business tenant for split settlements."""
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+        if not current_user.is_tenant_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Business owner privileges required to configure payout subaccounts",
+            )
+
     stmt = select(Business).where(Business.id == payload.business_id)
     res = await db.execute(stmt)
     business = res.scalar_one_or_none()
@@ -304,8 +326,17 @@ async def list_tenant_transactions(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: DbSession = None,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> list[TransactionResponseItem]:
     """List financial transactions for a tenant."""
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required to view financial records",
+            )
+
     stmt = (
         select(Transaction)
         .where(Transaction.tenant_id == business_id)

@@ -122,3 +122,42 @@ async def test_social_studio_tenant_isolation(mock_db):
         )
         assert res_reply.status_code == 403
         assert "Staff privileges required" in res_reply.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_payments_tenant_isolation(mock_db):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Other tenant cannot view financial transactions
+        other_tenant_token = create_token("tenant_admin", "other-salon")
+        res_txs = await client.get(
+            "/api/payments/transactions?business_id=kemis-lounge",
+            headers={"Authorization": f"Bearer {other_tenant_token}"},
+        )
+        assert res_txs.status_code == 403
+        assert "Multi-tenant isolation violation" in res_txs.json()["detail"]
+
+        # 2. Customer cannot view business financial records
+        customer_token = create_token("customer", "kemis-lounge")
+        res_customer_txs = await client.get(
+            "/api/payments/transactions?business_id=kemis-lounge",
+            headers={"Authorization": f"Bearer {customer_token}"},
+        )
+        assert res_customer_txs.status_code == 403
+        assert "Staff privileges required to view financial records" in res_customer_txs.json()["detail"]
+
+        # 3. Staff member cannot configure payout bank subaccounts (Owner only)
+        staff_token = create_token("staff", "kemis-lounge")
+        res_subaccount = await client.post(
+            "/api/payments/subaccount",
+            json={
+                "business_id": "kemis-lounge",
+                "business_name": "Kemi Hair Lounge",
+                "settlement_bank": "058",
+                "account_number": "0123456789",
+                "percentage_charge": 5.0,
+            },
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+        assert res_subaccount.status_code == 403
+        assert "Business owner privileges required" in res_subaccount.json()["detail"]
