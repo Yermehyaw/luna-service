@@ -640,35 +640,33 @@ function StaffOpsConsoleContent() {
 
   return (
     <TenantStaffLayout>
-      <div className="space-y-6 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+      <div className="ops-workspace space-y-5 font-sans selection:bg-[#e9dfe9] selection:text-[#291E29]">
         {/* ========================================================= */}
         {/* TOP HEADER WITH BRANCH SELECTOR & DATE                    */}
         {/* ========================================================= */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 md:flex-row md:items-end">
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#291E29] text-white px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider">
-                <LayoutDashboard className="h-3.5 w-3.5 text-[#FFA800]" />
-                Operations Console
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#702D7B]">
+                Today&apos;s operations
               </span>
               {isConnected ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[11px] font-bold border border-emerald-300">
-                  <Radio className="h-3 w-3 text-emerald-600 animate-pulse" />
-                  Live WebSocket
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Live
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-[11px] font-medium border border-slate-200">
-                  <RefreshCw className="h-3 w-3 animate-spin text-slate-400" />
                   Synced
                 </span>
               )}
             </div>
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mt-2 font-display">
-              Run today&apos;s queues
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#291E29] sm:text-4xl">
+              Operations overview
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Call tickets, manage counters and keep every branch flowing &mdash; with voice announcements built in.
+            <p className="mt-1.5 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
+              See who is waiting, call the next person, and share updates.
             </p>
           </div>
 
@@ -676,7 +674,7 @@ function StaffOpsConsoleContent() {
           <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
             {/* Branch Selector */}
             <div className="relative">
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-2xs">
+                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm">
                 <Building className="h-4 w-4 text-[#FFA800]" />
                 <select
                   value={selectedBranch}
@@ -698,7 +696,7 @@ function StaffOpsConsoleContent() {
             </div>
 
             {/* Date Picker */}
-            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-800 shadow-2xs">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm">
               <Calendar className="h-4 w-4 text-slate-500" />
               <span>{selectedDate}</span>
             </div>
@@ -712,7 +710,7 @@ function StaffOpsConsoleContent() {
                   ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
                   : 'bg-slate-100 border-slate-200 text-slate-500'
               }`}
-              title="Toggle Browser Voice Synthesis PA Announcements"
+              title="Turn spoken announcements on or off"
             >
               <Volume2 className={`h-4 w-4 ${voiceEnabled ? 'text-emerald-600' : 'text-slate-400'}`} />
               <span>{voiceEnabled ? 'PA Voice On' : 'Voice Off'}</span>
@@ -731,8 +729,8 @@ function StaffOpsConsoleContent() {
         {/* ========================================================= */}
         {/* TOP TAB SWITCHER: CONSOLE VS LIVE BROADCASTS              */}
         {/* ========================================================= */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
-          <div className="inline-flex rounded-2xl bg-slate-200/60 p-1 border border-slate-200/80">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
             <button
               type="button"
               onClick={() => {
@@ -746,7 +744,7 @@ function StaffOpsConsoleContent() {
               }`}
             >
               <LayoutDashboard className="h-4 w-4 text-[#FFA800]" />
-              <span>Queue Operations</span>
+              <span>Appointments &amp; queue</span>
             </button>
             <button
               type="button"
@@ -755,13 +753,13 @@ function StaffOpsConsoleContent() {
                 router.push(`${basePath}/ops-console?tab=broadcast`);
               }}
               className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition-all relative ${
-                activeTab === 'broadcast'
-                  ? 'bg-[#FFA800] text-[#291E29] shadow-sm font-black'
+                  activeTab === 'broadcast'
+                    ? 'bg-[#fef3c7] text-[#92400e] shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
               }`}
             >
               <Share2 className="h-4 w-4" />
-              <span>Live Broadcasts & Tickers</span>
+              <span>Broadcasts</span>
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -780,7 +778,7 @@ function StaffOpsConsoleContent() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold hover:bg-amber-100 transition shadow-2xs"
               >
                 <Megaphone className="h-3.5 w-3.5 text-[#FFA800]" />
-                <span>Open Full Broadcast Studio &rarr;</span>
+              <span>Open broadcasts &rarr;</span>
               </button>
             ) : (
               <button
@@ -792,7 +790,7 @@ function StaffOpsConsoleContent() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition shadow-2xs"
               >
                 <LayoutDashboard className="h-3.5 w-3.5 text-slate-600" />
-                <span>&larr; Back to Queue Operations</span>
+                <span>&larr; Back to appointments</span>
               </button>
             )}
           </div>
@@ -804,8 +802,8 @@ function StaffOpsConsoleContent() {
             {/* ========================================================= */}
             {/* TOP METRICS KPI BAR (6 TILES)                             */}
             {/* ========================================================= */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+        <div className="ops-metrics grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-[#291E29] bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               SCHEDULED
             </span>
@@ -813,7 +811,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">tickets today</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-[#FFA800] bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               WAITING
             </span>
@@ -821,7 +819,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">in queue</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-blue-500 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               AT COUNTERS
             </span>
@@ -829,7 +827,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">called + serving</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-emerald-500 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               SERVED
             </span>
@@ -839,7 +837,7 @@ function StaffOpsConsoleContent() {
             </span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-slate-300 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               NO-SHOW
             </span>
@@ -847,7 +845,7 @@ function StaffOpsConsoleContent() {
             <span className="text-[10px] text-slate-500 font-medium">missed / cancelled</span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs space-y-1">
+          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-purple-500 bg-white p-4 shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
               NETWORK LIVE
             </span>
@@ -859,18 +857,18 @@ function StaffOpsConsoleContent() {
         {/* ========================================================= */}
         {/* OPERATIONAL HERO TRIAGE GRID (3 CARDS)                    */}
         {/* ========================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+        <div className="ops-primary grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
           {/* ------------------------------------------------------- */}
           {/* CARD 1: NEXT UP HERO CARD (4 COLS)                      */}
           {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 rounded-3xl border border-[#291E29]/15 bg-gradient-to-br from-[#291E29] to-[#341539] p-5 sm:p-6 text-white shadow-lg flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-4 rounded-2xl border border-[#291E29]/15 bg-gradient-to-br from-[#291E29] via-[#341539] to-[#52215A] p-5 text-white shadow-lg sm:p-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#FFA800]">
-                  <Volume2 className="h-3.5 w-3.5 animate-pulse" />
-                  Next Up
+                  <Volume2 className="h-3.5 w-3.5" />
+                  Next to call
                 </span>
-                <span className="text-[11px] text-slate-300 font-mono">
+                <span className="text-[11px] text-slate-500 font-mono">
                   {nextUpTicket ? nextUpTicket.windowTime : 'Queue Clear'}
                 </span>
               </div>
@@ -881,20 +879,20 @@ function StaffOpsConsoleContent() {
                     {nextUpTicket.code}
                   </div>
                   <div>
-                    <h3 className="text-base sm:text-lg font-bold text-white truncate">
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
                       {nextUpTicket.customerName}
                     </h3>
-                    <p className="text-xs text-slate-300 truncate">
+                    <p className="text-xs text-slate-600 truncate">
                       {nextUpTicket.service}
                     </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[11px] text-slate-500 mt-0.5">
                       Slot {nextUpTicket.slotTime} &middot; window {nextUpTicket.windowTime}
                     </p>
                   </div>
                 </div>
               ) : (
                 <div className="py-6 text-center text-xs text-slate-400 space-y-1">
-                  <p className="font-bold text-white">All Scheduled Tickets Called</p>
+                  <p className="font-bold text-slate-900">All scheduled tickets called</p>
                   <p>Issue a walk-in below to summon new customers.</p>
                 </div>
               )}
@@ -924,14 +922,14 @@ function StaffOpsConsoleContent() {
           {/* ------------------------------------------------------- */}
           {/* CARD 2: BRANCH ANNOUNCEMENTS (4 COLS)                   */}
           {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-4">
+          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                   <Megaphone className="h-3.5 w-3.5 text-[#FFA800]" />
                   Branch Announcements
                 </span>
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
               </div>
 
               {/* Composer */}
@@ -983,7 +981,7 @@ function StaffOpsConsoleContent() {
           {/* ------------------------------------------------------- */}
           {/* CARD 3: COUNTERS GRID (4 COLS)                          */}
           {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm flex flex-col justify-between space-y-3">
+          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div>
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <span className="font-extrabold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
@@ -1056,11 +1054,15 @@ function StaffOpsConsoleContent() {
         {/* ========================================================= */}
         {/* BOTTOM SECTION: MAIN QUEUE FEED + INTELLIGENCE SIDEBARS   */}
         {/* ========================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="ops-lower grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* ------------------------------------------------------- */}
           {/* LEFT COLUMN: LIVE TICKET QUEUE TABLE (8 COLS)           */}
           {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="ops-queue lg:col-span-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
+              <div><h2 className="text-base font-semibold text-slate-900">Today&apos;s queue</h2><p className="mt-0.5 text-xs text-slate-500">{tickets.length} scheduled appointments</p></div>
+              <button type="button" onClick={() => setShowWalkinModal(true)} className="inline-flex items-center gap-1.5 rounded-md bg-[#291E29] px-3 py-2 text-xs font-semibold text-white hover:bg-[#49334a]"><Plus className="h-3.5 w-3.5" /> New walk-in</button>
+            </div>
             {/* Search & Status Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="relative flex-1">
@@ -1344,7 +1346,7 @@ function StaffOpsConsoleContent() {
           /* ========================================================= */
           /* DEDICATED LIVE BROADCASTS & TICKER CONTROL STUDIO VIEW    */
           /* ========================================================= */
-          <div className="space-y-6 animate-in fade-in duration-200">
+          <div className="ops-broadcast space-y-6 animate-in fade-in duration-200">
             {/* Hero Banner */}
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#291E29] via-[#341539] to-[#291E29] p-6 sm:p-8 text-white shadow-xl">
               <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-96 h-96 bg-[#FFA800]/10 rounded-full blur-3xl pointer-events-none" />
@@ -1352,30 +1354,14 @@ function StaffOpsConsoleContent() {
               <div className="relative z-10 space-y-3 max-w-3xl">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#FFA800] border border-white/10 text-xs font-extrabold uppercase tracking-widest">
                   <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-                  <span>Omnichannel Live Broadcast Center</span>
+                  <span>Live announcements</span>
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                  Reach Every Customer Screen Instantly.
+                  Broadcast to every customer screen
                 </h2>
                 <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Publish real-time announcements, branch delay advisories, and queue promotions. Messages broadcast instantaneously across customer mobile web trackers, lobby wall displays, and SMS feeds.
+                  Share an update with customers on the screens and channels you use.
                 </p>
-
-                {/* Quick stats strip */}
-                <div className="flex flex-wrap items-center gap-3 pt-2 text-xs">
-                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
-                    <Tv className="h-4 w-4 text-[#FFA800]" />
-                    <span className="font-bold text-white">3 Lobby Displays Connected</span>
-                  </div>
-                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
-                    <Smartphone className="h-4 w-4 text-emerald-400" />
-                    <span className="font-bold text-white">24 Active Mobile Trackers</span>
-                  </div>
-                  <div className="px-3 py-1.5 rounded-xl bg-white/10 border border-white/10 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-300" />
-                    <span className="font-bold text-white">&lt; 1s Real-time WebSocket Latency</span>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -1388,9 +1374,9 @@ function StaffOpsConsoleContent() {
                     <div>
                       <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
                         <Smartphone className="h-4 w-4 text-[#FFA800]" />
-                        <span>Live Customer Screen Preview</span>
+                        <span>Customer screen preview</span>
                       </h3>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Real-time mock of the customer mobile web tracker</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">See how the current announcement appears to customers</p>
                     </div>
                     <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-300 flex items-center gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
@@ -1486,9 +1472,9 @@ function StaffOpsConsoleContent() {
                     <div>
                       <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
                         <Megaphone className="h-4 w-4 text-[#FFA800]" />
-                        <span>Compose Live Announcement</span>
+                        <span>New announcement</span>
                       </h3>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Broadcast custom copy or choose a high-velocity template</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Write a message or start from a template</p>
                     </div>
                     <button
                       type="button"
@@ -1569,7 +1555,7 @@ function StaffOpsConsoleContent() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        High-Velocity Presets (Tap to Load)
+                        Message templates
                       </span>
                       <span className="text-[10px] text-slate-400 font-medium">1-click insert</span>
                     </div>
@@ -1656,7 +1642,7 @@ function StaffOpsConsoleContent() {
                       className="w-full py-3.5 px-6 rounded-2xl bg-[#FFA800] hover:bg-[#ffb41f] text-[#291E29] font-black text-sm transition shadow-md shadow-[#FFA800]/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-98"
                     >
                       <Send className="h-4 w-4" />
-                      <span>Publish Live Broadcast to All Displays</span>
+                      <span>Publish announcement</span>
                     </button>
                   </div>
                 </div>
@@ -1666,7 +1652,7 @@ function StaffOpsConsoleContent() {
                   <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                     <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
                       <History className="h-4 w-4 text-[#FFA800]" />
-                      <span>Broadcast Log & Previous Advisories</span>
+                      <span>Recent announcements</span>
                     </h3>
                     <span className="text-xs text-slate-400 font-bold">{broadcastHistory.length} sent</span>
                   </div>

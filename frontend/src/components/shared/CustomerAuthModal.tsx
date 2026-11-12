@@ -163,25 +163,25 @@ export function CustomerAuthModal({
               {/* Loyalty & Window Benefits */}
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Tier Status</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Visit level</span>
                   <span className="text-sm font-extrabold text-[#702D7B]">VIP Diamond</span>
                 </div>
                 <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Fast-Track</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Priority service</span>
                   <span className="text-sm font-extrabold text-emerald-600">Active</span>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-dashed border-slate-200 p-4 space-y-2 bg-[#FFF6E9]/40">
-                <span className="font-bold text-slate-800 block text-xs">Customer Account Benefits</span>
+                <span className="font-bold text-slate-800 block text-xs">Your account</span>
                 <ul className="space-y-1.5 text-[11px] text-slate-600">
                   <li className="flex items-center gap-1.5">
                     <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-                    <span>Auto-saved tickets with real-time SMS position updates</span>
+                    <span>Keep your visit details and get text updates</span>
                   </li>
                   <li className="flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5 text-blue-600 shrink-0" />
-                    <span>Guaranteed arrival windows &amp; zero lobby waiting</span>
+                    <span>Choose a visit time and spend less time waiting</span>
                   </li>
                 </ul>
               </div>

@@ -58,6 +58,7 @@ export default function BookQueuePage({
 
   // Customer reference photo upload
   const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
+  const [verificationDocument, setVerificationDocument] = useState<File | null>(null);
   const [customerNotes, setCustomerNotes] = useState('');
 
   const [createdTicket, setCreatedTicket] = useState<any>(null);
@@ -146,6 +147,7 @@ export default function BookQueuePage({
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !customerPhone.trim()) return;
+    if (activeService?.requiresVerificationDocument && !verificationDocument) { setErrorMessage('Please select the required verification document before booking.'); return; }
     setLoading(true);
     setErrorMessage(null);
 
@@ -157,7 +159,7 @@ export default function BookQueuePage({
           phone: customerPhone.trim(),
           email:
             customerEmail.trim() ||
-            `${customerName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@client.luna.com`,
+            `${customerName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@client.withluna.tech`,
           tenantId: tenant.id,
         });
         isCustomerAccountLinked = true;
@@ -688,11 +690,11 @@ export default function BookQueuePage({
                   <Camera className="h-4 w-4 text-purple-600" /> 4. Style Lookbook / Reference Photo
                 </label>
                 <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
-                  Optional Pre-Clearance
+                  Optional photo or notes
                 </span>
               </div>
               <p className="text-[11px] text-purple-800 leading-relaxed">
-                Upload your desired hair braid lookbook, vehicle fault diagram, or cake design. Your {tenant.branding?.serviceUnitName?.toLowerCase() || 'specialist'} will prepare in advance!
+                Share a style photo, repair details, or design idea so your {tenant.branding?.serviceUnitName?.toLowerCase() || 'specialist'} can prepare.
               </p>
 
               {referencePhoto ? (
@@ -733,6 +735,7 @@ export default function BookQueuePage({
             </div>
 
             {/* 5. CUSTOMER CONTACT DETAILS */}
+            {activeService?.requiresVerificationDocument && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4"><label htmlFor="verification-document" className="block text-sm font-semibold text-amber-950">Verification document required</label><p className="mt-1 text-xs text-amber-900">Select the document requested by this business before booking. Secure document transfer is not yet available in this preview.</p><input id="verification-document" type="file" required accept="image/*,.pdf" onChange={e => setVerificationDocument(e.target.files?.[0] || null)} className="mt-3 block w-full text-sm" /></div>}
             <div className="space-y-3 pt-2 border-t border-slate-100">
               <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
                 <User className="h-4 w-4 text-[#FFA800]" /> 5. Customer Contact Information

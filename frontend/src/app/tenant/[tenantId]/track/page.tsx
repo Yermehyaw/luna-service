@@ -165,13 +165,13 @@ function TrackTicketContent({ tenantId }: { tenantId: string }) {
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800 border border-blue-200 shadow-xs">
             <Radio className="h-3 w-3 text-blue-600 animate-pulse" />
-            <span>Live WebSocket Queue Stream</span>
+            <span>Live queue updates</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900">
             Track Live Queue Position
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-            Live turn tracker with instant audio chime caller broadcasts for {tenant.name}.
+            Follow your place in line at {tenant.name}.
           </p>
         </div>
 
@@ -262,12 +262,12 @@ function TrackTicketContent({ tenantId }: { tenantId: string }) {
               {isConnected ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-700 border border-blue-200">
                   <span className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
-                  WebSocket Stream Active
+                  Updating now
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-600">
                   <RefreshCw className="h-3 w-3 animate-spin" />
-                  Connecting Stream...
+                  Connecting…
                 </span>
               )}
             </div>

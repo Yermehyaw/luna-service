@@ -139,7 +139,7 @@ export default function MarketingPage() {
             </h1>
 
             <p className="mx-auto max-w-2xl text-xs sm:text-base text-[#291E29]/80 leading-relaxed font-normal">
-              One unified platform powering timed arrival windows, lookbook &amp; document pre-clearance, and zero lobby waiting for busy hair salons, auto repair garages, artisan bakeries, private clinics, and enterprise banks.
+              Help customers book visits, share needed documents, and spend less time waiting. Built for salons, garages, shops, clinics, and larger teams.
             </p>
 
             {/* CTAs */}
@@ -189,10 +189,10 @@ export default function MarketingPage() {
         {/* Live Multi-Tenant Showcase */}
         <section className="mx-auto max-w-6xl px-4 sm:px-6 space-y-8">
           <div className="text-center space-y-2">
-            <span className="text-xs font-bold text-[#702D7B] uppercase tracking-widest">Multi-Tenant Engine</span>
+            <span className="text-xs font-bold text-[#702D7B] uppercase tracking-widest">One home for every location</span>
             <h2 className="font-display text-2xl sm:text-3xl font-extrabold text-[#291E29]">SMEs &amp; Enterprises Operating on Luna</h2>
             <p className="text-xs text-[#291E29]/70 max-w-xl mx-auto">
-              Every shop and organization runs on the same unified frontend codebase with custom branding, dynamic colors, and tailored feature modules.
+              Give each location the right details and look, while managing your business from one account.
             </p>
           </div>
 
@@ -266,7 +266,7 @@ export default function MarketingPage() {
           <div className="flex justify-center">
             <LunaLogo size={32} />
           </div>
-          <p>© 2026 Luna. Beyond the Expected. Multi-Tenant Intelligent Queue Infrastructure.</p>
+          <p>© 2026 Luna. Beyond the Expected. A better way to welcome and serve customers.</p>
         </div>
       </footer>
     </div>

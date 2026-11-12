@@ -96,7 +96,7 @@ export default function TenantBrandingSettingsPage({
     }
   }, [tenant]);
 
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'withluna.tech';
   const fullSubdomainUrl = `https://${subdomain}.${platformDomain}`;
 
   const handleCopyDomain = () => {
@@ -246,17 +246,17 @@ export default function TenantBrandingSettingsPage({
           <div>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-[#FFA800]/20 text-[#291E29] text-[10px] font-extrabold uppercase px-2.5 py-0.5 tracking-wider">
-                Business Admin Console
+                Business settings
               </span>
               <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1">
-                <Check className="h-3 w-3" /> Free Subdomain Active
+                <Check className="h-3 w-3" /> Business page is live
               </span>
             </div>
             <h1 className="font-display text-2xl font-extrabold text-[#291E29] mt-1">
-              Storefront Branding &amp; Team Management
+              Business page and team
             </h1>
             <p className="text-xs text-[#291E29]/70">
-              Customize website themes, logo &amp; templates, and assign logins &amp; task privileges to your staff members.
+              Update your page, choose its look, and manage your team.
             </p>
           </div>
 
@@ -559,7 +559,7 @@ export default function TenantBrandingSettingsPage({
               </div>
 
               <p className="text-xs text-slate-600 leading-relaxed">
-                Tailored for commercial banks, hospital clinical triage, national telecom flagships, and civic centers.
+                Made for banks, hospitals, phone companies, and public service teams.
               </p>
 
               <ul className="space-y-1.5 text-[11px] text-slate-600 pt-1">
@@ -569,15 +569,15 @@ export default function TenantBrandingSettingsPage({
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Check className="h-3 w-3 text-emerald-600" />
-                  <span><strong>Formal counter / window assignment triage</strong></span>
+                  <span><strong>Send each customer to the right service desk</strong></span>
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Check className="h-3 w-3 text-emerald-600" />
-                  <span><strong>Strict corporate handling time &amp; SLA compliance</strong></span>
+                  <span><strong>Set business targets for service times</strong></span>
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Check className="h-3 w-3 text-emerald-600" />
-                  <span><strong>KYC and cryptographic paperwork clearances</strong></span>
+                  <span><strong>Review customer documents before visits</strong></span>
                 </li>
               </ul>
             </div>

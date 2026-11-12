@@ -26,5 +26,16 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             raise
 
 
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """Where handlers open their own short-lived sessions.
+
+    Injected rather than imported so WebSocket handshakes can be pointed at the
+    test database: those handlers deliberately avoid `get_db`, because holding its
+    session open for the life of a socket would pin one pooled connection per
+    connection until the pool is exhausted.
+    """
+    return AsyncSessionLocal
+
+
 async def dispose_engine() -> None:
     await engine.dispose()

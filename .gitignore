@@ -17,3 +17,5 @@ htmlcov/
 # Secrets
 .env
 .env.local
+*.sqlite
+*.sqlite3

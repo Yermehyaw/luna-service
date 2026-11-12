@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { TenantStaffLayout } from '../../../../../components/layouts/TenantStaffLayout';
 import { useTenant } from '../../../../../lib/tenant-context';
@@ -79,6 +79,16 @@ export interface SocialConversation {
   messages: SocialMessage[];
 }
 
+type ScheduledSocialPost = {
+  id: string;
+  text: string;
+  mediaName: string;
+  mediaUrl: string;
+  handles: string[];
+  scheduledAt: string;
+  status: 'scheduled' | 'posted';
+};
+
 export default function SocialStudioPage() {
   const { tenant } = useTenant();
   const { user } = useAuth();
@@ -91,6 +101,87 @@ export default function SocialStudioPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'urgent' | 'resolved'>('all');
   const [channelFilter, setChannelFilter] = useState<'all' | ChannelPlatform>('all');
+  const [trialStarted, setTrialStarted] = useState(false);
+  const [credits, setCredits] = useState(50);
+  const [handles, setHandles] = useState<{ platform: ChannelPlatform; handle: string }[]>([]);
+  const isFreePlan = !tenant.plan || tenant.plan === 'free' || tenant.plan === 'free_subdomain';
+  const handleLimit = isFreePlan ? 2 : Number.POSITIVE_INFINITY;
+  const [newPlatform, setNewPlatform] = useState<ChannelPlatform>('instagram');
+  const [newHandle, setNewHandle] = useState('');
+  const [scheduledPosts, setScheduledPosts] = useState<ScheduledSocialPost[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const [postEditorOpen, setPostEditorOpen] = useState(false);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [postText, setPostText] = useState('');
+  const [postHandles, setPostHandles] = useState<string[]>([]);
+  const [postDate, setPostDate] = useState('');
+  const [postTime, setPostTime] = useState('09:00');
+  const [postMediaName, setPostMediaName] = useState('');
+  const [postMediaUrl, setPostMediaUrl] = useState('');
+  const [postSaving, setPostSaving] = useState(false);
+  useEffect(() => {
+    try {
+      const trial = localStorage.getItem(`luna_inbox_trial_${tenant.slug}`);
+      setTrialStarted(Boolean(trial && Date.now() - Number(trial) < 7 * 86400000));
+      setHandles(JSON.parse(localStorage.getItem(`luna_handles_${tenant.slug}`) || '[]'));
+      setScheduledPosts(JSON.parse(localStorage.getItem(`luna_scheduled_posts_${tenant.slug}`) || '[]'));
+      const month = new Date().toISOString().slice(0, 7);
+      setCredits(Number(localStorage.getItem(`luna_credits_${tenant.slug}_${month}`) ?? 50));
+    } catch { /* Demo state remains available without storage. */ }
+  }, [tenant.slug]);
+  const saveScheduledPosts = (posts: ScheduledSocialPost[]) => {
+    setScheduledPosts(posts);
+    try { localStorage.setItem(`luna_scheduled_posts_${tenant.slug}`, JSON.stringify(posts)); } catch { setActionNotice('Could not save this post. Try a smaller media file.'); }
+  };
+  const openPostEditor = (date?: Date, post?: ScheduledSocialPost) => {
+    setEditingPostId(post?.id || null);
+    setPostText(post?.text || '');
+    setPostHandles(post?.handles || handles.map((entry) => `${entry.platform}:${entry.handle}`));
+    const when = post ? new Date(post.scheduledAt) : date || new Date();
+    setPostDate(`${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-${String(when.getDate()).padStart(2, '0')}`);
+    setPostTime(post ? `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}` : '09:00');
+    setPostMediaName(post?.mediaName || '');
+    setPostMediaUrl(post?.mediaUrl || '');
+    setPostEditorOpen(true);
+  };
+  const savePost = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!postText.trim() || postHandles.length === 0 || !postDate || !postTime) return;
+    const selectedMonth = postDate.slice(0, 7);
+    const postsThisMonth = scheduledPosts.filter((post) => {
+      const scheduledDate = new Date(post.scheduledAt);
+      return `${scheduledDate.getFullYear()}-${String(scheduledDate.getMonth() + 1).padStart(2, '0')}` === selectedMonth;
+    }).length;
+    if (isFreePlan && !editingPostId && postsThisMonth >= 10) {
+      setActionNotice('The Free plan includes 10 posts each month. Choose another month or upgrade your plan.');
+      return;
+    }
+    setPostSaving(true);
+    const scheduledAt = new Date(`${postDate}T${postTime}`).toISOString();
+    const nextPost: ScheduledSocialPost = {
+      id: editingPostId || `post-${Date.now()}`,
+      text: postText.trim(), mediaName: postMediaName, mediaUrl: postMediaUrl,
+      handles: postHandles, scheduledAt, status: 'scheduled',
+    };
+    const updated = editingPostId
+      ? scheduledPosts.map((post) => post.id === editingPostId ? nextPost : post)
+      : [...scheduledPosts, nextPost];
+    saveScheduledPosts(updated);
+    setPostSaving(false);
+    setPostEditorOpen(false);
+    setActiveTab('calendar');
+    setActionNotice('Post saved. Luna can remind you while this app is open.');
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      try { await Notification.requestPermission(); } catch { /* Reminder remains in the calendar. */ }
+    }
+  };
+  const useCredit = () => {
+    if (credits < 1) { setActionNotice('No social credits remain this month.'); return false; }
+    const next = credits - 1;
+    setCredits(next);
+    try { localStorage.setItem(`luna_credits_${tenant.slug}_${new Date().toISOString().slice(0, 7)}`, String(next)); } catch {}
+    return true;
+  };
 
   // Conversations state
   const [conversations, setConversations] = useState<SocialConversation[]>([
@@ -337,6 +428,7 @@ export default function SocialStudioPage() {
   // AI draft generator
   const handleDraftWithAi = async () => {
     if (!activeConversation) return;
+    if (!useCredit()) return;
     setIsGeneratingAi(true);
     try {
       const prompt = `You are the lead client experience specialist at ${tenant.name} (${tenant.industry}).
@@ -391,6 +483,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
   // Send message
   const handleSendMessage = (resolve: boolean, isAiAssisted: boolean = false) => {
     if (!replyText.trim() || !activeConversation) return;
+    if (!useCredit()) return;
 
     const newMsg: SocialMessage = {
       id: `m-${Date.now()}`,
@@ -439,6 +532,47 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
     setTimeout(() => setActionNotice(null), 3000);
   };
 
+  const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+  const monthEnd = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0);
+  const calendarStart = new Date(monthStart);
+  calendarStart.setDate(monthStart.getDate() - ((monthStart.getDay() + 6) % 7));
+  const calendarDays = Array.from({ length: Math.ceil(((monthEnd.getDate() + ((monthStart.getDay() + 6) % 7)) / 7)) * 7 }, (_, index) => {
+    const day = new Date(calendarStart);
+    day.setDate(calendarStart.getDate() + index);
+    return day;
+  });
+  const dateKey = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+  useEffect(() => {
+    const timers: number[] = [];
+    scheduledPosts.filter((post) => post.status === 'scheduled').forEach((post) => {
+      const notifyWhenReady = async () => {
+        const notifiedKey = `luna_post_reminded_${post.id}`;
+        if (localStorage.getItem(notifiedKey)) return;
+        const remaining = new Date(post.scheduledAt).getTime() - Date.now();
+        if (remaining > 0) {
+          timers.push(window.setTimeout(notifyWhenReady, Math.min(remaining, 2147480000)));
+          return;
+        }
+        localStorage.setItem(notifiedKey, '1');
+        const title = 'Time to share your post';
+        const body = post.text.slice(0, 100);
+        try {
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.showNotification(title, { body, icon: '/icon-192.png', data: { url: `/tenant/${tenant.slug}/staff/social-studio` } });
+          } else if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body });
+          }
+        } catch { /* The saved post stays visible in the calendar if notifications are unavailable. */ }
+      };
+      const initialDelay = new Date(post.scheduledAt).getTime() - Date.now();
+      if (initialDelay <= 2147480000) timers.push(window.setTimeout(notifyWhenReady, Math.max(initialDelay, 0)));
+      else timers.push(window.setTimeout(notifyWhenReady, 2147480000));
+    });
+    return () => timers.forEach(window.clearTimeout);
+  }, [scheduledPosts, tenant.slug]);
+
   // Platform icon helper
   const getPlatformIcon = (platform: ChannelPlatform) => {
     switch (platform) {
@@ -463,6 +597,16 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
   return (
     <TenantStaffLayout>
       <div className="space-y-6 font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm">
+          <div><strong>Social credits: {credits} / 50</strong><p className="text-xs text-slate-500">Resets monthly. Sample replies and AI drafts use credits.</p></div>
+          <div className="text-xs text-slate-600">{isFreePlan ? 'Free plan · 10 posts/month · 2 profile limit' : `${tenant.plan} plan · profile limits depend on plan settings`}</div>
+        </div>
+        <form onSubmit={event => { event.preventDefault(); const handle = newHandle.trim(); if (!handle || handles.length >= handleLimit) return; const updated = [...handles, { platform: newPlatform, handle }]; setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); setNewHandle(''); }} className="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="text-base font-semibold">Social profiles for reminders</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500">Add the profiles you plan to post on. Luna does not connect to these accounts or publish posts yet. Your list is saved in this browser, and you can add more than one profile from the same platform.</p>
+          <div className="mt-3 flex flex-wrap gap-2">{handles.map((entry, index) => <span key={`${entry.platform}-${entry.handle}-${index}`} className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-xs"><span className="capitalize">{entry.platform} · {entry.handle}</span><span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-slate-500">Reminder only</span><button type="button" className="text-rose-700" aria-label={`Remove ${entry.handle}`} onClick={() => { const updated = handles.filter((_, i) => i !== index); setHandles(updated); localStorage.setItem(`luna_handles_${tenant.slug}`, JSON.stringify(updated)); }}>×</button></span>)}</div>
+          <div className="mt-3 flex flex-wrap gap-2"><select aria-label="Social platform" value={newPlatform} onChange={e => setNewPlatform(e.target.value as ChannelPlatform)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">{(['instagram','x','facebook','linkedin','tiktok','whatsapp'] as const).map(platform => <option key={platform} value={platform}>{platform}</option>)}</select><input aria-label="Social profile name" value={newHandle} onChange={e => setNewHandle(e.target.value)} placeholder="@yourbusiness" className="rounded-md border border-slate-300 px-3 py-2 text-sm" /><button disabled={handles.length >= handleLimit} className="rounded-md bg-[#291e29] px-4 py-2 text-sm text-white disabled:opacity-40">Add profile</button></div>
+          {isFreePlan && handles.length >= handleLimit && <p className="mt-2 text-xs text-purple-700">You’ve used the Free plan’s 2 profile limit. More profiles are available on a paid plan.</p>}
+        </form>
         {/* ========================================================= */}
         {/* INTELLIGENT SOCIAL STUDIO HEADER BANNER                  */}
         {/* ========================================================= */}
@@ -479,16 +623,16 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
                 </span>
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-400/30">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Omnichannel Live
+                  Social Studio preview
                 </span>
               </div>
 
               <div>
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white font-display">
-                  Every channel. One inbox. Zero slow replies.
+                  Social messages and posts
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-xl leading-relaxed">
-                  Respond to customer inquiries, complaints, and booking requests across Instagram, X, Facebook, LinkedIn, TikTok &amp; WhatsApp in real time with AI drafting.
+                  Check customer messages, write replies, and plan posts for the social accounts you add.
                 </p>
               </div>
 
@@ -500,11 +644,11 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-200 border border-rose-500/30">
                   <AlertCircle className="h-3.5 w-3.5 text-rose-300" />
-                  {urgentCount} need urgent care
+                  {urgentCount} need a reply
                 </span>
                 <span className="inline-flex items-center gap-1.5 rounded-xl bg-white/10 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-white/10">
                   <Clock className="h-3.5 w-3.5 text-[#FFA800]" />
-                  Avg first response: <strong className="text-white">4.2 min</strong>
+                  Avg reply time: <strong className="text-white">4.2 min</strong>
                 </span>
               </div>
             </div>
@@ -572,8 +716,9 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
             </div>
           </div>
 
-          {/* Omnichannel Channel Stat Strip */}
+          {/* Preview channel snapshot; live social providers are not connected yet. */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-6 pt-5 border-t border-white/10">
+            <div className="col-span-full -mb-1 text-[11px] text-slate-300">Sample channel snapshot · connect accounts to see live metrics</div>
             <div className="rounded-2xl bg-white/5 border border-white/10 p-3 hover:bg-white/10 transition">
               <div className="flex items-center justify-between text-xs text-slate-300">
                 <span className="flex items-center gap-1.5 font-bold">
@@ -639,10 +784,24 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
           </div>
         )}
 
+        {postEditorOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-slate-950/50 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="post-editor-title">
+          <form onSubmit={savePost} className="max-h-[92vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3"><div><h2 id="post-editor-title" className="text-lg font-bold text-slate-900">{editingPostId ? 'Edit scheduled post' : 'Schedule a post'}</h2><p className="mt-1 text-sm text-slate-500">Choose where and when to share it. Luna will remind you to post.</p></div><button type="button" onClick={() => setPostEditorOpen(false)} className="rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100" aria-label="Close">✕</button></div>
+            <label className="block text-sm font-semibold text-slate-700">Post text<textarea required rows={4} value={postText} onChange={(event) => setPostText(event.target.value)} maxLength={2200} placeholder="What would you like to share?" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-normal focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-100" /></label>
+            <div><label className="block text-sm font-semibold text-slate-700">Photo or video <input type="file" accept="image/*,video/*" className="mt-1.5 block w-full rounded-lg border border-slate-300 p-2 text-sm font-normal" onChange={(event) => { const file = event.target.files?.[0]; if (!file) return; if (file.size > 2 * 1024 * 1024) { setActionNotice('Please choose a file under 2 MB for this local preview.'); event.target.value = ''; return; } const reader = new FileReader(); reader.onload = () => { setPostMediaName(file.name); setPostMediaUrl(String(reader.result || '')); }; reader.readAsDataURL(file); }} /></label>{postMediaName && <div className="mt-2 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-700">{postMediaName}<button type="button" onClick={() => { setPostMediaName(''); setPostMediaUrl(''); }} className="font-semibold text-rose-700">Remove</button></div>}</div>
+            <fieldset><legend className="text-sm font-semibold text-slate-700">Remind me to share on</legend>{handles.length ? <div className="mt-2 grid gap-2 sm:grid-cols-2">{handles.map((entry) => { const value = `${entry.platform}:${entry.handle}`; return <label key={value} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"><input type="checkbox" checked={postHandles.includes(value)} onChange={(event) => setPostHandles((prev) => event.target.checked ? [...prev, value] : prev.filter((handle) => handle !== value))} /> <span className="capitalize">{entry.platform}</span><span className="truncate text-slate-500">{entry.handle}</span></label>; })}</div> : <p className="mt-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">Add a social profile above to choose where to share.</p>}</fieldset>
+            <div className="grid grid-cols-2 gap-3"><label className="text-sm font-semibold text-slate-700">Date<input required type="date" value={postDate} onChange={(event) => setPostDate(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label><label className="text-sm font-semibold text-slate-700">Time<input required type="time" value={postTime} onChange={(event) => setPostTime(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal" /></label></div>
+            <p className="rounded-lg bg-blue-50 p-3 text-xs leading-5 text-blue-900">Luna saves this reminder in this browser. It can notify you at the scheduled time while Luna is open and notifications are allowed. You’ll share the post yourself.</p>
+            <div className="flex justify-end gap-2"><button type="button" onClick={() => setPostEditorOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700">Cancel</button><button type="submit" disabled={postSaving || handles.length === 0 || postHandles.length === 0} className="rounded-lg bg-[#291E29] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{postSaving ? 'Saving…' : editingPostId ? 'Save changes' : 'Save post'}</button></div>
+          </form>
+        </div>}
+
         {/* ========================================================= */}
         {/* VIEW 1: UNIFIED OMNICHANNEL INBOX (MASTER-DETAIL)         */}
         {/* ========================================================= */}
-        {activeTab === 'inbox' && (
+        {activeTab === 'inbox' && !trialStarted && <div className="rounded-xl border border-purple-200 bg-[#f7f1f8] p-8 text-center"><span className="text-xs font-semibold uppercase tracking-widest text-purple-700">Unified inbox preview</span><h2 className="mt-2 text-2xl font-semibold">Bring every customer conversation together</h2><p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">Start a 7-day free trial to explore the unified inbox, with 50 social credits each month. Organize comments and messages, route urgent requests, and draft thoughtful replies with AI suggestions. Automated AI replies are planned for a future release.</p><p className="mt-3 text-xs text-amber-800">Direct message replies can be limited to a 24-hour window depending on the platform. Some platforms do not support DMs.</p><button type="button" className="mt-5 rounded-md bg-[#291e29] px-5 py-3 text-sm font-semibold text-white" onClick={() => { localStorage.setItem(`luna_inbox_trial_${tenant.slug}`, String(Date.now())); setTrialStarted(true); }}>Start 7-day trial</button></div>}
+        {activeTab === 'inbox' && trialStarted && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600"><span>DM replies may only be available within 24 hours of a customer message. Availability differs by platform; some channels do not support DMs.</span><button type="button" onClick={() => setActionNotice('This preview has no live social connection yet. New messages will appear when a platform is connected.')} className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-2 font-semibold"><RefreshCw className="h-3.5 w-3.5" /> Refresh messages</button></div>}
+        {activeTab === 'inbox' && trialStarted && (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* ----------------------------------------------------- */}
             {/* LEFT COLUMN: CONVERSATION LIST (5 COLS ON DESKTOP)     */}
@@ -935,7 +1094,7 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
                       </div>
 
                       <div className="text-[11px] text-slate-400 font-medium">
-                        Tone matches brand &amp; SLA
+                        Tone matches your brand and business targets
                       </div>
                     </div>
 
@@ -1025,52 +1184,29 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
         {/* VIEW 2: CONTENT CALENDAR                                  */}
         {/* ========================================================= */}
         {activeTab === 'calendar' && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-              <div>
-                <h2 className="font-extrabold text-slate-900 text-lg">Social &amp; Broadcast Calendar</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Scheduled public broadcast announcements, promotions, and branch queue hours.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActionNotice('📅 Scheduled queue announcement added to calendar.')}
-                className="flex items-center gap-2 rounded-xl bg-[#291E29] text-white px-4 py-2.5 text-xs font-bold hover:bg-[#341539] transition"
-              >
-                <Plus className="h-4 w-4 text-[#FFA800]" />
-                <span>Schedule New Broadcast</span>
-              </button>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <div><h2 className="text-lg font-bold text-slate-900">Post calendar</h2><p className="mt-1 text-sm text-slate-500">Plan posts and get a reminder when it’s time to share.</p><p className="mt-1 text-xs font-medium text-slate-500">{scheduledPosts.filter((post) => { const d = new Date(post.scheduledAt); return d.getFullYear() === calendarMonth.getFullYear() && d.getMonth() === calendarMonth.getMonth(); }).length}{!tenant.plan || tenant.plan === 'free' || tenant.plan === 'free_subdomain' ? ' of 10 free posts planned this month' : ' posts planned this month'}</p></div>
+              <button type="button" onClick={() => openPostEditor(new Date())} className="inline-flex items-center gap-2 rounded-lg bg-[#291E29] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#40223f]"><Plus className="h-4 w-4 text-[#FFA800]" />Schedule a post</button>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-              {[
-                { day: 'Mon', date: 'Oct 20', events: ['Morning Rush Zero-Wait Alert', 'SME Clinic Spotlight'] },
-                { day: 'Tue', date: 'Oct 21', events: ['VIP Lookbook Showcase', 'Afternoon Open Bay Notice'] },
-                { day: 'Wed', date: 'Oct 22', events: ['Pre-Clearance Reminder'] },
-                { day: 'Thu', date: 'Oct 23', events: ['Lunch Hour Express Lane'] },
-                { day: 'Fri', date: 'Oct 24', events: ['Weekend Prep Announcement', 'Extended Hours Notice'] },
-                { day: 'Sat', date: 'Oct 25', events: ['Full Staff Live On-Duty'] },
-                { day: 'Sun', date: 'Oct 26', events: ['Maintenance & Digital Intake'] },
-              ].map((c) => (
-                <div key={c.day} className="rounded-2xl border border-slate-200 bg-slate-50/50 p-3.5 space-y-2 min-h-[160px]">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-extrabold text-slate-800">{c.day}</span>
-                    <span className="text-[10px] text-slate-400 font-semibold">{c.date}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {c.events.map((ev, i) => (
-                      <div
-                        key={i}
-                        className="rounded-xl bg-white border border-slate-200 p-2 text-[11px] font-semibold text-slate-800 shadow-2xs"
-                      >
-                        {ev}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2"><button type="button" aria-label="Previous month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))} className="rounded-md border px-3 py-2 text-slate-700 hover:bg-slate-50">‹</button><h3 className="min-w-36 text-center font-semibold text-slate-900">{calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</h3><button type="button" aria-label="Next month" onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))} className="rounded-md border px-3 py-2 text-slate-700 hover:bg-slate-50">›</button></div>
+              <button type="button" onClick={() => setCalendarMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))} className="rounded-md px-3 py-2 text-sm font-medium text-purple-800 hover:bg-purple-50">Today</button>
             </div>
+            <div className="grid grid-cols-7 border-b border-slate-200 text-center text-xs font-semibold text-slate-500">{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => <div key={day} className="py-3">{day}</div>)}</div>
+            <div className="grid grid-cols-7 overflow-hidden rounded-b-xl border-l border-slate-200">
+              {calendarDays.map((day) => {
+                const dayPosts = scheduledPosts.filter((post) => dateKey(new Date(post.scheduledAt)) === dateKey(day)).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+                const inMonth = day.getMonth() === calendarMonth.getMonth();
+                const today = dateKey(day) === dateKey(new Date());
+                return <div key={dateKey(day)} className={`min-h-28 border-b border-r border-slate-200 p-1.5 sm:min-h-36 sm:p-2 ${inMonth ? 'bg-white' : 'bg-slate-50/70'}`}>
+                  <button type="button" onClick={() => openPostEditor(day)} className={`mb-1 flex h-7 w-7 items-center justify-center rounded-full text-xs ${today ? 'bg-[#291E29] font-bold text-white' : inMonth ? 'text-slate-700 hover:bg-amber-100' : 'text-slate-400 hover:bg-slate-200'}`} aria-label={`Add post on ${day.toLocaleDateString()}`}>{day.getDate()}</button>
+                  <div className="space-y-1">{dayPosts.map((post) => <button key={post.id} type="button" onClick={() => openPostEditor(day, post)} className="block w-full truncate rounded-md border border-purple-100 bg-purple-50 px-1.5 py-1 text-left text-[10px] leading-4 text-purple-900 hover:border-purple-300 sm:text-xs"><span className="font-semibold">{new Date(post.scheduledAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span> {post.text}</button>)}</div>
+                </div>;
+              })}
+            </div>
+            <p className="mt-3 text-xs text-slate-500">Posts are saved here. Luna will remind you to publish them; it won’t post automatically yet.</p>
+            {handles.length === 0 && <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Add a social profile above before scheduling your first reminder.</div>}
           </div>
         )}
 
@@ -1172,17 +1308,18 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate next ste
         {activeTab === 'analytics' && (
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
             <div className="border-b border-slate-100 pb-4">
-              <h2 className="font-extrabold text-slate-900 text-lg">Omnichannel Service SLA &amp; Sentiments</h2>
+              <h2 className="font-extrabold text-slate-900 text-lg">Social conversations and sentiment</h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Real-time sentiment categorization, resolution time, and multi-channel performance.
+                A preview of social metrics from the conversations shown in this workspace. Live reach and growth require connected platform data.
               </p>
             </div>
+            <div className="grid gap-4 md:grid-cols-2"><div className="rounded-xl border border-slate-200 p-5"><h3 className="text-sm font-semibold">Conversations by channel</h3><div className="mt-4 space-y-3">{(['instagram','x','facebook','linkedin','tiktok','whatsapp'] as const).map(platform => { const count = conversations.filter(item => item.platform === platform).length; return <div key={platform} className="grid grid-cols-[85px_1fr_24px] items-center gap-2 text-xs"><span className="capitalize">{platform}</span><div className="h-3 rounded bg-slate-100"><div className="h-3 rounded bg-purple-600" style={{width: `${conversations.length ? count / conversations.length * 100 : 0}%`}} /></div><span>{count}</span></div>; })}</div></div><div className="rounded-xl border border-slate-200 p-5"><h3 className="text-sm font-semibold">Growth and reach</h3><p className="mt-3 text-sm text-slate-500">Connect social platforms to see reach and audience growth over time.</p><div className="mt-5 h-28 rounded-lg border border-dashed border-slate-300 bg-slate-50" aria-label="Growth chart awaiting connected data" /></div></div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-2">
-                <span className="text-xs font-bold text-slate-500">First Response SLA</span>
+                <span className="text-xs font-bold text-slate-500">First response</span>
                 <div className="text-2xl font-extrabold text-slate-900">4.2 min</div>
-                <span className="text-[11px] text-emerald-600 font-bold">▲ 18% faster than SLA target</span>
+                <span className="text-[11px] text-emerald-600 font-bold">▲ 18% faster than the business target</span>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-5 space-y-2">

@@ -10,13 +10,32 @@ export interface TenantRepository {
 }
 
 let dynamicTenants: Tenant[] = [...MOCK_TENANTS];
+const LOCAL_TENANTS_KEY = 'luna_dynamic_tenants';
+
+function restoreDynamicTenants() {
+  if (typeof window === 'undefined') return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(LOCAL_TENANTS_KEY) || '[]') as Tenant[];
+    if (Array.isArray(saved)) {
+      dynamicTenants = [...saved.filter((item) => item?.slug), ...MOCK_TENANTS.filter((item) => !saved.some((stored) => stored.slug === item.slug))];
+    }
+  } catch { /* Keep the bundled tenants if browser storage is unavailable. */ }
+}
+
+function persistDynamicTenants() {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(LOCAL_TENANTS_KEY, JSON.stringify(dynamicTenants));
+  }
+}
 
 export class MockTenantRepository implements TenantRepository {
   async getTenants(): Promise<Tenant[]> {
+    restoreDynamicTenants();
     return Promise.resolve(dynamicTenants);
   }
 
   async getTenantBySlug(slug: string): Promise<Tenant | null> {
+    restoreDynamicTenants();
     const found = dynamicTenants.find((t) => t.slug.toLowerCase() === slug.toLowerCase());
     return Promise.resolve(found || null);
   }
@@ -28,7 +47,7 @@ export class MockTenantRepository implements TenantRepository {
 
   async createTenant(newTenantData: Partial<Tenant>): Promise<Tenant> {
     const slug = newTenantData.slug || (newTenantData.name || 'new-tenant').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
+    const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'withluna.tech';
     const newTenant: Tenant = {
       id: `tenant_${Date.now()}`,
       slug,
@@ -42,6 +61,7 @@ export class MockTenantRepository implements TenantRepository {
       area: newTenantData.area || 'Central District',
       rating: 5.0,
       reviewCount: 1,
+      plan: newTenantData.plan || 'free',
       branding: {
         primaryColor: newTenantData.branding?.primaryColor || '#0057B8',
         secondaryColor: newTenantData.branding?.secondaryColor || '#002F6C',
@@ -74,6 +94,7 @@ export class MockTenantRepository implements TenantRepository {
     };
 
     dynamicTenants = [newTenant, ...dynamicTenants];
+    persistDynamicTenants();
     return Promise.resolve(newTenant);
   }
 
@@ -95,6 +116,7 @@ export class MockTenantRepository implements TenantRepository {
       },
     };
     dynamicTenants[index] = updated;
+    persistDynamicTenants();
     return Promise.resolve(updated);
   }
 }
@@ -128,9 +150,9 @@ export function resolveTenant(host: string | null, pathname: string | null): str
     }
   }
 
-  // 2. Subdomain host resolution: acme-bank.luna.com or acme-bank.localhost
+  // 2. Subdomain host resolution: acme-bank.withluna.tech or acme-bank.localhost
   const cleanHost = host.split(':')[0].toLowerCase();
-  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'luna.com';
+  const platformDomain = process.env.NEXT_PUBLIC_PLATFORM_DOMAIN || 'withluna.tech';
 
   if (cleanHost === 'localhost' || cleanHost === '127.0.0.1' || cleanHost === platformDomain || cleanHost === `app.${platformDomain}`) {
     return 'acme-bank';

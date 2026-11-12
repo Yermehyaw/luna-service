@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTenant } from '../../lib/tenant-context';
 import { useAuth } from '../../lib/auth';
 import { LunaLogo } from '../shared/LumaMark';
+import { InstallAppNotice } from '../shared/InstallAppNotice';
 import { getTenantStaff, DEFAULT_TENANT_STAFF } from '../../mock/staff';
 import { StaffAccount, StaffPrivilege } from '../../types/user';
 import {
@@ -13,9 +14,9 @@ import {
   Users,
   GitBranch,
   Settings,
-  Share2,
   BarChart2,
   Briefcase,
+  CreditCard,
   ExternalLink,
   Menu,
   X,
@@ -30,6 +31,7 @@ import {
   ArrowRightLeft,
   Check,
   MessageSquare,
+  House,
 } from 'lucide-react';
 
 export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +41,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
   const { user, loginAsStaffMember, hasPrivilege } = useAuth();
   
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isSlim, setIsSlim] = useState(false);
+  const [isSlim, setIsSlim] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [switchAccountOpen, setSwitchAccountOpen] = useState(false);
   const [currentTab, setCurrentTab] = useState<string | null>(null);
@@ -81,21 +83,24 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
     privilege?: StaffPrivilege;
     adminOnly?: boolean;
   }[] = [
+    { name: 'Home', href: `${basePath}/dashboard`, icon: House },
     { name: 'Ops Console', href: `${basePath}/ops-console`, icon: LayoutDashboard, privilege: 'ops_console' },
     { name: 'Social Studio', href: `${basePath}/social-studio`, icon: MessageSquare, privilege: 'social_studio' },
-    { name: 'Live Broadcasts', href: `${basePath}/ops-console?tab=broadcast`, icon: Share2, privilege: 'ops_console' },
     { name: 'Customers', href: `${basePath}/customers`, icon: Users, privilege: 'customer_directory' },
     { name: 'Branches', href: `${basePath}/branches`, icon: GitBranch, privilege: 'manage_branches' },
     { name: 'Services', href: `${basePath}/services`, icon: Briefcase, privilege: 'manage_services' },
     { name: 'Analytics', href: `${basePath}/analytics`, icon: BarChart2, privilege: 'view_analytics' },
+    { name: 'Plans', href: `${basePath}/plans`, icon: CreditCard, adminOnly: true },
+    { name: 'Payments', href: `${basePath}/payments`, icon: CreditCard, adminOnly: true },
+    { name: 'AI Agents · Coming soon', href: `${basePath}/agents`, icon: Lock },
     { name: 'Branding & Settings', href: `${basePath}/settings`, icon: Settings, adminOnly: true },
   ];
 
   // Primary items for mobile bottom bar
   const bottomBarItems = [
+    { name: 'Home', href: `${basePath}/dashboard`, icon: House },
     { name: 'Ops', href: `${basePath}/ops-console`, icon: LayoutDashboard },
     { name: 'Social', href: `${basePath}/social-studio`, icon: MessageSquare },
-    { name: 'Broadcast', href: `${basePath}/ops-console?tab=broadcast`, icon: Share2 },
     { name: 'Services', href: `${basePath}/services`, icon: Briefcase },
     isOwner
       ? { name: 'Settings', href: `${basePath}/settings`, icon: Settings }
@@ -120,9 +125,9 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FCFBF4] flex flex-col font-sans selection:bg-[#FFA800] selection:text-[#291E29]">
+    <div className="min-h-screen bg-[#f7f6f2] flex flex-col font-sans selection:bg-[#ead9f1] selection:text-[#291E29]">
       {/* Universal Sticky Top Header Bar */}
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[#341539] bg-[#291E29] px-3 sm:px-4 py-2.5 sm:py-3 text-[#FFF6E9] shadow-md">
+      <header className="sticky top-0 z-40 flex h-[68px] items-center justify-between border-b border-[#4b3650] bg-[#291E29] px-3 text-[#FFF6E9] shadow-lg sm:px-4">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Hamburger Menu Toggle Button */}
           <button
@@ -130,13 +135,19 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
             onClick={handleToggleSidebar}
             className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-[#FFA800] hover:text-[#291E29] active:scale-95 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[#FFA800] shrink-0"
             aria-label="Toggle navigation sidebar"
-            title={sidebarOpen ? 'Collapse sidebar into hamburger menu' : 'Expand navigation sidebar'}
+            title={isSlim ? 'Open navigation sidebar' : 'Close navigation sidebar'}
           >
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <LunaLogo variant="light" size={26} />
+          <Link href={`${basePath}/dashboard`} className="flex items-center gap-2 shrink-0">
+            {tenant.branding?.logoUrl ? (
+              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-sm">
+                <img src={tenant.branding.logoUrl} alt={`${tenant.name} logo`} className="h-full w-full object-contain" />
+              </span>
+            ) : (
+              <LunaLogo variant="light" size={26} />
+            )}
           </Link>
 
           <div className="border-l border-white/20 pl-2.5 sm:pl-3 min-w-0">
@@ -304,7 +315,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
         {/* Desktop Collapsible Sidebar */}
         <aside
           className={`hidden md:flex flex-col border-r border-[#341539] bg-[#291E29] text-[#FFF6E9] shadow-xl shrink-0 transition-all duration-300 ease-in-out ${
-            isSlim ? 'w-20 p-3 items-center' : 'w-64 p-4'
+            isSlim ? 'w-16 p-2 opacity-100' : 'w-64 p-4 opacity-100'
           }`}
         >
           {/* Sidebar Top Header & Collapse Controls */}
@@ -389,7 +400,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
           )}
 
           {/* Nav Items */}
-          <nav className="mt-4 flex-1 w-full space-y-1.5 text-xs font-semibold overflow-y-auto">
+          <nav className="mt-4 flex-1 w-full space-y-1.5 text-xs font-semibold overflow-y-auto overflow-x-visible">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isBroadcastItem = item.name.includes('Broadcast');
@@ -406,6 +417,8 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.name}
                   href={item.href}
+                  title={isSlim ? item.name : undefined}
+                  aria-label={isSlim ? item.name : undefined}
                   className={`group relative flex items-center transition-all ${
                     isSlim ? 'justify-center p-2.5 rounded-xl' : 'justify-between px-3 py-2.5 rounded-xl'
                   } ${
@@ -492,6 +505,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
 
         {/* Main Content Area */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 pb-20 md:pb-8 overflow-y-auto bg-[#FCFBF4] min-w-0 transition-all duration-300">
+          {pathname.includes('/social-studio') && <InstallAppNotice />}
           {children}
         </main>
       </div>
@@ -541,8 +555,8 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                   <ArrowRightLeft className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm text-[#291E29]">Switch Account & Role</h3>
-                  <p className="text-[10px] text-slate-500">Test platform as Business Owner or Staff</p>
+                  <h3 className="font-extrabold text-sm text-[#291E29]">Switch user</h3>
+                  <p className="text-[10px] text-slate-500">Preview as an owner or team member</p>
                 </div>
               </div>
               <button

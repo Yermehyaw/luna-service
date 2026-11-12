@@ -46,7 +46,7 @@ export const ALL_PRIVILEGES: PrivilegeMeta[] = [
   },
   {
     id: 'view_analytics',
-    label: 'Business Analytics & SLA',
+    label: 'Business Analytics & Targets',
     shortLabel: 'Analytics',
     description: 'View wait time performance, peak hours and customer satisfaction',
     iconName: 'BarChart2',
