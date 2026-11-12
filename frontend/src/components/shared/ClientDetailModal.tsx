@@ -65,6 +65,7 @@ export interface ClientData {
   name: string;
   email: string;
   phone: string;
+  socialHandle?: string;
   avatarColor?: string;
   tier: 'VIP Diamond' | 'Gold Regular' | 'Frequent Client' | 'New Client';
   visits: number;
@@ -276,6 +277,11 @@ export function ClientDetailModal({
                 >
                   {client.tier}
                 </span>
+                {client.socialHandle && (
+                  <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-100/70 px-2.5 py-0.5 rounded-full border border-purple-200">
+                    👑 {client.socialHandle}
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 truncate">
                 Client #{client.id} · Member since {client.memberSince} · {businessScale === 'sme' ? 'Small Business Storefront' : 'Enterprise Customer'}

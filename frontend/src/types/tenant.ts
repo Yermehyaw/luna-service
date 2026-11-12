@@ -51,7 +51,7 @@ export interface TenantFeatures {
 }
 
 export type TenantStatus = 'active' | 'pending' | 'suspended';
-export type TenantPlan = 'free' | 'basic' | 'pro' | 'enterprise' | 'free_subdomain' | 'pro_sme' | 'enterprise_tier';
+export type TenantPlan = 'free' | 'basic' | 'growth' | 'pro' | 'enterprise' | 'free_subdomain' | 'pro_sme' | 'enterprise_tier';
 
 export interface Tenant {
   id: string;

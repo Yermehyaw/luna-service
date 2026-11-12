@@ -46,6 +46,7 @@ export default function StaffCustomersPage() {
       name: 'Amara Okafor',
       email: 'amara.okafor@example.com',
       phone: '+234 802 123 4567',
+      socialHandle: '@amara_okafor',
       avatarColor: '#702D7B',
       tier: 'VIP Diamond',
       visits: 14,

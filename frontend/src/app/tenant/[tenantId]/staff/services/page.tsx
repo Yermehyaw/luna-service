@@ -609,7 +609,8 @@ export default function StaffServicesPage() {
                     />
                   </div>
                   <div>
-                    <label className="font-bold text-slate-700">Time needed (minutes) *</label>
+                    <label className="font-bold text-slate-700">Appointment Slot Duration (minutes) *</label>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Defines the booking window so clients know exact completion timing.</p>
                     <input
                       type="number"
                       min="1"

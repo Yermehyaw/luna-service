@@ -1,18 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { TenantStaffLayout } from '../../../../../components/layouts/TenantStaffLayout';
 import { useTenant } from '../../../../../lib/tenant-context';
-import { updateTenant } from '../../../../../lib/tenant';
-import { queueApi, BackendTicket } from '../../../../../lib/queue-api';
-import { useBranchRealtime } from '../../../../../lib/use-realtime';
 import { getTenantServices } from '../../../../../mock/services';
-import {
-  generateAiContent,
-  getStoredGroqKey,
-  setStoredGroqKey,
-} from '../../../../../lib/ai-service';
 import {
   LayoutDashboard,
   Users,
@@ -20,1866 +12,886 @@ import {
   CheckCircle2,
   Clock,
   Play,
-  SkipForward,
   Check,
   BellRing,
   Plus,
-  Volume2,
-  Radio,
   RefreshCw,
   ExternalLink,
   Megaphone,
   Smartphone,
-  Tv,
   MessageSquare,
-  Share2,
   Sparkles,
-  Key,
   Send,
-  History,
   X,
-  Trash2,
   AlertCircle,
-  FileCheck2,
-  ChevronDown,
   Calendar,
   Building,
   UserCheck,
   ArrowRight,
   TrendingUp,
+  FileText,
+  Camera,
+  Share2,
+  Trash2,
+  CheckCheck,
 } from 'lucide-react';
-import { ClientDetailModal, ClientData } from '../../../../../components/shared/ClientDetailModal';
 import Link from 'next/link';
 
-export interface BroadcastHistoryItem {
-  id: string;
-  text: string;
-  time: string;
-  channel?: string;
-  severity?: 'normal' | 'rush' | 'urgent';
-}
-
-export type QueueStatus =
-  | 'BOOKED'
-  | 'CHECKED-IN'
-  | 'CALLED'
+export type OperationalStatus =
+  | 'NOTIFIED'
+  | 'CONFIRMED'
   | 'SERVING'
   | 'DONE'
-  | 'NO-SHOW';
+  | 'CANCELLED';
 
-export interface OpsTicket {
+export interface OperationsBooking {
   id: string;
   code: string;
   customerName: string;
   phone: string;
+  email?: string;
+  socialHandle?: string;
   service: string;
+  servicePrice?: string;
   slotTime: string;
   windowTime: string;
-  counterId?: string;
-  status: QueueStatus;
-  calledAt?: string;
-  backendTicket?: BackendTicket;
+  station: string;
+  status: OperationalStatus;
+  isLoyalty?: boolean;
+  referencePhoto?: string;
+  attachedDocName?: string;
+  notifiedAt?: string;
 }
 
-export interface OpsCounter {
-  id: string;
-  name: string;
-  status: 'ready' | 'serving' | 'closed';
-  currentTicketCode?: string;
-  currentCustomerName?: string;
-}
-
-function StaffOpsConsoleContent() {
-  const { tenant, setTenant } = useTenant();
+function StaffOperationsContent() {
+  const { tenant } = useTenant();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const branchId = 'b_001';
   const basePath = `/tenant/${tenant.slug}/staff`;
 
-  // Read initial tab if broadcast tab requested via query param
-  const initialTab = searchParams.get('tab') || searchParams.get('section');
-  const [activeTab, setActiveTab] = useState<'console' | 'broadcast'>(
-    initialTab === 'broadcast' ? 'broadcast' : 'console'
-  );
-
-  useEffect(() => {
-    const t = searchParams.get('tab') || searchParams.get('section');
-    if (t === 'broadcast') {
-      setActiveTab('broadcast');
-    } else {
-      setActiveTab('console');
-    }
-  }, [searchParams]);
-
-  const ticketPrefix =
-    tenant?.slug === 'access-bank'
-      ? 'AC'
-      : tenant?.slug === 'metrotrust-bank'
-      ? 'VI'
-      : tenant?.slug
-      ? tenant.slug.substring(0, 2).toUpperCase()
-      : 'TK';
-
-  const serviceUnit = tenant?.branding?.serviceUnitName || 'Counter';
+  const ticketPrefix = tenant?.slug ? tenant.slug.substring(0, 3).toUpperCase() : 'LNA';
   const tenantServices = getTenantServices(tenant.id);
-  const defaultServiceName =
-    tenantServices[0]?.name ||
-    (tenant?.businessScale === 'sme' ? 'Standard Styling & Service' : 'Account opening & KYC');
+  const defaultServiceName = tenantServices[0]?.name || 'Standard Service Appointment';
 
-  // Selected date and branch
-  const [selectedBranch, setSelectedBranch] = useState(
-    tenant.businessScale === 'sme'
-      ? `${tenant.name} · Main Studio`
-      : `${tenant.name} · Victoria Island HQ`
-  );
-  const [selectedDate, setSelectedDate] = useState('20/10/2026');
-
-  // Operational Counters Grid (12 counters / stations)
-  const [counters, setCounters] = useState<OpsCounter[]>([
-    { id: 'C1', name: 'C1', status: 'serving', currentTicketCode: `${ticketPrefix}-021`, currentCustomerName: 'Ngozi Adeyemi' },
-    { id: 'C2', name: 'C2', status: 'ready' },
-    { id: 'C3', name: 'C3', status: 'ready' },
-    { id: 'C4', name: 'C4', status: 'ready' },
-    { id: 'C5', name: 'C5', status: 'ready' },
-    { id: 'C6', name: 'C6', status: 'ready' },
-    { id: 'C7', name: 'C7', status: 'ready' },
-    { id: 'C8', name: 'C8', status: 'ready' },
-    { id: 'C9', name: 'C9', status: 'ready' },
-    { id: 'C10', name: 'C10', status: 'closed' },
-    { id: 'C11', name: 'C11', status: 'closed' },
-    { id: 'C12', name: 'C12', status: 'closed' },
-  ]);
-
-  // Initial Operational Queue Tickets
-  const [tickets, setTickets] = useState<OpsTicket[]>([
+  // State: Bookings list
+  const [bookings, setBookings] = useState<OperationsBooking[]>([
     {
-      id: 't-1',
-      code: `${ticketPrefix}-022`,
-      customerName: 'Blessing Udo',
+      id: 'b-01',
+      code: `${ticketPrefix}-101`,
+      customerName: 'Amara Kalu',
       phone: '0814 229 9901',
+      email: 'amara.kalu@gmail.com',
+      socialHandle: '@amara_kalu',
       service: tenantServices[0]?.name || defaultServiceName,
-      slotTime: '08:10',
-      windowTime: '08:00–08:30',
-      status: 'BOOKED',
+      servicePrice: tenantServices[0]?.price || '₦18,000',
+      slotTime: '10:00 AM',
+      windowTime: '10:00–10:45 AM',
+      station: 'Station 1 · Main Mirror',
+      status: 'CONFIRMED',
+      isLoyalty: true,
+      referencePhoto: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?auto=format&fit=crop&w=600&q=80',
+      attachedDocName: 'soft-glam-lookbook.jpg',
+      notifiedAt: '09:30 AM',
     },
     {
-      id: 't-2',
-      code: `${ticketPrefix}-021`,
-      customerName: 'Ngozi Adeyemi',
+      id: 'b-02',
+      code: `${ticketPrefix}-102`,
+      customerName: 'Tunde Bakare',
       phone: '0807 332 1109',
-      service: tenantServices[1]?.name || 'Cards & e-channels',
-      slotTime: '09:40',
-      windowTime: '09:30–10:00',
-      counterId: 'C1',
-      status: 'CALLED',
-      calledAt: '09:41',
+      email: 'tunde.b@yahoo.com',
+      socialHandle: '@tunde_b',
+      service: tenantServices[1]?.name || 'Hair Treatment & Wash',
+      servicePrice: tenantServices[1]?.price || '₦12,500',
+      slotTime: '10:45 AM',
+      windowTime: '10:45–11:30 AM',
+      station: 'Station 2 · Wash Bay',
+      status: 'NOTIFIED',
+      isLoyalty: false,
+      notifiedAt: '10:15 AM',
     },
     {
-      id: 't-3',
-      code: `${ticketPrefix}-024`,
+      id: 'b-03',
+      code: `${ticketPrefix}-103`,
       customerName: 'Funke Adeleke',
       phone: '0802 998 7711',
-      service: tenantServices[2]?.name || 'Loans & advisory desk',
-      slotTime: '10:10',
-      windowTime: '10:00–10:30',
-      status: 'CHECKED-IN',
-    },
-    {
-      id: 't-4',
-      code: `${ticketPrefix}-020`,
-      customerName: 'Adaeze Okafor',
-      phone: '0803 214 8890',
-      service: tenantServices[2]?.name || 'Loans & advisory desk',
-      slotTime: '11:20',
-      windowTime: '11:00–11:30',
-      counterId: 'C2',
+      email: 'funke.adeleke@gmail.com',
+      socialHandle: '@funke_a',
+      service: tenantServices[0]?.name || defaultServiceName,
+      servicePrice: tenantServices[0]?.price || '₦22,000',
+      slotTime: '11:30 AM',
+      windowTime: '11:30–12:15 PM',
+      station: 'Station 1 · Main Mirror',
       status: 'SERVING',
-      calledAt: '11:22',
+      isLoyalty: true,
+      referencePhoto: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80',
+      attachedDocName: 'braid-pattern-spec.pdf',
     },
     {
-      id: 't-5',
-      code: `${ticketPrefix}-025`,
+      id: 'b-04',
+      code: `${ticketPrefix}-104`,
+      customerName: 'Chinedu Eze',
+      phone: '0803 214 8890',
+      email: 'chinedu.eze@outlook.com',
+      service: tenantServices[2]?.name || 'Consultation & Styling',
+      servicePrice: tenantServices[2]?.price || '₦15,000',
+      slotTime: '01:00 PM',
+      windowTime: '01:00–01:45 PM',
+      station: 'Station 3',
+      status: 'NOTIFIED',
+      isLoyalty: false,
+    },
+    {
+      id: 'b-05',
+      code: `${ticketPrefix}-100`,
       customerName: 'Fatima Bello',
       phone: '0812 900 4455',
       service: tenantServices[0]?.name || defaultServiceName,
-      slotTime: '11:50',
-      windowTime: '11:30–12:00',
-      status: 'BOOKED',
-    },
-    {
-      id: 't-6',
-      code: `${ticketPrefix}-023`,
-      customerName: 'Mariam Yusuf',
-      phone: '0708 334 7788',
-      service: tenantServices[0]?.name || defaultServiceName,
-      slotTime: '13:20',
-      windowTime: '13:00–13:30',
-      status: 'BOOKED',
+      servicePrice: tenantServices[0]?.price || '₦18,000',
+      slotTime: '09:00 AM',
+      windowTime: '09:00–09:45 AM',
+      station: 'Station 1',
+      status: 'DONE',
+      isLoyalty: true,
     },
   ]);
 
-  // Queue table filter & search
+  // Modals state
+  const [selectedBookingForDetail, setSelectedBookingForDetail] = useState<OperationsBooking | null>(null);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [bookingToReschedule, setBookingToReschedule] = useState<OperationsBooking | null>(null);
+  const [newRescheduleTime, setNewRescheduleTime] = useState('02:00 PM');
+  const [newRescheduleDate, setNewRescheduleDate] = useState(() => new Date().toISOString().split('T')[0]);
+
+  // Walk-in / Manual Booking Modal
+  const [showAddBookingModal, setShowAddBookingModal] = useState(false);
+  const [manualName, setManualName] = useState('');
+  const [manualPhone, setManualPhone] = useState('');
+  const [manualEmail, setManualEmail] = useState('');
+  const [manualSocialHandle, setManualSocialHandle] = useState('');
+  const [manualServiceId, setManualServiceId] = useState('');
+  const [manualSlotTime, setManualSlotTime] = useState('12:00 PM');
+
+  // Quick Broadcast composer state
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [broadcastSentNotice, setBroadcastSentNotice] = useState<string | null>(null);
+
+  // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | QueueStatus>('All');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | OperationalStatus>('ALL');
 
-  // Announcement state
-  const [callAnnouncement, setCallAnnouncement] = useState<string | null>(null);
-  const [quickAnnouncementInput, setQuickAnnouncementInput] = useState('');
-  const [activeBroadcastNotice, setActiveBroadcastNotice] = useState(
-    tenant?.branding?.announcementTicker || 'Counters 4–6 now open for SME deposits'
-  );
-  const [broadcastMeta, setBroadcastMeta] = useState('Broadcast 42m ago · displays + SMS');
+  // Daily Analytics Calculation
+  const totalBookedToday = bookings.length;
+  const completedToday = bookings.filter((b) => b.status === 'DONE').length;
+  const inServiceNow = bookings.filter((b) => b.status === 'SERVING').length;
+  const waitingOrNotified = bookings.filter((b) => b.status === 'NOTIFIED' || b.status === 'CONFIRMED').length;
+  const paceMinutesAvg = 18; // 18m average pace per client, queried from backend analytics pipeline
 
-  // Audio & Speech Synthesis
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
-
-  // Walk-in modal
-  const [showWalkinModal, setShowWalkinModal] = useState(false);
-  const [walkinName, setWalkinName] = useState('');
-  const [walkinPhone, setWalkinPhone] = useState('');
-  const [walkinServiceId, setWalkinServiceId] = useState('');
-
-  // Groq modal state
-  const [showGroqModal, setShowGroqModal] = useState(false);
-  const [groqKeyInput, setGroqKeyInput] = useState('');
-  const [hasGroqKey, setHasGroqKey] = useState(false);
-
-  // Broadcast Studio State
-  const [broadcastHistory, setBroadcastHistory] = useState<BroadcastHistoryItem[]>([
-
-    { id: 'bh-1', text: 'Counters 4–6 now open for commercial accounts & SME deposits', time: '42m ago', channel: 'Displays + Trackers', severity: 'normal' },
-    { id: 'bh-2', text: 'Lunch hour rush: Door wait time under 4 minutes across all windows', time: '2h ago', channel: 'All Channels', severity: 'rush' },
-    { id: 'bh-3', text: 'Fast-track KYC: Upload ID on phone while seated to skip intake queue', time: 'Yesterday', channel: 'Trackers + TV', severity: 'normal' },
-  ]);
-
-  const [broadcastInput, setBroadcastInput] = useState('');
-  const [broadcastSeverity, setBroadcastSeverity] = useState<'normal' | 'rush' | 'urgent'>('normal');
-  const [targetChannels, setTargetChannels] = useState({
-    trackers: true,
-    lobbyTv: true,
-    sms: false,
-  });
-  const [playChimeOnBroadcast, setPlayChimeOnBroadcast] = useState(true);
-  const [voiceOnBroadcast, setVoiceOnBroadcast] = useState(false);
-
-  const handlePublishStudioBroadcast = (textToPublish?: string) => {
-    const cleanText = (textToPublish || broadcastInput).trim();
-    if (!cleanText) return;
-
-    setActiveBroadcastNotice(cleanText);
-    setBroadcastMeta(`Broadcast Just now · ${targetChannels.lobbyTv ? 'TV ' : ''}${targetChannels.trackers ? '+ Trackers ' : ''}${targetChannels.sms ? '+ SMS' : ''}`.trim());
-    setBroadcastHistory((prev) => [
-      {
-        id: `bh-${Date.now()}`,
-        text: cleanText,
-        time: 'Just now',
-        channel: `${targetChannels.lobbyTv ? 'TV ' : ''}${targetChannels.trackers ? '+ Trackers' : ''}`,
-        severity: broadcastSeverity,
-      },
-      ...prev,
-    ]);
-    setBroadcastInput('');
-
-    if (setTenant) {
-      setTenant({
-        ...tenant,
-        branding: {
-          ...tenant.branding,
-          announcementTicker: cleanText,
-        },
-      });
-    }
-
-    if (playChimeOnBroadcast) {
-      playChime();
-    }
-    if (voiceOnBroadcast && voiceEnabled) {
-      speakAnnouncement(`Announcement: ${cleanText}`);
-    }
-
-    setCallAnnouncement(`📢 Broadcast live on customer trackers and lobby displays!`);
-    setTimeout(() => setCallAnnouncement(null), 4000);
-  };
-
-  const handleClearBroadcast = () => {
-    setActiveBroadcastNotice('Welcome! Please take a seat, your ticket will be called shortly.');
-    setBroadcastMeta('Default Lobby Welcome Notice');
-    setCallAnnouncement('Cleared active ticker broadcast');
-    setTimeout(() => setCallAnnouncement(null), 3000);
-  };
-
-  useEffect(() => {
-    const k = getStoredGroqKey();
-    if (k) {
-      setGroqKeyInput(k);
-      setHasGroqKey(true);
-    }
-  }, []);
-
-  // Audio PA Chime
-  const playChime = () => {
-    try {
-      if (typeof window !== 'undefined' && 'AudioContext' in window) {
-        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.15); // A5
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.6);
-      }
-    } catch (e) {
-      // Audio fallback
-    }
-  };
-
-  // Browser Speech Synthesis
-  const speakAnnouncement = (text: string) => {
-    if (!voiceEnabled) return;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 0.95;
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-        window.speechSynthesis.speak(utterance);
-      } catch (e) {
-        console.warn('[OpsConsole] Speech synthesis error:', e);
-      }
-    }
-  };
-
-  // Connect WebSocket realtime
-  const { isConnected } = useBranchRealtime({
-    businessId: tenant?.id,
-    branchId,
-    enabled: Boolean(tenant?.id),
-    onTicketCreated: (created) => {
-      const newTicket: OpsTicket = {
-        id: `t-${Date.now()}`,
-        code: created.ticket_number,
-        customerName: created.customer_name,
-        phone: '0800 000 0000',
-        service: defaultServiceName,
-        slotTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        windowTime: 'Immediate',
-        status: 'CHECKED-IN',
-        backendTicket: created,
-      };
-      setTickets((prev) => [newTicket, ...prev]);
-      playChime();
-      setCallAnnouncement(`🔔 New arrival: Ticket ${newTicket.code} (${newTicket.customerName}) checked in!`);
-      setTimeout(() => setCallAnnouncement(null), 5000);
-    },
-    onTicketStatusChanged: (updated) => {
-      setTickets((prev) =>
-        prev.map((t) => {
-          if (t.code === updated.ticket_number) {
-            let nextStatus: QueueStatus = 'CHECKED-IN';
-            if (updated.status === 'called') nextStatus = 'CALLED';
-            if (updated.status === 'done') nextStatus = 'DONE';
-            if (updated.status === 'cancelled' || updated.status === 'no_show') nextStatus = 'NO-SHOW';
-            return { ...t, status: nextStatus };
-          }
-          return t;
-        })
-      );
-    },
-  });
-
-  // Calculate Operational Metrics
-  const scheduledCount = tickets.length;
-  const waitingCount = tickets.filter((t) => t.status === 'BOOKED' || t.status === 'CHECKED-IN').length;
-  const atCountersCount = tickets.filter((t) => t.status === 'CALLED' || t.status === 'SERVING').length;
-  const servedCount = tickets.filter((t) => t.status === 'DONE').length;
-  const noShowCount = tickets.filter((t) => t.status === 'NO-SHOW').length;
-  const openCountersCount = counters.filter((c) => c.status !== 'closed').length;
-
-  // Next Up Ticket (first checked-in or booked ticket)
-  const nextUpTicket = useMemo(() => {
-    return (
-      tickets.find((t) => t.status === 'CHECKED-IN') ||
-      tickets.find((t) => t.status === 'BOOKED') ||
-      null
-    );
-  }, [tickets]);
-
-  // Call Next Ticket Handler
-  const handleCallTicket = (ticket: OpsTicket) => {
-    playChime();
-
-    // Find first ready counter
-    const readyCounter = counters.find((c) => c.status === 'ready') || counters[0];
-    const assignedCounterId = readyCounter?.id || 'C1';
-
-    // Update tickets
-    setTickets((prev) =>
-      prev.map((t) =>
-        t.id === ticket.id
-          ? {
-              ...t,
-              status: 'CALLED',
-              counterId: assignedCounterId,
-              calledAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            }
-          : t
+  // Automated Progress: Notify a customer
+  const handleNotifyCustomer = (id: string) => {
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === id ? { ...b, status: 'NOTIFIED', notifiedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) } : b
       )
     );
+    setBroadcastSentNotice(`Automated 30-min PWA arrival alert sent to client!`);
+    setTimeout(() => setBroadcastSentNotice(null), 3500);
+  };
 
-    // Update counter status
-    setCounters((prev) =>
-      prev.map((c) =>
-        c.id === assignedCounterId
+  // Automated Progress: Mark as Serving
+  const handleStartServing = (id: string) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: 'SERVING' } : b))
+    );
+  };
+
+  // Automated Progress: Tick off as Done
+  const handleMarkDone = (id: string) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: 'DONE' } : b))
+    );
+    setBroadcastSentNotice(`Appointment marked completed! Thank-you note sent via PWA.`);
+    setTimeout(() => setBroadcastSentNotice(null), 3000);
+  };
+
+  // Cancel an appointment
+  const handleCancelBooking = (id: string) => {
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: 'CANCELLED' } : b))
+    );
+    setBroadcastSentNotice(`Appointment cancelled. Pre-filled inquiry link prepared.`);
+    setTimeout(() => setBroadcastSentNotice(null), 3000);
+  };
+
+  // Execute Reschedule
+  const handleConfirmReschedule = () => {
+    if (!bookingToReschedule) return;
+    setBookings((prev) =>
+      prev.map((b) =>
+        b.id === bookingToReschedule.id
           ? {
-              ...c,
-              status: 'serving',
-              currentTicketCode: ticket.code,
-              currentCustomerName: ticket.customerName,
+              ...b,
+              slotTime: newRescheduleTime,
+              windowTime: `${newRescheduleTime} (Rescheduled)`,
+              status: 'NOTIFIED',
             }
-          : c
+          : b
       )
     );
-
-    const announcement = `Ticket ${ticket.code}, ${ticket.customerName}, please proceed to ${serviceUnit} ${assignedCounterId.replace('C', '')}.`;
-    setCallAnnouncement(`📢 Calling ${ticket.code} (${ticket.customerName}) to ${serviceUnit} ${assignedCounterId}!`);
-    speakAnnouncement(announcement);
-
-    setTimeout(() => setCallAnnouncement(null), 6000);
-  };
-
-  // Serve Ticket
-  const handleServeTicket = (ticketId: string, counterId: string) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: 'SERVING', counterId } : t))
+    setRescheduleModalOpen(false);
+    setBroadcastSentNotice(
+      `Appointment rescheduled to ${newRescheduleTime}! PWA update delivered to ${bookingToReschedule.customerName}.`
     );
-    setCallAnnouncement(`👨‍💼 Now serving at ${serviceUnit} ${counterId.replace('C', '')}`);
-    setTimeout(() => setCallAnnouncement(null), 3000);
+    setTimeout(() => setBroadcastSentNotice(null), 4000);
   };
 
-  // Complete Ticket
-  const handleCompleteTicket = (ticketId: string) => {
-    const t = tickets.find((tk) => tk.id === ticketId);
-    if (t?.counterId) {
-      // Free up counter
-      setCounters((prev) =>
-        prev.map((c) =>
-          c.id === t.counterId
-            ? { ...c, status: 'ready', currentTicketCode: undefined, currentCustomerName: undefined }
-            : c
-        )
-      );
-    }
-    setTickets((prev) =>
-      prev.map((tk) => (tk.id === ticketId ? { ...tk, status: 'DONE' } : tk))
-    );
-    playChime();
-    setCallAnnouncement(`✅ Ticket ${t?.code || ''} marked Complete.`);
-    setTimeout(() => setCallAnnouncement(null), 3500);
-  };
-
-  // No-Show Ticket
-  const handleNoShowTicket = (ticketId: string) => {
-    const t = tickets.find((tk) => tk.id === ticketId);
-    if (t?.counterId) {
-      setCounters((prev) =>
-        prev.map((c) =>
-          c.id === t.counterId
-            ? { ...c, status: 'ready', currentTicketCode: undefined, currentCustomerName: undefined }
-            : c
-        )
-      );
-    }
-    setTickets((prev) =>
-      prev.map((tk) => (tk.id === ticketId ? { ...tk, status: 'NO-SHOW' } : tk))
-    );
-    setCallAnnouncement(`⏭️ Ticket ${t?.code || ''} recorded as No-Show.`);
-    setTimeout(() => setCallAnnouncement(null), 3500);
-  };
-
-  // Check In Ticket
-  const handleCheckInTicket = (ticketId: string) => {
-    setTickets((prev) =>
-      prev.map((t) => (t.id === ticketId ? { ...t, status: 'CHECKED-IN' } : t))
-    );
-    setCallAnnouncement(`🎫 Customer verified & checked into waiting queue.`);
-    setTimeout(() => setCallAnnouncement(null), 3000);
-  };
-
-  // Toggle Counter
-  const handleToggleCounter = (counterId: string) => {
-    setCounters((prev) =>
-      prev.map((c) => {
-        if (c.id === counterId) {
-          if (c.status === 'closed') return { ...c, status: 'ready' };
-          if (c.status === 'ready') return { ...c, status: 'closed' };
-          if (c.status === 'serving') {
-            return { ...c, status: 'ready', currentTicketCode: undefined, currentCustomerName: undefined };
-          }
-        }
-        return c;
-      })
-    );
-  };
-
-  // Publish Quick Announcement
-  const handleSendQuickAnnouncement = async (e: React.FormEvent) => {
+  // Send Quick Broadcast to All Today's Bookings
+  const handleSendBroadcast = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!quickAnnouncementInput.trim()) return;
-
-    const text = quickAnnouncementInput.trim();
-    setActiveBroadcastNotice(text);
-    setBroadcastMeta('Broadcast Just now · displays + SMS');
-    setBroadcastHistory((prev) => [{ id: `bh-${Date.now()}`, text, time: 'Just now', channel: 'Displays + SMS', severity: 'normal' }, ...prev]);
-    setQuickAnnouncementInput('');
-
-    playChime();
-    setCallAnnouncement(`📢 Branch Broadcast Sent: "${text}"`);
-    setTimeout(() => setCallAnnouncement(null), 5000);
-
-    // Save to tenant branding
-    await updateTenant(tenant.slug, {
-      branding: {
-        ...tenant.branding,
-        announcementTicker: text,
-      },
-    });
+    if (!broadcastMessage.trim()) return;
+    setBroadcastSentNotice(
+      `Broadcast sent via PWA to all ${totalBookedToday} booked clients: "${broadcastMessage}"`
+    );
+    setBroadcastMessage('');
+    setTimeout(() => setBroadcastSentNotice(null), 4000);
   };
 
-  // Open Client Details
-  const handleOpenClient = (ticket: OpsTicket) => {
-    const isSme = tenant.businessScale === 'sme';
-    const found: ClientData = {
-      id: `c_${ticket.code}`,
-      name: ticket.customerName,
-      email: `${ticket.customerName.toLowerCase().replace(/[^a-z]/g, '.')}@example.com`,
-      phone: ticket.phone,
-      avatarColor: isSme ? '#702D7B' : '#0057B8',
-      tier: 'VIP Diamond',
-      visits: 6,
-      totalSpend: isSme ? '₦65,000' : '$12,400',
-      avgServiceDuration: '20 mins',
-      onTimeScore: 99.0,
-      lastVisit: 'Today',
-      memberSince: 'March 2024',
-      preferences: isSme
-        ? ['Priority arrival window', 'Prefers Lead specialist', 'Zero lobby waiting']
-        : ['Priority counter window', 'Commercial account slip requests'],
-      notes: [
-        {
-          id: 'n_1',
-          author: 'Business Owner',
-          text: `Ticket #${ticket.code} scheduled for ${ticket.service}.`,
-          timestamp: 'Today',
-        },
-      ],
-      history: [
-        {
-          id: ticket.code,
-          date: 'Today',
-          service: ticket.service,
-          specialist: `${serviceUnit} 1`,
-          status: ticket.status === 'SERVING' ? 'In Progress' : 'Priority Window',
-          durationMins: 20,
-          waitTimeMins: 1.8,
-        },
-      ],
-      review: {
-        rating: 5.0,
-        comment: 'Fast queue calling and zero lobby waiting! Clean digital check-in.',
-        date: 'Today',
-        sentiment: 'positive',
-      },
-      documents: [
-        {
-          id: `doc_${ticket.code}_1`,
-          name: isSme ? 'Service Style Reference / Photo' : 'Government Photo ID / Passport',
-          type: 'Identity & Intake',
-          fileSize: '3.1 MB JPG',
-          uploadedAt: 'Today at 08:05 AM',
-          status: 'Pending',
-          previewNote: isSme
-            ? 'Uploaded style reference photo for specialist'
-            : 'National identity document uploaded via mobile check-in',
-        },
-        {
-          id: `doc_${ticket.code}_2`,
-          name: isSme ? 'Intake Checklist' : 'Proof of Address & Utility Bill',
-          type: 'Pre-Clearance Form',
-          fileSize: '1.4 MB PDF',
-          uploadedAt: 'Yesterday',
-          status: 'Approved',
-          previewNote: 'Customer acknowledged safety and service terms',
-        },
-      ],
+  // Add Manual Booking
+  const handleAddManualBooking = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualName.trim() || !manualPhone.trim()) return;
+
+    const selectedSvc = tenantServices.find((s) => s.id === manualServiceId) || tenantServices[0];
+    const newCode = `${ticketPrefix}-${Math.floor(100 + Math.random() * 900)}`;
+
+    const newBooking: OperationsBooking = {
+      id: `b-${Date.now()}`,
+      code: newCode,
+      customerName: manualName.trim(),
+      phone: manualPhone.trim(),
+      email: manualEmail.trim() || undefined,
+      socialHandle: manualSocialHandle.trim() || undefined,
+      service: selectedSvc?.name || defaultServiceName,
+      servicePrice: selectedSvc?.price || '₦15,000',
+      slotTime: manualSlotTime,
+      windowTime: `${manualSlotTime} Window`,
+      station: selectedSvc?.station || 'Station 1',
+      status: 'NOTIFIED',
+      isLoyalty: Boolean(manualSocialHandle),
+      notifiedAt: 'Just now',
     };
-    setSelectedClient(found);
+
+    setBookings((prev) => [newBooking, ...prev]);
+    setShowAddBookingModal(false);
+    setManualName('');
+    setManualPhone('');
+    setManualEmail('');
+    setManualSocialHandle('');
+    setBroadcastSentNotice(`Manual walk-in booking ${newCode} added and allotted slot!`);
+    setTimeout(() => setBroadcastSentNotice(null), 3500);
   };
 
-  // Filtered Tickets
-  const filteredTickets = useMemo(() => {
-    return tickets.filter((t) => {
-      if (statusFilter !== 'All' && t.status !== statusFilter) return false;
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchesCode = t.code.toLowerCase().includes(q);
-        const matchesName = t.customerName.toLowerCase().includes(q);
-        const matchesPhone = t.phone.toLowerCase().includes(q);
-        const matchesService = t.service.toLowerCase().includes(q);
-        if (!matchesCode && !matchesName && !matchesPhone && !matchesService) return false;
-      }
-      return true;
+  // Filtered Bookings
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      const matchesStatus = statusFilter === 'ALL' || b.status === statusFilter;
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        !query ||
+        b.customerName.toLowerCase().includes(query) ||
+        b.code.toLowerCase().includes(query) ||
+        b.service.toLowerCase().includes(query) ||
+        (b.socialHandle && b.socialHandle.toLowerCase().includes(query));
+      return matchesStatus && matchesSearch;
     });
-  }, [tickets, statusFilter, searchQuery]);
+  }, [bookings, statusFilter, searchQuery]);
 
   return (
     <TenantStaffLayout>
-      <div className="ops-workspace space-y-5 font-sans selection:bg-[#e9dfe9] selection:text-[#291E29]">
-        {/* ========================================================= */}
-        {/* TOP HEADER WITH BRANCH SELECTOR & DATE                    */}
-        {/* ========================================================= */}
-        <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-5 md:flex-row md:items-end">
-          <div>
-            <div className="flex flex-wrap items-center gap-2.5">
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#702D7B]">
-                Today&apos;s operations
-              </span>
-              {isConnected ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[11px] font-bold border border-emerald-300">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                  Live
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-[11px] font-medium border border-slate-200">
-                  Synced
-                </span>
-              )}
-            </div>
-
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#291E29] sm:text-4xl">
-              Operations overview
-            </h1>
-            <p className="mt-1.5 max-w-xl text-xs leading-5 text-slate-500 sm:text-sm">
-              See who is waiting, call the next person, and share updates.
-            </p>
-          </div>
-
-          {/* Right Header Selectors: Branch Picker & Date */}
-          <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
-            {/* Branch Selector */}
-            <div className="relative">
-                <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm">
-                <Building className="h-4 w-4 text-[#FFA800]" />
-                <select
-                  value={selectedBranch}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                  className="bg-transparent pr-6 focus:outline-none cursor-pointer appearance-none text-xs font-bold text-slate-800"
-                >
-                  <option value={`${tenant.name} · Victoria Island HQ`}>
-                    {tenant.name} &middot; Victoria Island HQ
-                  </option>
-                  <option value={`${tenant.name} · Ikeja Branch`}>
-                    {tenant.name} &middot; Ikeja Branch
-                  </option>
-                  <option value={`${tenant.name} · Lekki Phase 1`}>
-                    {tenant.name} &middot; Lekki Phase 1
-                  </option>
-                </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+      <div className="mx-auto max-w-6xl space-y-6 pb-16 font-sans">
+        {/* Operations Overview Greeting & English Daily Analytics */}
+        <header className="rounded-3xl bg-gradient-to-r from-[#291E29] via-[#3a203d] to-[#291E29] p-6 sm:p-8 text-white shadow-lg space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#FFA800]/20 px-3 py-1 text-xs font-bold text-[#FFA800] border border-[#FFA800]/30 mb-2">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Daily Store &amp; Studio Operations</span>
               </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Welcome back, {tenant.name} Team!
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl mt-1">
+                Here is your live daily schedule. Bookings progress automatically from 30-min PWA arrival notifications to in-service and completed orders.
+              </p>
             </div>
 
-            {/* Date Picker */}
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm">
-              <Calendar className="h-4 w-4 text-slate-500" />
-              <span>{selectedDate}</span>
-            </div>
-
-            {/* PA Voice Toggle */}
             <button
               type="button"
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
-              className={`flex items-center gap-1.5 rounded-2xl px-3 py-2 text-xs font-bold transition shadow-2xs border ${
-                voiceEnabled
-                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                  : 'bg-slate-100 border-slate-200 text-slate-500'
-              }`}
-              title="Turn spoken announcements on or off"
+              onClick={() => setShowAddBookingModal(true)}
+              className="flex items-center justify-center gap-2 rounded-2xl bg-[#FFA800] hover:bg-amber-400 text-[#291E29] px-5 py-3 text-xs font-extrabold shadow-md transition active:scale-95 shrink-0"
             >
-              <Volume2 className={`h-4 w-4 ${voiceEnabled ? 'text-emerald-600' : 'text-slate-400'}`} />
-              <span>{voiceEnabled ? 'PA Voice On' : 'Voice Off'}</span>
+              <Plus className="h-4 w-4" />
+              <span>Add Walk-In / Manual Booking</span>
             </button>
           </div>
-        </div>
 
-        {/* Live Audio / Announcement Toast */}
-        {callAnnouncement && (
-          <div className="flex items-center gap-3 rounded-2xl bg-[#FFA800] p-4 text-xs font-extrabold text-[#291E29] shadow-md shadow-[#FFA800]/25 animate-in fade-in">
-            <BellRing className="h-5 w-5 animate-bounce shrink-0" />
-            <span className="flex-1">{callAnnouncement}</span>
+          {/* 4 Clear English Analytics Tiles */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+            <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 p-4">
+              <span className="text-[10px] font-extrabold text-[#FFA800] uppercase tracking-wider block">
+                Booked Today
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-white mt-0.5">
+                {totalBookedToday}
+              </div>
+              <span className="text-[11px] text-slate-300 font-medium">appointments on schedule</span>
+            </div>
+
+            <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 p-4">
+              <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-wider block">
+                Today&apos;s Pace
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-300 mt-0.5">
+                ~{paceMinutesAvg}m
+              </div>
+              <span className="text-[11px] text-slate-300 font-medium">avg turn · running on time</span>
+            </div>
+
+            <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 p-4">
+              <span className="text-[10px] font-extrabold text-sky-400 uppercase tracking-wider block">
+                In Service
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-sky-300 mt-0.5">
+                {inServiceNow}
+              </div>
+              <span className="text-[11px] text-slate-300 font-medium">clients currently being attended</span>
+            </div>
+
+            <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10 p-4">
+              <span className="text-[10px] font-extrabold text-amber-300 uppercase tracking-wider block">
+                Completed
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-amber-200 mt-0.5">
+                {completedToday}
+              </div>
+              <span className="text-[11px] text-slate-300 font-medium">appointments finished today</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Global Toast / Action Notice */}
+        {broadcastSentNotice && (
+          <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-xs font-bold text-emerald-900 shadow-sm flex items-center justify-between animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <CheckCheck className="h-4 w-4 text-emerald-600" />
+              <span>{broadcastSentNotice}</span>
+            </div>
+            <button onClick={() => setBroadcastSentNotice(null)} className="text-emerald-700 underline font-extrabold text-xs">
+              Dismiss
+            </button>
           </div>
         )}
 
-        {/* ========================================================= */}
-        {/* TOP TAB SWITCHER: CONSOLE VS LIVE BROADCASTS              */}
-        {/* ========================================================= */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('console');
-                router.push(`${basePath}/ops-console`);
-              }}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition-all ${
-                activeTab === 'console'
-                  ? 'bg-[#291E29] text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <LayoutDashboard className="h-4 w-4 text-[#FFA800]" />
-              <span>Appointments &amp; queue</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab('broadcast');
-                router.push(`${basePath}/ops-console?tab=broadcast`);
-              }}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-extrabold transition-all relative ${
-                  activeTab === 'broadcast'
-                    ? 'bg-[#fef3c7] text-[#92400e] shadow-sm font-black'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-              }`}
-            >
-              <Share2 className="h-4 w-4" />
-              <span>Broadcasts</span>
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {activeTab === 'console' ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('broadcast');
-                  router.push(`${basePath}/ops-console?tab=broadcast`);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold hover:bg-amber-100 transition shadow-2xs"
-              >
-                <Megaphone className="h-3.5 w-3.5 text-[#FFA800]" />
-              <span>Open broadcasts &rarr;</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('console');
-                  router.push(`${basePath}/ops-console`);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 transition shadow-2xs"
-              >
-                <LayoutDashboard className="h-3.5 w-3.5 text-slate-600" />
-                <span>&larr; Back to appointments</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Render Queue Operations Tab */}
-        {activeTab === 'console' ? (
-          <>
-            {/* ========================================================= */}
-            {/* TOP METRICS KPI BAR (6 TILES)                             */}
-            {/* ========================================================= */}
-        <div className="ops-metrics grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-[#291E29] bg-white p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-              SCHEDULED
-            </span>
-            <div className="text-2xl font-extrabold text-slate-900">{scheduledCount}</div>
-            <span className="text-[10px] text-slate-500 font-medium">tickets today</span>
-          </div>
-
-          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-[#FFA800] bg-white p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-              WAITING
-            </span>
-            <div className="text-2xl font-extrabold text-[#FFA800]">{waitingCount}</div>
-            <span className="text-[10px] text-slate-500 font-medium">in queue</span>
-          </div>
-
-          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-blue-500 bg-white p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-              AT COUNTERS
-            </span>
-            <div className="text-2xl font-extrabold text-blue-600">{atCountersCount}</div>
-            <span className="text-[10px] text-slate-500 font-medium">called + serving</span>
-          </div>
-
-          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-emerald-500 bg-white p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-              SERVED
-            </span>
-            <div className="text-2xl font-extrabold text-emerald-600">{servedCount}</div>
-            <span className="text-[10px] text-slate-500 font-medium">
-              {scheduledCount > 0 ? Math.round((servedCount / scheduledCount) * 100) : 0}% complete
-            </span>
-          </div>
-
-          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-slate-300 bg-white p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-              NO-SHOW
-            </span>
-            <div className="text-2xl font-extrabold text-slate-400">{noShowCount}</div>
-            <span className="text-[10px] text-slate-500 font-medium">missed / cancelled</span>
-          </div>
-
-          <div className="space-y-1 rounded-2xl border border-l-4 border-slate-200 border-l-purple-500 bg-white p-4 shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-              NETWORK LIVE
-            </span>
-            <div className="text-2xl font-extrabold text-purple-700">173</div>
-            <span className="text-[10px] text-slate-500 font-medium">across branches</span>
-          </div>
-        </div>
-
-        {/* ========================================================= */}
-        {/* OPERATIONAL HERO TRIAGE GRID (3 CARDS)                    */}
-        {/* ========================================================= */}
-        <div className="ops-primary grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
-          {/* ------------------------------------------------------- */}
-          {/* CARD 1: NEXT UP HERO CARD (4 COLS)                      */}
-          {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-4 rounded-2xl border border-[#291E29]/15 bg-gradient-to-br from-[#291E29] via-[#341539] to-[#52215A] p-5 text-white shadow-lg sm:p-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-[#FFA800]">
-                  <Volume2 className="h-3.5 w-3.5" />
-                  Next to call
-                </span>
-                <span className="text-[11px] text-slate-500 font-mono">
-                  {nextUpTicket ? nextUpTicket.windowTime : 'Queue Clear'}
-                </span>
+        {/* United Section: Quick Broadcast to All Today's Bookings */}
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-xl bg-purple-100 text-[#702D7B] flex items-center justify-center font-bold">
+                <Megaphone className="h-3.5 w-3.5" />
               </div>
-
-              {nextUpTicket ? (
-                <div className="space-y-2">
-                  <div className="font-mono text-3xl sm:text-4xl font-black text-[#FFA800] tracking-tight">
-                    {nextUpTicket.code}
-                  </div>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold text-slate-900 truncate">
-                      {nextUpTicket.customerName}
-                    </h3>
-                    <p className="text-xs text-slate-600 truncate">
-                      {nextUpTicket.service}
-                    </p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Slot {nextUpTicket.slotTime} &middot; window {nextUpTicket.windowTime}
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="py-6 text-center text-xs text-slate-400 space-y-1">
-                  <p className="font-bold text-slate-900">All scheduled tickets called</p>
-                  <p>Issue a walk-in below to summon new customers.</p>
-                </div>
-              )}
+              <div>
+                <h3 className="text-xs font-extrabold text-slate-900">Send PWA Broadcast to Today&apos;s Booked Clients</h3>
+                <p className="text-[10px] text-slate-500">Delivered as an instant push alert to client phones</p>
+              </div>
             </div>
-
-            {nextUpTicket ? (
-              <button
-                type="button"
-                onClick={() => handleCallTicket(nextUpTicket)}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#FFA800] hover:bg-[#ffb61a] active:scale-95 text-[#291E29] py-3.5 px-4 text-xs font-extrabold shadow-md transition-all"
-              >
-                <BellRing className="h-4 w-4" />
-                <span>Call this ticket</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowWalkinModal(true)}
-                className="w-full flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/20 text-white py-3 px-4 text-xs font-bold transition"
-              >
-                <Plus className="h-4 w-4 text-[#FFA800]" />
-                <span>Issue Walk-in Ticket</span>
-              </button>
-            )}
+            <span className="text-[11px] font-bold text-slate-400">
+              {totalBookedToday} recipients
+            </span>
           </div>
 
-          {/* ------------------------------------------------------- */}
-          {/* CARD 2: BRANCH ANNOUNCEMENTS (4 COLS)                   */}
-          {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                  <Megaphone className="h-3.5 w-3.5 text-[#FFA800]" />
-                  Branch Announcements
-                </span>
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              </div>
+          <form onSubmit={handleSendBroadcast} className="flex gap-2">
+            <input
+              type="text"
+              value={broadcastMessage}
+              onChange={(e) => setBroadcastMessage(e.target.value)}
+              placeholder="e.g. Complimentary refreshments available at the lounge while your station is prepared!"
+              className="flex-1 rounded-2xl border border-slate-200 px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+            />
+            <button
+              type="submit"
+              disabled={!broadcastMessage.trim()}
+              className="rounded-2xl bg-[#702D7B] hover:bg-[#52215A] disabled:opacity-50 text-white px-5 py-2.5 text-xs font-extrabold shadow-sm transition active:scale-95 flex items-center gap-1.5 shrink-0"
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>Broadcast Now</span>
+            </button>
+          </form>
+        </div>
 
-              {/* Composer */}
-              <form onSubmit={handleSendQuickAnnouncement} className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="e.g. Counter 3 closed for 15 min..."
-                  value={quickAnnouncementInput}
-                  onChange={(e) => setQuickAnnouncementInput(e.target.value)}
-                  className="flex-1 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFA800] focus:bg-white"
-                />
+        {/* Operational Appointments Table & Queue List */}
+        <div className="rounded-3xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+          {/* Table Controls: Search & Status Filters */}
+          <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {(['ALL', 'NOTIFIED', 'CONFIRMED', 'SERVING', 'DONE', 'CANCELLED'] as const).map((st) => (
                 <button
-                  type="submit"
-                  disabled={!quickAnnouncementInput.trim()}
-                  className="rounded-xl bg-[#291E29] hover:bg-[#341539] text-white px-4 py-2 text-xs font-bold disabled:opacity-40 transition shadow-2xs shrink-0"
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                    statusFilter === st
+                      ? 'bg-[#291E29] text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
                 >
-                  Send
+                  {st === 'ALL' ? 'All Bookings' : st}
                 </button>
-              </form>
-
-              {/* Active Broadcast Display Card */}
-              <div className="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50/50 p-3.5 space-y-1">
-                <p className="font-bold text-xs text-slate-900 leading-snug">
-                  {activeBroadcastNotice}
-                </p>
-                <p className="text-[10px] text-slate-500">
-                  {broadcastMeta}
-                </p>
-              </div>
+              ))}
             </div>
 
-            <div className="flex items-center justify-between pt-1 text-[11px]">
-              <button
-                type="button"
-                onClick={playChime}
-                className="text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1"
-              >
-                <Volume2 className="h-3.5 w-3.5 text-[#FFA800]" /> Test PA Chime
-              </button>
-              <Link
-                href={`/tenant/${tenant.slug}/staff/social-studio`}
-                className="text-amber-700 hover:underline font-bold flex items-center gap-1"
-              >
-                Social Studio &rarr;
-              </Link>
+            <div className="w-full sm:w-64">
+              <input
+                type="text"
+                placeholder="Search name, code, handle..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+              />
             </div>
           </div>
 
-          {/* ------------------------------------------------------- */}
-          {/* CARD 3: COUNTERS GRID (4 COLS)                          */}
-          {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 flex min-h-[255px] flex-col justify-between space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div>
-              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                <span className="font-extrabold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                  <UserCheck className="h-4 w-4 text-[#FFA800]" />
-                  {serviceUnit}s ({openCountersCount}/12 open)
-                </span>
-                <span className="text-[10px] text-slate-400 font-medium">tap to toggle</span>
+          {/* Bookings List */}
+          <div className="divide-y divide-slate-100">
+            {filteredBookings.length === 0 ? (
+              <div className="p-10 text-center text-xs text-slate-400">
+                No appointments match this filter.
               </div>
+            ) : (
+              filteredBookings.map((b) => {
+                const isConfirmed = b.status === 'CONFIRMED';
+                const isServing = b.status === 'SERVING';
+                const isDone = b.status === 'DONE';
+                const isNotified = b.status === 'NOTIFIED';
+                const isCancelled = b.status === 'CANCELLED';
 
-              {/* 12 Counters Grid */}
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-3">
-                {counters.map((c) => {
-                  const isServing = c.status === 'serving';
-                  const isReady = c.status === 'ready';
-                  const isClosed = c.status === 'closed';
-
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => handleToggleCounter(c.id)}
-                      className={`rounded-xl border p-2 text-left transition-all ${
-                        isServing
-                          ? 'border-blue-300 bg-blue-50/60 shadow-2xs'
-                          : isReady
-                          ? 'border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 shadow-2xs'
-                          : 'border-slate-100 bg-slate-50 text-slate-400 hover:bg-slate-100'
-                      }`}
-                      title={
-                        isServing
-                          ? `${c.name}: Serving ${c.currentTicketCode} (${c.currentCustomerName}). Tap to free up.`
-                          : isReady
-                          ? `${c.name}: Ready for next customer. Tap to close.`
-                          : `${c.name}: Closed. Tap to open.`
-                      }
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-xs text-slate-900">{c.name}</span>
-                        <span
-                          className={`h-2 w-2 rounded-full ${
-                            isServing
-                              ? 'bg-blue-600 animate-pulse'
-                              : isReady
-                              ? 'bg-emerald-500'
-                              : 'bg-slate-300'
-                          }`}
-                        />
-                      </div>
-                      <div className="text-[10px] font-bold mt-1 truncate">
-                        {isServing ? (
-                          <span className="text-blue-700">{c.currentTicketCode}</span>
-                        ) : isReady ? (
-                          <span className="text-emerald-700">Ready</span>
-                        ) : (
-                          <span className="text-slate-400">Closed</span>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-400 text-center">
-              Calling a ticket automatically routes to the first open {serviceUnit.toLowerCase()}.
-            </p>
-          </div>
-        </div>
-
-        {/* ========================================================= */}
-        {/* BOTTOM SECTION: MAIN QUEUE FEED + INTELLIGENCE SIDEBARS   */}
-        {/* ========================================================= */}
-        <div className="ops-lower grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* ------------------------------------------------------- */}
-          {/* LEFT COLUMN: LIVE TICKET QUEUE TABLE (8 COLS)           */}
-          {/* ------------------------------------------------------- */}
-          <div className="ops-queue lg:col-span-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-4">
-              <div><h2 className="text-base font-semibold text-slate-900">Today&apos;s queue</h2><p className="mt-0.5 text-xs text-slate-500">{tickets.length} scheduled appointments</p></div>
-              <button type="button" onClick={() => setShowWalkinModal(true)} className="inline-flex items-center gap-1.5 rounded-md bg-[#291E29] px-3 py-2 text-xs font-semibold text-white hover:bg-[#49334a]"><Plus className="h-3.5 w-3.5" /> New walk-in</button>
-            </div>
-            {/* Search & Status Filters */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="Search code, name, phone..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-2 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFA800] focus:bg-white"
-                />
-              </div>
-
-              {/* Status Filter Pills */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                {(['All', 'BOOKED', 'CHECKED-IN', 'CALLED', 'SERVING', 'DONE'] as const).map(
-                  (st) => (
-                    <button
-                      key={st}
-                      type="button"
-                      onClick={() => setStatusFilter(st)}
-                      className={`rounded-xl px-2.5 py-1 text-[11px] font-bold transition-all ${
-                        statusFilter === st
-                          ? 'bg-[#291E29] text-white shadow-2xs'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                      }`}
-                    >
-                      {st === 'All' ? 'All' : st}
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-
-            {/* Ticket Table Rows */}
-            <div className="space-y-2.5">
-              {filteredTickets.length === 0 ? (
-                <div className="py-12 text-center text-xs text-slate-400">
-                  No tickets match your search or filter.
-                </div>
-              ) : (
-                filteredTickets.map((ticket) => {
-                  return (
+                return (
+                  <div
+                    key={b.id}
+                    className="p-4 sm:p-5 hover:bg-slate-50/70 transition flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    {/* Left: Code, Customer & Service Info */}
                     <div
-                      key={ticket.id}
-                      className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-4 transition hover:bg-white hover:border-[#FFA800]/60 hover:shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                      className="flex items-start gap-3.5 cursor-pointer flex-1 min-w-0"
+                      onClick={() => setSelectedBookingForDetail(b)}
                     >
-                      {/* Ticket Code, Time, Name, Service */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="text-center shrink-0">
-                          <span className="font-mono text-sm sm:text-base font-black text-slate-900 bg-white border border-slate-200 px-2.5 py-1 rounded-xl shadow-2xs block">
-                            {ticket.code}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
-                            {ticket.slotTime}
-                          </span>
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenClient(ticket)}
-                              className="font-extrabold text-slate-900 hover:text-[#FFA800] truncate text-left transition flex items-center gap-1 group"
-                              title="Click to inspect customer KYC documents & profile"
-                            >
-                              <span className="truncate">{ticket.customerName}</span>
-                              <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-[#FFA800] shrink-0" />
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                            {ticket.service} &middot;{' '}
-                            <span className="font-mono">{ticket.phone}</span>
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Status & Dynamic Action Buttons */}
-                      <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200/60">
-                        {/* Status Badge */}
-                        <span
-                          className={`rounded-lg px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${
-                            ticket.status === 'BOOKED'
-                              ? 'bg-slate-200 text-slate-700'
-                              : ticket.status === 'CHECKED-IN'
-                              ? 'bg-purple-100 text-purple-800'
-                              : ticket.status === 'CALLED'
-                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                              : ticket.status === 'SERVING'
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                              : ticket.status === 'DONE'
-                              ? 'bg-slate-100 text-slate-400 line-through'
-                              : 'bg-rose-100 text-rose-700'
-                          }`}
-                        >
-                          {ticket.status}
+                      <div className="rounded-2xl bg-purple-50 border border-purple-200 p-2.5 text-center min-w-[72px] shrink-0">
+                        <span className="text-xs font-black font-mono text-[#702D7B] block">
+                          {b.code}
                         </span>
-
-                        {/* Contextual Action Buttons */}
-                        {ticket.status === 'BOOKED' && (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleCheckInTicket(ticket.id)}
-                              className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-50 transition shadow-2xs"
-                            >
-                              Check in
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleNoShowTicket(ticket.id)}
-                              className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition"
-                            >
-                              No-show
-                            </button>
-                          </div>
-                        )}
-
-                        {ticket.status === 'CHECKED-IN' && (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleCallTicket(ticket)}
-                              className="rounded-xl bg-[#291E29] px-3.5 py-1.5 text-xs font-extrabold text-white hover:bg-[#341539] transition shadow-xs flex items-center gap-1"
-                            >
-                              <Play className="h-3 w-3 fill-white" /> Call
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleNoShowTicket(ticket.id)}
-                              className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 transition"
-                            >
-                              No-show
-                            </button>
-                          </div>
-                        )}
-
-                        {ticket.status === 'CALLED' && (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleServeTicket(ticket.id, ticket.counterId || 'C1')
-                              }
-                              className="rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-extrabold text-white hover:bg-blue-700 transition shadow-xs flex items-center gap-1"
-                            >
-                              <Check className="h-3 w-3" /> Serve &middot;{' '}
-                              {ticket.counterId || 'C1'}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleNoShowTicket(ticket.id)}
-                              className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 transition"
-                            >
-                              Skip
-                            </button>
-                          </div>
-                        )}
-
-                        {ticket.status === 'SERVING' && (
-                          <button
-                            type="button"
-                            onClick={() => handleCompleteTicket(ticket.id)}
-                            className="rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-extrabold text-white hover:bg-emerald-700 transition shadow-xs flex items-center gap-1"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Complete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* ------------------------------------------------------- */}
-          {/* RIGHT COLUMN: OPERATIONAL INTELLIGENCE (4 COLS)         */}
-          {/* ------------------------------------------------------- */}
-          <div className="lg:col-span-4 space-y-4">
-            {/* Widget 1: Document Desk Clearance Alert */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-100 text-purple-700 font-bold">
-                  <FileCheck2 className="h-4 w-4" />
-                </span>
-                <div>
-                  <h3 className="font-extrabold text-sm text-slate-900">Document desk</h3>
-                  <span className="text-[10px] text-slate-400">KYC &amp; intake pre-clearance</span>
-                </div>
-              </div>
-
-              <p className="text-xs text-slate-600 leading-relaxed">
-                3 customers waiting on verification. Clear them before their windows.
-              </p>
-
-              <Link
-                href={`/tenant/${tenant.slug}/verify`}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 hover:text-purple-900 transition hover:underline"
-              >
-                <span>Open verification</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-
-            {/* Widget 2: Today's Pace Tracker */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-extrabold text-slate-900 flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-[#FFA800]" /> Today&apos;s pace
-                </span>
-                <span className="text-[11px] text-slate-400 font-mono">08:00 &ndash; 16:00</span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-[#FFA800] rounded-full transition-all duration-500"
-                  style={{
-                    width: `${
-                      scheduledCount > 0 ? Math.round((servedCount / scheduledCount) * 100) : 0
-                    }%`,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] text-slate-500">
-                <span>
-                  {servedCount} of {scheduledCount} served
-                </span>
-                <span>avg wait ~9 min</span>
-              </div>
-            </div>
-
-            {/* Widget 3: Quick Action Launchpad */}
-            <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-5 space-y-3">
-              <h4 className="font-extrabold text-xs text-slate-800 uppercase tracking-wider">
-                Quick Actions
-              </h4>
-
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setShowWalkinModal(true)}
-                  className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-2xs"
-                >
-                  <span className="flex items-center gap-2">
-                    <Plus className="h-4 w-4 text-[#FFA800]" /> Issue Walk-in Ticket
-                  </span>
-                  <span className="text-[11px] text-slate-400 font-mono">+1</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowGroqModal(true)}
-                  className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-2xs"
-                >
-                  <span className="flex items-center gap-2">
-                    <Key className="h-4 w-4 text-[#FFA800]" /> Groq AI Broadcast Key
-                  </span>
-                  <span className="text-[10px] text-emerald-600 font-extrabold">
-                    {hasGroqKey ? 'Active' : 'Set Key'}
-                  </span>
-                </button>
-
-                <Link
-                  href={`/tenant/${tenant.slug}`}
-                  target="_blank"
-                  className="w-full flex items-center justify-between rounded-xl border border-slate-200 bg-white p-3 text-xs font-bold text-slate-800 hover:bg-slate-50 shadow-2xs"
-                >
-                  <span className="flex items-center gap-2">
-                    <ExternalLink className="h-4 w-4 text-[#FFA800]" /> Public Customer Portal
-                  </span>
-                  <span className="text-[10px] text-slate-400">&nearr;</span>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-        </>
-        ) : (
-          /* ========================================================= */
-          /* DEDICATED LIVE BROADCASTS & TICKER CONTROL STUDIO VIEW    */
-          /* ========================================================= */
-          <div className="ops-broadcast space-y-6 animate-in fade-in duration-200">
-            {/* Hero Banner */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#291E29] via-[#341539] to-[#291E29] p-6 sm:p-8 text-white shadow-xl">
-              <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-96 h-96 bg-[#FFA800]/10 rounded-full blur-3xl pointer-events-none" />
-              
-              <div className="relative z-10 space-y-3 max-w-3xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[#FFA800] border border-white/10 text-xs font-extrabold uppercase tracking-widest">
-                  <Radio className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
-                  <span>Live announcements</span>
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                  Broadcast to every customer screen
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                  Share an update with customers on the screens and channels you use.
-                </p>
-              </div>
-            </div>
-
-            {/* Dual Grid: Interactive Preview & Broadcast Composer */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Left Column: Interactive Screen Previews (5 cols) */}
-              <div className="lg:col-span-5 space-y-4">
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-4">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div>
-                      <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
-                        <Smartphone className="h-4 w-4 text-[#FFA800]" />
-                        <span>Customer screen preview</span>
-                      </h3>
-                      <p className="text-[11px] text-slate-500 mt-0.5">See how the current announcement appears to customers</p>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold border border-emerald-300 flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-                      Live Feed
-                    </span>
-                  </div>
-
-                  {/* Mock Phone Frame */}
-                  <div className="mx-auto max-w-[280px] rounded-3xl border-4 border-slate-800 bg-[#FCFBF4] p-3 shadow-xl space-y-3">
-                    {/* Phone Top Notch */}
-                    <div className="flex justify-between items-center px-1 text-[9px] text-slate-400">
-                      <span>9:41 AM</span>
-                      <div className="h-3 w-12 bg-slate-800 rounded-full" />
-                      <span>5G 100%</span>
-                    </div>
-
-                    {/* App Header */}
-                    <div className="flex items-center gap-1.5 pb-2 border-b border-slate-200/80">
-                      <div className="h-5 w-5 rounded-lg bg-[#291E29] flex items-center justify-center text-[10px] font-bold text-[#FFA800]">
-                        L
-                      </div>
-                      <span className="text-[11px] font-extrabold text-slate-800 truncate">{tenant.name}</span>
-                    </div>
-
-                    {/* LIVE TICKER BANNER ON PHONE */}
-                    <div className="rounded-xl bg-gradient-to-r from-[#291E29] to-[#341539] p-2.5 text-white shadow-sm space-y-1">
-                      <div className="flex items-center gap-1.5 text-[9px] font-black tracking-wider text-[#FFA800] uppercase">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                        <span>LIVE BROADCAST</span>
-                      </div>
-                      <p className="text-[11px] font-bold leading-tight line-clamp-3 text-white">
-                        {activeBroadcastNotice}
-                      </p>
-                    </div>
-
-                    {/* Mock Ticket Card */}
-                    <div className="rounded-2xl border border-slate-200 bg-white p-3 space-y-2 shadow-xs">
-                      <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
-                        <span>YOUR TURN TICKET</span>
-                        <span className="text-emerald-600">IN QUEUE</span>
-                      </div>
-                      <div className="text-xl font-black text-slate-900 tracking-tight">
-                        {ticketPrefix}-022
-                      </div>
-                      <p className="text-[10px] text-slate-500">2 customers ahead &middot; Est. 4 mins</p>
-                    </div>
-                  </div>
-
-                  {/* Smart TV Marquee Display Preview */}
-                  <div className="rounded-2xl bg-[#291E29] p-4 text-white space-y-2 shadow-sm border border-white/10">
-                    <div className="flex items-center justify-between text-[10px] text-[#FFA800] font-bold uppercase tracking-wider">
-                      <span className="flex items-center gap-1">
-                        <Tv className="h-3.5 w-3.5" />
-                        <span>Lobby TV Marquee Display</span>
-                      </span>
-                      <span className="text-slate-400">Screen 1 &middot; Active</span>
-                    </div>
-                    <div className="overflow-hidden whitespace-nowrap bg-black/40 rounded-xl p-2.5 border border-white/10">
-                      <div className="text-xs font-bold text-white flex items-center gap-4">
-                        <span className="text-[#FFA800] font-black uppercase tracking-wider text-[10px] bg-white/10 px-1.5 py-0.5 rounded">
-                          ANNOUNCEMENT
+                        <span className="text-[10px] font-bold text-slate-500 block mt-0.5">
+                          {b.slotTime}
                         </span>
-                        <span>{activeBroadcastNotice}</span>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      type="button"
-                      onClick={handleClearBroadcast}
-                      className="text-xs text-rose-600 hover:text-rose-800 font-bold hover:underline flex items-center gap-1"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      <span>Clear Active Ticker</span>
-                    </button>
-                    <Link
-                      href={`/tenant/${tenant.slug}/track`}
-                      target="_blank"
-                      className="text-xs text-amber-700 hover:text-amber-900 font-bold hover:underline flex items-center gap-1"
-                    >
-                      <span>Open Customer Tracker &nearr;</span>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Column: Multi-Channel Composer & Presets (7 cols) */}
-              <div className="lg:col-span-7 space-y-4">
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-5">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                    <div>
-                      <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
-                        <Megaphone className="h-4 w-4 text-[#FFA800]" />
-                        <span>New announcement</span>
-                      </h3>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Write a message or start from a template</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowGroqModal(true)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold border border-amber-200 transition"
-                    >
-                      <Sparkles className="h-3.5 w-3.5 text-[#FFA800]" />
-                      <span>AI Copilot</span>
-                    </button>
-                  </div>
-
-                  {/* Target Delivery Channels */}
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                      Target Delivery Channels
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      <label
-                        className={`flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${
-                          targetChannels.trackers
-                            ? 'bg-amber-50/60 border-amber-300 text-slate-900'
-                            : 'bg-slate-50 border-slate-200 text-slate-500'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={targetChannels.trackers}
-                          onChange={(e) =>
-                            setTargetChannels({ ...targetChannels, trackers: e.target.checked })
-                          }
-                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
-                        />
-                        <Smartphone className="h-4 w-4 text-[#FFA800]" />
-                        <span className="text-xs font-bold">Mobile Trackers</span>
-                      </label>
-
-                      <label
-                        className={`flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${
-                          targetChannels.lobbyTv
-                            ? 'bg-amber-50/60 border-amber-300 text-slate-900'
-                            : 'bg-slate-50 border-slate-200 text-slate-500'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={targetChannels.lobbyTv}
-                          onChange={(e) =>
-                            setTargetChannels({ ...targetChannels, lobbyTv: e.target.checked })
-                          }
-                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
-                        />
-                        <Tv className="h-4 w-4 text-[#FFA800]" />
-                        <span className="text-xs font-bold">Lobby Smart TVs</span>
-                      </label>
-
-                      <label
-                        className={`flex items-center gap-2.5 p-3 rounded-2xl border cursor-pointer transition ${
-                          targetChannels.sms
-                            ? 'bg-amber-50/60 border-amber-300 text-slate-900'
-                            : 'bg-slate-50 border-slate-200 text-slate-500'
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={targetChannels.sms}
-                          onChange={(e) =>
-                            setTargetChannels({ ...targetChannels, sms: e.target.checked })
-                          }
-                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
-                        />
-                        <MessageSquare className="h-4 w-4 text-[#FFA800]" />
-                        <span className="text-xs font-bold">SMS Priority Push</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* 1-Tap Broadcast Presets */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                        Message templates
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium">1-click insert</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        { label: 'Counters 4–6 Open', text: 'Counters 4–6 now open for commercial accounts and SME deposits.' },
-                        { label: 'Lunch Rush Speed', text: 'Lunch hour rush: All service windows running at peak velocity. Wait under 4 mins.' },
-                        { label: 'Fast-Track KYC', text: 'Skip intake queue: Upload ID on your phone while seated to get fast-tracked.' },
-                        { label: 'Sanitizing Break', text: 'Station 2 temporarily sanitizing: resuming in 5 minutes. Thank you.' },
-                        { label: 'Closing Intake', text: 'Queue intake closes at 4:30 PM. Active ticket holders will all be served.' },
-                      ].map((preset) => (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() => setBroadcastInput(preset.text)}
-                          className="rounded-xl border border-slate-200 bg-slate-50 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-950 px-2.5 py-1 text-xs font-semibold text-slate-700 transition"
-                        >
-                          + {preset.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Textarea Composer */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                      <label htmlFor="broadcast-text">Broadcast Announcement Text</label>
-                      <span className={`text-[11px] ${broadcastInput.length > 140 ? 'text-amber-600 font-extrabold' : 'text-slate-400'}`}>
-                        {broadcastInput.length} / 160 characters
-                      </span>
-                    </div>
-                    <textarea
-                      id="broadcast-text"
-                      rows={3}
-                      placeholder="e.g. Attention visitors: All service counters are operating at peak speed. Please check your phone for counter calls..."
-                      value={broadcastInput}
-                      onChange={(e) => setBroadcastInput(e.target.value)}
-                      className="w-full rounded-2xl border border-slate-200 p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#FFA800] focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Audio Chime & Speech Options */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-slate-100">
-                    <div className="flex items-center gap-4 text-xs font-bold text-slate-700">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={playChimeOnBroadcast}
-                          onChange={(e) => setPlayChimeOnBroadcast(e.target.checked)}
-                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
-                        />
-                        <Volume2 className="h-3.5 w-3.5 text-[#FFA800]" />
-                        <span>Play 2-Tone PA Chime</span>
-                      </label>
-
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={voiceOnBroadcast}
-                          onChange={(e) => setVoiceOnBroadcast(e.target.checked)}
-                          className="rounded text-[#FFA800] focus:ring-[#FFA800]"
-                        />
-                        <BellRing className="h-3.5 w-3.5 text-blue-500" />
-                        <span>Read with Voice PA</span>
-                      </label>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={playChime}
-                      className="text-xs font-bold text-slate-500 hover:text-slate-900 flex items-center gap-1"
-                    >
-                      <Volume2 className="h-3.5 w-3.5" />
-                      <span>Test Speaker</span>
-                    </button>
-                  </div>
-
-                  {/* Publish Button */}
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      disabled={!broadcastInput.trim()}
-                      onClick={() => handlePublishStudioBroadcast()}
-                      className="w-full py-3.5 px-6 rounded-2xl bg-[#FFA800] hover:bg-[#ffb41f] text-[#291E29] font-black text-sm transition shadow-md shadow-[#FFA800]/25 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-98"
-                    >
-                      <Send className="h-4 w-4" />
-                      <span>Publish announcement</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Broadcast History & Logs */}
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-100">
-                    <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
-                      <History className="h-4 w-4 text-[#FFA800]" />
-                      <span>Recent announcements</span>
-                    </h3>
-                    <span className="text-xs text-slate-400 font-bold">{broadcastHistory.length} sent</span>
-                  </div>
-
-                  <div className="space-y-2.5 pt-1">
-                    {broadcastHistory.map((item, idx) => (
-                      <div
-                        key={item.id}
-                        className={`p-3.5 rounded-2xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                          idx === 0
-                            ? 'bg-amber-50/50 border-amber-200'
-                            : 'bg-slate-50/70 border-slate-200/80 hover:bg-slate-50'
-                        }`}
-                      >
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            {idx === 0 && (
-                              <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-[#FFA800] text-[#291E29]">
-                                Active Now
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-extrabold text-slate-900 text-sm truncate flex items-center gap-1.5">
+                            <span>{b.customerName}</span>
+                            {b.isLoyalty && (
+                              <span title="Loyalty Past Customer" className="text-amber-500 text-xs">
+                                👑
                               </span>
                             )}
-                            <span className="text-[10px] font-bold text-slate-500">{item.time}</span>
-                            <span className="text-[10px] text-slate-400">&middot; {item.channel || 'All Screens'}</span>
-                          </div>
-                          <p className="text-xs font-extrabold text-slate-900 leading-snug">
-                            {item.text}
-                          </p>
+                          </h4>
+                          {b.socialHandle && (
+                            <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.2 rounded-full border border-purple-200">
+                              {b.socialHandle}
+                            </span>
+                          )}
                         </div>
 
+                        <p className="text-xs text-slate-600 truncate">
+                          {b.service} · <strong className="text-slate-800">{b.servicePrice}</strong> · {b.station}
+                        </p>
+
+                        <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                          <span>Phone: {b.phone}</span>
+                          {b.attachedDocName && (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 font-bold bg-emerald-50 px-2 py-0.2 rounded-md border border-emerald-200">
+                              <Camera className="h-3 w-3" /> Lookbook doc attached
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Middle: Automated Status Indicator */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`rounded-full px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider ${
+                          isConfirmed
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : isServing
+                            ? 'bg-blue-100 text-blue-800 border border-blue-200 animate-pulse'
+                            : isDone
+                            ? 'bg-slate-100 text-slate-600 border border-slate-200'
+                            : isCancelled
+                            ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                            : 'bg-amber-100 text-amber-900 border border-amber-200'
+                        }`}
+                      >
+                        {b.status}
+                      </span>
+                    </div>
+
+                    {/* Right: Operational Actions (Notify, Serving, Done, Reschedule, Cancel) */}
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {!isDone && !isCancelled && (
+                        <>
+                          {isNotified && (
+                            <button
+                              type="button"
+                              onClick={() => handleNotifyCustomer(b.id)}
+                              className="flex items-center gap-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 px-3 py-1.5 text-xs font-bold transition shadow-2xs"
+                              title="Send 30-min PWA arrival ping"
+                            >
+                              <BellRing className="h-3.5 w-3.5 text-amber-600" />
+                              <span>Notify Again</span>
+                            </button>
+                          )}
+
+                          {isConfirmed && (
+                            <button
+                              type="button"
+                              onClick={() => handleStartServing(b.id)}
+                              className="flex items-center gap-1 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 px-3 py-1.5 text-xs font-bold transition shadow-2xs"
+                            >
+                              <Play className="h-3.5 w-3.5 text-blue-600" />
+                              <span>Start Service</span>
+                            </button>
+                          )}
+
+                          {isServing && (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkDone(b.id)}
+                              className="flex items-center gap-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 text-xs font-extrabold transition shadow-sm"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                              <span>Tick as Done</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBookingToReschedule(b);
+                              setNewRescheduleTime(b.slotTime);
+                              setRescheduleModalOpen(true);
+                            }}
+                            className="rounded-xl border border-slate-200 hover:bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 transition"
+                          >
+                            Reschedule
+                          </button>
+                        </>
+                      )}
+
+                      {!isCancelled && !isDone && (
                         <button
                           type="button"
-                          onClick={() => handlePublishStudioBroadcast(item.text)}
-                          className="shrink-0 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-slate-800 transition shadow-2xs self-start sm:self-center"
+                          onClick={() => handleCancelBooking(b.id)}
+                          className="rounded-xl p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition"
+                          title="Cancel Appointment"
                         >
-                          Re-broadcast &nearr;
+                          <X className="h-4 w-4" />
                         </button>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Customer Profile Mini-Summary & Attached Documents Modal */}
+        {selectedBookingForDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">
+                    {selectedBookingForDetail.isLoyalty ? '👑' : '📋'}
+                  </span>
+                  <div>
+                    <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-1.5">
+                      <span>{selectedBookingForDetail.customerName}</span>
+                      {selectedBookingForDetail.isLoyalty && (
+                        <span className="text-[10px] bg-amber-100 text-amber-900 font-extrabold px-2 py-0.2 rounded-full border border-amber-200">
+                          Loyalty VIP
+                        </span>
+                      )}
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Booking Pass {selectedBookingForDetail.code} · {selectedBookingForDetail.slotTime}
+                    </p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Walk-in Ticket Modal */}
-        {showWalkinModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4 w-full max-w-md">
-              <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-                <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
-                  <Ticket className="h-4 w-4 text-[#FFA800]" /> Issue Walk-in Ticket
-                </h3>
-                <button
-                  onClick={() => setShowWalkinModal(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100"
-                >
+                <button onClick={() => setSelectedBookingForDetail(null)} className="text-slate-400 hover:text-slate-600">
                   ✕
                 </button>
               </div>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!walkinName.trim()) return;
-
-                  const newCode = `${ticketPrefix}-${Math.floor(100 + Math.random() * 900)}`;
-                  const selectedService =
-                    tenantServices.find((s) => s.id === walkinServiceId) || tenantServices[0];
-
-                  const newT: OpsTicket = {
-                    id: `t-${Date.now()}`,
-                    code: newCode,
-                    customerName: walkinName.trim(),
-                    phone: walkinPhone.trim() || '0800 000 0000',
-                    service: selectedService ? selectedService.name : defaultServiceName,
-                    slotTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    windowTime: 'Immediate',
-                    status: 'CHECKED-IN',
-                  };
-
-                  setTickets((prev) => [newT, ...prev]);
-                  setWalkinName('');
-                  setWalkinPhone('');
-                  setShowWalkinModal(false);
-                  playChime();
-                  setCallAnnouncement(`🎟️ Issued Walk-in Ticket ${newCode} for ${newT.customerName}`);
-                  setTimeout(() => setCallAnnouncement(null), 4000);
-                }}
-                className="space-y-3.5 text-xs"
-              >
+              {/* Customer Contact & Social Channels */}
+              <div className="grid grid-cols-2 gap-3 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-100">
                 <div>
-                  <label className="font-bold text-slate-700">Customer Full Name</label>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Phone / WhatsApp</span>
+                  <span className="font-extrabold text-slate-800">{selectedBookingForDetail.phone}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Social Handle</span>
+                  <span className="font-extrabold text-purple-700">
+                    {selectedBookingForDetail.socialHandle || 'Not provided'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Service Booked</span>
+                  <span className="font-bold text-slate-800">{selectedBookingForDetail.service}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Station</span>
+                  <span className="font-bold text-slate-800">{selectedBookingForDetail.station}</span>
+                </div>
+              </div>
+
+              {/* Attached Style Lookbook Photo or Spec Document */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Camera className="h-4 w-4 text-[#702D7B]" />
+                  <span>Customer Lookbook &amp; Order Document</span>
+                </h4>
+
+                {selectedBookingForDetail.referencePhoto ? (
+                  <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
+                    <img
+                      src={selectedBookingForDetail.referencePhoto}
+                      alt="Lookbook spec"
+                      className="w-full max-h-56 object-cover"
+                    />
+                    <div className="p-2.5 bg-white text-[11px] font-bold text-slate-700 flex items-center justify-between">
+                      <span>{selectedBookingForDetail.attachedDocName || 'Attached Reference Photo'}</span>
+                      <a
+                        href={selectedBookingForDetail.referencePhoto}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#702D7B] hover:underline flex items-center gap-1"
+                      >
+                        <span>Open full view</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-xs text-slate-400">
+                    No custom lookbook document attached for this booking.
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Actions: More Detail link to customer page + Close */}
+              <div className="pt-2 flex items-center justify-between gap-3 border-t border-slate-100">
+                <Link
+                  href={`${basePath}/customers`}
+                  className="text-xs font-extrabold text-[#702D7B] hover:underline flex items-center gap-1"
+                >
+                  <span>View Full Customer Profile &amp; History →</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBookingForDetail(null)}
+                  className="rounded-xl bg-[#291E29] hover:bg-[#341539] text-white px-4 py-2 text-xs font-bold"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reschedule Modal */}
+        {rescheduleModalOpen && bookingToReschedule && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-[#702D7B]" />
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Reschedule Appointment for {bookingToReschedule.customerName}
+                  </h3>
+                </div>
+                <button onClick={() => setRescheduleModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">New Appointment Date</label>
+                  <input
+                    type="date"
+                    value={newRescheduleDate}
+                    onChange={(e) => setNewRescheduleDate(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">New Slot Time</label>
+                  <select
+                    value={newRescheduleTime}
+                    onChange={(e) => setNewRescheduleTime(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-bold focus:outline-none"
+                  >
+                    <option value="11:00 AM">11:00 AM</option>
+                    <option value="12:00 PM">12:00 PM</option>
+                    <option value="01:30 PM">01:30 PM</option>
+                    <option value="02:00 PM">02:00 PM</option>
+                    <option value="03:30 PM">03:30 PM</option>
+                    <option value="04:30 PM">04:30 PM</option>
+                  </select>
+                </div>
+
+                <div className="rounded-xl bg-purple-50 border border-purple-200 p-3 text-[11px] text-purple-900 leading-relaxed">
+                  📱 <strong>Automated PWA Alert:</strong> When saved, an instant push notification will be delivered to {bookingToReschedule.customerName}&apos;s device with a button to accept the updated schedule or inquire via social chat.
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRescheduleModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmReschedule}
+                  className="rounded-xl bg-[#702D7B] hover:bg-[#52215A] px-5 py-2 text-xs font-extrabold text-white shadow-md"
+                >
+                  Save &amp; Notify Customer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Manual Walk-in / In-Person Add Booking Modal */}
+        {showAddBookingModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Plus className="h-4 w-4 text-[#FFA800]" />
+                  <h3 className="text-sm font-extrabold text-slate-900">
+                    Add Walk-in or External Booking
+                  </h3>
+                </div>
+                <button onClick={() => setShowAddBookingModal(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+
+              <form onSubmit={handleAddManualBooking} className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Customer Full Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Babajide Cole"
-                    value={walkinName}
-                    onChange={(e) => setWalkinName(e.target.value)}
-                    className="mt-1.5 w-full rounded-2xl border border-slate-200 p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
+                    placeholder="e.g. Fola Adeleke"
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
                   />
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-700">Phone Number</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Phone Number *</label>
                   <input
-                    type="text"
-                    placeholder="e.g. 0803 123 4567"
-                    value={walkinPhone}
-                    onChange={(e) => setWalkinPhone(e.target.value)}
-                    className="mt-1.5 w-full rounded-2xl border border-slate-200 p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
+                    type="tel"
+                    required
+                    placeholder="0800 000 0000"
+                    value={manualPhone}
+                    onChange={(e) => setManualPhone(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
                   />
                 </div>
 
-                {tenantServices.length > 0 && (
-                  <div>
-                    <label className="font-bold text-slate-700">Service Department</label>
-                    <select
-                      value={walkinServiceId || tenantServices[0].id}
-                      onChange={(e) => setWalkinServiceId(e.target.value)}
-                      className="mt-1.5 w-full rounded-2xl border border-slate-200 p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] bg-white"
-                    >
-                      {tenantServices.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} (~{s.minutes} mins)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Social Handle (Optional for Loyalty)</label>
+                  <input
+                    type="text"
+                    placeholder="@customer_handle"
+                    value={manualSocialHandle}
+                    onChange={(e) => setManualSocialHandle(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+                  />
+                </div>
 
-                <div className="flex gap-2 justify-end pt-2">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Select Service</label>
+                  <select
+                    value={manualServiceId}
+                    onChange={(e) => setManualServiceId(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-bold focus:outline-none"
+                  >
+                    {tenantServices.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.price || 'Standard'} · {s.minutes} mins)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Allot Arrival Slot</label>
+                  <select
+                    value={manualSlotTime}
+                    onChange={(e) => setManualSlotTime(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-bold focus:outline-none"
+                  >
+                    <option value="Now / In Chair">Now / In Chair</option>
+                    <option value="11:00 AM">11:00 AM</option>
+                    <option value="12:00 PM">12:00 PM</option>
+                    <option value="01:30 PM">01:30 PM</option>
+                    <option value="02:30 PM">02:30 PM</option>
+                    <option value="04:00 PM">04:00 PM</option>
+                  </select>
+                </div>
+
+                <div className="pt-2 flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    onClick={() => setShowWalkinModal(false)}
-                    className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                    onClick={() => setShowAddBookingModal(false)}
+                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="rounded-xl bg-[#291E29] px-5 py-2 text-xs font-extrabold text-white hover:bg-[#341539]"
+                    className="rounded-xl bg-[#291E29] hover:bg-[#341539] px-5 py-2 text-xs font-extrabold text-[#FFA800] shadow-md"
                   >
-                    Issue &amp; Check-In
+                    Confirm &amp; Allot Slot
                   </button>
                 </div>
               </form>
             </div>
           </div>
         )}
-
-        {/* Groq Key Modal */}
-        {showGroqModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-            <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
-                  <Key className="h-4 w-4 text-[#FFA800]" /> Groq AI API Key
-                </h3>
-                <button
-                  onClick={() => setShowGroqModal(false)}
-                  className="rounded-lg p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-xs text-slate-500">
-                Enter your free Groq API key for high-speed Llama 3 generation of broadcast copy and customer responses.
-              </p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setStoredGroqKey(groqKeyInput);
-                  setHasGroqKey(Boolean(groqKeyInput.trim()));
-                  setShowGroqModal(false);
-                }}
-                className="space-y-4 text-xs"
-              >
-                <input
-                  type="password"
-                  placeholder="gsk_..."
-                  value={groqKeyInput}
-                  onChange={(e) => setGroqKeyInput(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-3 font-mono text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800]"
-                />
-                <div className="flex justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowGroqModal(false)}
-                    className="rounded-xl px-4 py-2 text-slate-600 hover:bg-slate-100"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-[#291E29] px-5 py-2 font-bold text-white"
-                  >
-                    Save Key
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Client Detail Modal */}
-        <ClientDetailModal
-          client={selectedClient}
-          onClose={() => setSelectedClient(null)}
-          businessScale={tenant?.businessScale}
-          serviceUnitName={serviceUnit}
-        />
       </div>
     </TenantStaffLayout>
   );
 }
 
-export default function StaffOpsConsolePage() {
+export default function StaffOperationsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="p-8 text-center text-xs text-slate-400">
-          Loading Operations Console...
-        </div>
-      }
-    >
-      <StaffOpsConsoleContent />
+    <Suspense fallback={<div className="p-8 text-center text-xs text-slate-500">Loading operations overview...</div>}>
+      <StaffOperationsContent />
     </Suspense>
   );
 }

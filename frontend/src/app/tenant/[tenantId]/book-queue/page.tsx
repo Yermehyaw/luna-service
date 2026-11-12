@@ -27,6 +27,10 @@ import {
   Trash2,
   ImageIcon,
   Check,
+  Share2,
+  FileText,
+  Smartphone,
+  ExternalLink,
 } from 'lucide-react';
 import { ServiceItem, getTenantServices, MOCK_SERVICES } from '../../../../mock/services';
 import { useAuth } from '../../../../lib/auth';
@@ -46,7 +50,10 @@ export default function BookQueuePage({
   const [customerName, setCustomerName] = useState(user?.role === 'customer' ? user.name : '');
   const [customerPhone, setCustomerPhone] = useState(user?.role === 'customer' ? user.phone || '' : '');
   const [customerEmail, setCustomerEmail] = useState(user?.role === 'customer' ? user.email : '');
-  const [createAccount, setCreateAccount] = useState(!user || user.role !== 'customer');
+  const [socialPlatform, setSocialPlatform] = useState<'instagram' | 'x' | 'tiktok' | 'whatsapp'>('instagram');
+  const [socialHandle, setSocialHandle] = useState('');
+  const [ndpaConsent, setNdpaConsent] = useState(true);
+
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [selectedServiceId, setSelectedServiceId] = useState('');
 
@@ -56,15 +63,42 @@ export default function BookQueuePage({
   const [timeOfDaySlot, setTimeOfDaySlot] = useState<'Morning' | 'Afternoon' | 'Evening'>('Morning');
   const [specificTime, setSpecificTime] = useState('10:00 AM');
 
-  // Customer reference photo upload
+  // Customer reference photo and document upload
   const [referencePhoto, setReferencePhoto] = useState<string | null>(null);
+  const [attachedDocumentName, setAttachedDocumentName] = useState<string | null>(null);
   const [verificationDocument, setVerificationDocument] = useState<File | null>(null);
   const [customerNotes, setCustomerNotes] = useState('');
+
+  // Password creation step modal (seamless account trick)
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [customerPassword, setCustomerPassword] = useState('');
+  const [isExistingUserPasswordPrompt, setIsExistingUserPasswordPrompt] = useState(false);
 
   const [createdTicket, setCreatedTicket] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [shareNotice, setShareNotice] = useState<string | null>(null);
+
+  // PWA Install Prompt State
+  const [pwaInstalled, setPwaInstalled] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isStandalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        Boolean((navigator as any).standalone);
+      setPwaInstalled(isStandalone);
+
+      const onPrompt = (e: any) => {
+        e.preventDefault();
+        setInstallPrompt(e);
+      };
+      window.addEventListener('beforeinstallprompt', onPrompt);
+      return () => window.removeEventListener('beforeinstallprompt', onPrompt);
+    }
+  }, []);
 
   // Sync if user logs in
   useEffect(() => {
@@ -72,7 +106,6 @@ export default function BookQueuePage({
       if (user.name) setCustomerName(user.name);
       if (user.phone) setCustomerPhone(user.phone);
       if (user.email) setCustomerEmail(user.email);
-      setCreateAccount(false);
     }
   }, [user]);
 
@@ -82,7 +115,6 @@ export default function BookQueuePage({
       setTenant(res);
       if (!res) return;
 
-      // Check localStorage / mock services for complete rich services
       const localServices = getTenantServices(res.id);
       if (localServices && localServices.length > 0) {
         setServices(localServices);
@@ -90,7 +122,6 @@ export default function BookQueuePage({
         return;
       }
 
-      // Fallback to MOCK_SERVICES
       const fallbackList = MOCK_SERVICES.filter((s) => s.tenantId === res.id);
       if (fallbackList.length > 0) {
         setServices(fallbackList);
@@ -99,13 +130,21 @@ export default function BookQueuePage({
     });
   }, [resolvedParams.tenantId]);
 
-  // Read URL search params for pre-selected service
+  // Read URL search params for "Pay in the Conversation" / Service deep-link
   useEffect(() => {
     if (typeof window !== 'undefined' && services.length > 0) {
       const p = new URLSearchParams(window.location.search);
       const svcParam = p.get('service');
       if (svcParam && services.some((s) => s.id === svcParam)) {
         setSelectedServiceId(svcParam);
+      }
+      const handleParam = p.get('handle') || p.get('username');
+      if (handleParam) {
+        setSocialHandle(handleParam.startsWith('@') ? handleParam : `@${handleParam}`);
+      }
+      const platformParam = p.get('platform') as any;
+      if (platformParam && ['instagram', 'x', 'tiktok', 'whatsapp'].includes(platformParam)) {
+        setSocialPlatform(platformParam);
       }
       const authParam = p.get('auth');
       if (authParam === 'login' || authParam === 'signin') {
@@ -114,15 +153,14 @@ export default function BookQueuePage({
     }
   }, [services]);
 
-  // Active selected service object
   const activeService = useMemo(() => {
     return services.find((s) => s.id === selectedServiceId) || services[0];
   }, [services, selectedServiceId]);
 
-  // Handle local photo reference upload
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setAttachedDocumentName(file.name);
       const reader = new FileReader();
       reader.onloadend = () => {
         if (typeof reader.result === 'string') {
@@ -133,43 +171,104 @@ export default function BookQueuePage({
     }
   };
 
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAttachedDocumentName(file.name);
+      setVerificationDocument(file);
+    }
+  };
+
   if (!tenant) {
     return <div className="p-8 text-center text-xs text-slate-500">Loading booking portal...</div>;
   }
 
-  // Pre-configured time slots
   const timeSlotsByPeriod = {
     Morning: ['08:30 AM', '09:15 AM', '10:00 AM', '10:45 AM', '11:30 AM'],
     Afternoon: ['12:15 PM', '01:00 PM', '01:45 PM', '02:30 PM', '03:15 PM'],
     Evening: ['04:00 PM', '04:45 PM', '05:30 PM', '06:15 PM', '07:00 PM'],
   };
 
-  const handleBook = async (e: React.FormEvent) => {
+  // Step 1: Click "Book Appointment" -> Triggers password prompt if not logged in
+  const handleInitiateBook = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName.trim() || !customerPhone.trim()) return;
-    if (activeService?.requiresVerificationDocument && !verificationDocument) { setErrorMessage('Please select the required verification document before booking.'); return; }
+    if (!customerName.trim() || !customerPhone.trim()) {
+      setErrorMessage('Please enter your full name and phone number.');
+      return;
+    }
+    if (!ndpaConsent) {
+      setErrorMessage('Please accept the NDPA 2023 data processing notice to proceed.');
+      return;
+    }
+
+    // If user is already authenticated with password, proceed directly
+    if (user && user.role === 'customer') {
+      finalizeBooking();
+    } else {
+      // Check if email or phone is already recognized
+      const existingEmail = customerEmail.trim();
+      if (existingEmail && localStorage.getItem(`luna_user_${existingEmail}`)) {
+        setIsExistingUserPasswordPrompt(true);
+      } else {
+        setIsExistingUserPasswordPrompt(false);
+      }
+      setPasswordModalOpen(true);
+    }
+  };
+
+  // Step 2: Finalize booking after setting/entering password
+  const finalizeBooking = async () => {
+    setPasswordModalOpen(false);
     setLoading(true);
     setErrorMessage(null);
 
-    let isCustomerAccountLinked = user?.role === 'customer';
-    if (createAccount && (!user || user.role !== 'customer')) {
-      try {
-        await registerCustomer({
-          name: customerName.trim(),
-          phone: customerPhone.trim(),
-          email:
-            customerEmail.trim() ||
-            `${customerName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@client.withluna.tech`,
-          tenantId: tenant.id,
-        });
-        isCustomerAccountLinked = true;
-      } catch (err) {
-        console.warn('[BookQueue] Customer registration fallback:', err);
+    let isCustomerAccountLinked = true;
+    try {
+      await registerCustomer({
+        name: customerName.trim(),
+        phone: customerPhone.trim(),
+        email:
+          customerEmail.trim() ||
+          `${customerName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@client.withluna.tech`,
+        tenantId: tenant.id,
+      });
+      // Save social handle in localStorage for priority matching
+      if (socialHandle) {
+        localStorage.setItem(`luna_customer_handle_${tenant.slug}`, socialHandle);
       }
+    } catch (err) {
+      console.warn('[BookQueue] Customer registration fallback:', err);
     }
 
+    const ticketNumberPrefix = tenant.slug ? tenant.slug.split('-')[0].toUpperCase().slice(0, 3) : 'LNA';
+    const randomNum = Math.floor(100 + Math.random() * 900);
+    const generatedCode = `${ticketNumberPrefix}-${randomNum}`;
+
+    const newTicketRecord = {
+      ticketNumber: generatedCode,
+      customerName: customerName.trim(),
+      customerPhone: customerPhone.trim(),
+      customerEmail: customerEmail.trim(),
+      socialPlatform,
+      socialHandle: socialHandle.trim(),
+      isAccountLinked: isCustomerAccountLinked,
+      serviceName: activeService?.name || 'Customer Service',
+      serviceImage: activeService?.imageUrl,
+      servicePrice: activeService?.price,
+      serviceStation: activeService?.station || 'Station 1',
+      estimatedWaitMin: activeService?.minutes || 20,
+      displayWait: `About ${activeService?.minutes || 20} min`,
+      ticketsAhead: 1,
+      bookingDate,
+      timeSlot: specificTime,
+      timeOfDay: timeOfDaySlot,
+      referencePhoto,
+      attachedDocumentName,
+      status: 'CONFIRMED',
+      createdAt: new Date().toISOString(),
+    };
+
     try {
-      // Connect to backend ticket creator
       const res = await queueApi.createTicket({
         business_id: tenant.id,
         branch_id: 'b_001',
@@ -177,58 +276,61 @@ export default function BookQueuePage({
         customer_name: customerName.trim(),
         customer_email: customerEmail.trim() || undefined,
         customer_phone: customerPhone.trim(),
-        is_priority: isCustomerAccountLinked,
+        is_priority: true,
       });
+      newTicketRecord.ticketNumber = res.ticket_number;
+    } catch {
+      // Fallback ticket generated cleanly
+    }
 
-      setCreatedTicket({
-        ticketNumber: res.ticket_number,
-        customerName: res.customer_name,
-        customerPhone: customerPhone.trim(),
-        customerEmail: customerEmail.trim(),
-        isAccountLinked: isCustomerAccountLinked,
-        serviceName: activeService?.name || 'Customer Service',
-        serviceImage: activeService?.imageUrl,
-        servicePrice: activeService?.price,
-        serviceStation: activeService?.station || 'Counter 1',
-        estimatedWaitMin: res.wait?.minutes ?? activeService?.minutes ?? 5,
-        displayWait: res.wait?.display || 'Any moment now',
-        ticketsAhead: res.wait?.tickets_ahead ?? 0,
-        bookingDate,
-        timeSlot: specificTime,
-        timeOfDay: timeOfDaySlot,
-        referencePhoto,
-      });
-    } catch (err: any) {
-      console.warn('[BookQueue] Backend creation error, falling back locally:', err);
-      const prefix = tenant.slug ? tenant.slug.split('-')[0].toUpperCase().slice(0, 3) : 'LM';
-      const randomNum = Math.floor(100 + Math.random() * 900);
-      setCreatedTicket({
-        ticketNumber: `${prefix}-${randomNum}`,
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
-        customerEmail: customerEmail.trim(),
-        isAccountLinked: isCustomerAccountLinked,
-        serviceName: activeService?.name || 'Customer Service',
-        serviceImage: activeService?.imageUrl,
-        servicePrice: activeService?.price,
-        serviceStation: activeService?.station || 'Counter 1',
-        estimatedWaitMin: activeService?.minutes || 5,
-        displayWait: `About ${activeService?.minutes || 5} min`,
-        ticketsAhead: 1,
-        bookingDate,
-        timeSlot: specificTime,
-        timeOfDay: timeOfDaySlot,
-        referencePhoto,
-      });
-    } finally {
-      setLoading(false);
+    // Save to customer's bookings history for this tenant
+    try {
+      const existingBookings = JSON.parse(
+        localStorage.getItem(`luna_customer_bookings_${tenant.id}`) || '[]'
+      );
+      localStorage.setItem(
+        `luna_customer_bookings_${tenant.id}`,
+        JSON.stringify([newTicketRecord, ...existingBookings])
+      );
+    } catch {}
+
+    setCreatedTicket(newTicketRecord);
+    setLoading(false);
+  };
+
+  const handleShareTicket = () => {
+    if (!createdTicket) return;
+    const url = typeof window !== 'undefined'
+      ? `${window.location.origin}/tenant/${tenant.slug}/track?ticket=${createdTicket.ticketNumber}`
+      : '';
+    if (navigator.share) {
+      navigator.share({
+        title: `${tenant.name} Appointment Pass`,
+        text: `Here is my confirmed appointment ticket at ${tenant.name}: ${createdTicket.ticketNumber}`,
+        url,
+      }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setShareNotice('Ticket link copied to clipboard!');
+      setTimeout(() => setShareNotice(null), 3000);
+    }
+  };
+
+  const handleInstallPwa = async () => {
+    if (installPrompt) {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') setPwaInstalled(true);
+      setInstallPrompt(null);
+    } else {
+      alert('To install: Tap your browser Share/Menu button (⋮ or ⎙) and select "Add to Home Screen".');
     }
   };
 
   return (
     <TenantCustomerLayout initialTenant={tenant}>
       <div className="mx-auto max-w-2xl px-4 sm:px-6 py-8 sm:py-12 space-y-6 font-sans">
-        {/* Step-by-Step Progress Header */}
+        {/* Step Progress Header */}
         <div className="flex items-center justify-center gap-2 sm:gap-3 text-xs font-bold text-slate-500 pb-2">
           <div className="flex items-center gap-1.5">
             <span
@@ -241,7 +343,7 @@ export default function BookQueuePage({
               1
             </span>
             <span className={!createdTicket ? 'text-slate-900 font-extrabold' : 'text-slate-500'}>
-              Service &amp; Time
+              Service &amp; Details
             </span>
           </div>
           <div className="h-0.5 w-8 sm:w-12 bg-slate-200" />
@@ -256,39 +358,45 @@ export default function BookQueuePage({
               2
             </span>
             <span className={createdTicket ? 'text-slate-900 font-extrabold' : 'text-slate-400'}>
-              Digital Ticket Pass
+              Confirmed Pass
             </span>
           </div>
         </div>
 
-        {/* Title Area */}
+        {/* Title */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 border border-emerald-200 shadow-xs">
             <Sparkles className="h-3 w-3 text-emerald-600" />
-            <span>Zero Lobby Waiting · Priority Station Booking</span>
+            <span>Automated Appointment Window · Zero Lobby Waiting</span>
           </div>
           <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-slate-900">
-            {createdTicket ? 'Your Fast-Track Pass' : 'Book Custom Service Appointment'}
+            {createdTicket ? 'Your Confirmed Appointment Pass' : `Book with ${tenant.name}`}
           </h1>
           <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
             {createdTicket
-              ? `You're all set! Keep this pass open on your phone or check live position updates.`
-              : `Select your service, choose your preferred day & time of day, and pre-clear your style reference.`}
+              ? 'Your spot is saved! Keep this pass open on your phone or check live position updates.'
+              : 'Choose your service, preferred arrival slot, and pre-clear your request.'}
           </p>
         </div>
 
         {errorMessage && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-700 font-medium">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-700 font-semibold">
             {errorMessage}
           </div>
         )}
 
+        {shareNotice && (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs text-emerald-800 font-semibold text-center">
+            {shareNotice}
+          </div>
+        )}
+
         {/* ========================================================= */}
-        {/* VIEW 2: CONFIRMED TICKET BOARDING PASS                    */}
+        {/* VIEW 2: CONFIRMED PASS WITH PWA INSTALL NUDGE & SHARING   */}
         {/* ========================================================= */}
         {createdTicket ? (
           <div className="rounded-3xl border-2 border-emerald-300 bg-white p-5 sm:p-7 shadow-xl space-y-5 animate-in fade-in">
-            {/* Pass Header */}
+            {/* Header */}
             <div className="flex items-center justify-between border-b border-dashed border-slate-200 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="rounded-xl bg-emerald-100 p-2 text-emerald-600">
@@ -296,30 +404,30 @@ export default function BookQueuePage({
                 </div>
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
-                    Confirmed Priority Pass
+                    Confirmed Appointment
                   </span>
                   <span className="text-xs font-bold text-slate-800">{tenant.name}</span>
                 </div>
               </div>
               <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-extrabold text-emerald-800">
-                <Radio className="h-3 w-3 text-emerald-600 animate-pulse" /> Live Window
+                <Radio className="h-3 w-3 text-emerald-600 animate-pulse" /> Live Status
               </span>
             </div>
 
-            {/* Giant Ticket Number */}
-            <div className="text-center py-3 bg-slate-50/80 rounded-2xl border border-slate-100">
+            {/* Ticket Code */}
+            <div className="text-center py-4 bg-slate-50/90 rounded-2xl border border-slate-100">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                Queue Reference Number
+                Booking Reference
               </span>
               <div className="text-4xl sm:text-5xl font-black font-mono text-slate-900 mt-1 tracking-tight">
                 {createdTicket.ticketNumber}
               </div>
-              <span className="inline-block text-[11px] text-emerald-700 font-bold mt-1 bg-emerald-50 px-3 py-0.5 rounded-full border border-emerald-200">
-                Estimated Wait: {createdTicket.displayWait}
+              <span className="inline-block text-[11px] text-emerald-800 font-bold mt-1 bg-emerald-50 px-3 py-0.5 rounded-full border border-emerald-200">
+                Slot Time: {createdTicket.timeSlot} ({createdTicket.bookingDate})
               </span>
             </div>
 
-            {/* Booked Service Banner with Image */}
+            {/* Booked Service Banner */}
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3.5 flex items-center gap-3.5">
               {createdTicket.serviceImage && (
                 <img
@@ -345,94 +453,62 @@ export default function BookQueuePage({
               </div>
             </div>
 
-            {/* Pass Metadata Grid: Calendar, Time of Day, Contact */}
-            <div className="grid grid-cols-2 gap-2.5 sm:gap-3 text-xs">
-              <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">
-                  Calendar Date
-                </span>
-                <span className="font-bold text-slate-800 truncate block mt-0.5 flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5 text-blue-500" />
-                  {createdTicket.bookingDate === todayStr ? 'Today' : createdTicket.bookingDate}
-                </span>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">
-                  Time of Day Slot
-                </span>
-                <span className="font-bold text-slate-800 truncate block mt-0.5 flex items-center gap-1">
-                  <Sun className="h-3.5 w-3.5 text-amber-500" />
-                  {createdTicket.timeSlot} ({createdTicket.timeOfDay})
-                </span>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">
-                  Customer &amp; Phone
-                </span>
-                <span className="font-bold text-slate-800 truncate block mt-0.5">
-                  {createdTicket.customerName}
-                </span>
-                <span className="text-[11px] font-mono text-slate-500 truncate block mt-0.5">
-                  {createdTicket.customerPhone || 'SMS Active'}
-                </span>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase block">
-                  Ahead in Line
-                </span>
-                <span className="font-bold text-slate-800 block mt-0.5">
-                  {createdTicket.ticketsAhead} Customer{createdTicket.ticketsAhead === 1 ? '' : 's'}
-                </span>
-              </div>
-            </div>
-
-            {/* Uploaded Reference Photo Preview on Pass */}
-            {createdTicket.referencePhoto && (
-              <div className="rounded-2xl border border-purple-200 bg-purple-50/70 p-3 flex items-center gap-3">
-                <img
-                  src={createdTicket.referencePhoto}
-                  alt="Reference lookbook"
-                  className="h-12 w-12 rounded-xl object-cover shrink-0 border border-purple-300"
-                />
-                <div>
-                  <span className="font-bold text-xs text-purple-900 block flex items-center gap-1">
-                    <Camera className="h-3.5 w-3.5 text-purple-600" /> Lookbook Photo Pre-Cleared
-                  </span>
-                  <span className="text-[11px] text-purple-700">
-                    Your styling specialist or mechanic will prepare your station accordingly.
-                  </span>
+            {/* PWA Nudge inside confirmation pass */}
+            {!pwaInstalled && (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50/90 p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-5 w-5 text-amber-700 shrink-0" />
+                  <p className="text-[11px] text-amber-950 leading-tight">
+                    <strong>Install PWA on your phone:</strong> Ensures you receive the automated 30-minute reminder before your slot!
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleInstallPwa}
+                  className="rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFA800] px-3 py-1.5 text-[11px] font-extrabold shadow-sm shrink-0"
+                >
+                  Install App
+                </button>
               </div>
             )}
 
-            {/* Action Buttons */}
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-2.5 text-xs">
+              <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Calendar Date</span>
+                <span className="font-bold text-slate-800 block mt-0.5">{createdTicket.bookingDate}</span>
+              </div>
+              <div className="rounded-xl bg-slate-50 p-3 border border-slate-100">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase block">Customer Name</span>
+                <span className="font-bold text-slate-800 block mt-0.5">{createdTicket.customerName}</span>
+              </div>
+            </div>
+
+            {/* Actions: Track Live, Share Ticket, Book Another */}
             <div className="space-y-2.5 pt-2">
               <Link
-                href={`/tenant/${tenant.slug}/track?ticket=${encodeURIComponent(
-                  createdTicket.ticketNumber
-                )}`}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 py-3.5 px-4 text-xs sm:text-sm font-extrabold text-white shadow-lg hover:bg-slate-800 active:scale-95 transition-all text-center min-h-[48px]"
+                href={`/tenant/${tenant.slug}/track?ticket=${encodeURIComponent(createdTicket.ticketNumber)}`}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#291E29] hover:bg-[#341539] py-3.5 px-4 text-xs sm:text-sm font-extrabold text-[#FFF6E9] shadow-lg transition active:scale-95"
               >
                 <Radio className="h-4 w-4 text-[#FFA800] animate-pulse" />
-                <span>Track Live Turn &amp; Audio Caller</span>
+                <span>View in &quot;My Bookings&quot; &amp; Track Live</span>
               </Link>
 
               <div className="grid grid-cols-2 gap-2">
-                <Link
-                  href={`/tenant/${tenant.slug}/verify`}
+                <button
+                  type="button"
+                  onClick={handleShareTicket}
                   className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 min-h-[44px]"
                 >
-                  <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Pre-Clear Docs</span>
-                </Link>
+                  <Share2 className="h-3.5 w-3.5 text-[#702D7B]" />
+                  <span>Share Ticket Pass</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
                     setCreatedTicket(null);
                     setReferencePhoto(null);
+                    setAttachedDocumentName(null);
                   }}
                   className="rounded-xl border border-slate-200 bg-white py-2.5 px-3 text-xs font-bold text-slate-700 hover:bg-slate-50 min-h-[44px]"
                 >
@@ -440,16 +516,26 @@ export default function BookQueuePage({
                 </button>
               </div>
             </div>
+
+            {/* Viral Growth Loop Hook */}
+            <div className="pt-2 text-center border-t border-slate-100">
+              <Link
+                href="/register"
+                className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#702D7B] hover:underline bg-purple-50 px-3 py-1 rounded-full border border-purple-200"
+              >
+                <span>Do you run a business? Get your own booking page for free →</span>
+              </Link>
+            </div>
           </div>
         ) : (
           /* ========================================================= */
-          /* VIEW 1: STEP 1 BOOKING FORM                               */
+          /* VIEW 1: BOOKING INITIATION FORM                           */
           /* ========================================================= */
           <form
-            onSubmit={handleBook}
+            onSubmit={handleInitiateBook}
             className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-7 shadow-sm space-y-6 text-xs"
           >
-            {/* Customer Authentication Callout */}
+            {/* Existing Customer Sign In Link */}
             {user && user.role === 'customer' ? (
               <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-3 sm:p-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
@@ -458,42 +544,36 @@ export default function BookQueuePage({
                   </div>
                   <div>
                     <span className="font-bold text-slate-900 block text-xs">
-                      Signed In: {user.name}
+                      Signed In: {user.name} 👑
                     </span>
                     <span className="text-[11px] text-slate-600 block">
-                      Phone: {user.phone || 'SMS Linked'} · VIP auto-filled
+                      VIP Priority Account Active
                     </span>
                   </div>
                 </div>
                 <span className="rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 shrink-0">
-                  VIP Linked
+                  VIP Priority
                 </span>
               </div>
             ) : (
-              <div className="rounded-2xl border border-amber-200/90 bg-amber-50/70 p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="h-8 w-8 rounded-xl bg-[#FFA800]/20 flex items-center justify-center shrink-0">
-                    <LogIn className="h-4 w-4 text-[#291E29]" />
-                  </div>
-                  <div>
-                    <span className="font-bold text-slate-900 block text-xs">Existing Customer?</span>
-                    <span className="text-[11px] text-slate-600 block">
-                      Log in to auto-fill your contact details and earn VIP queue status.
-                    </span>
-                  </div>
+              <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-3 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">✨</span>
+                  <span className="text-purple-900 font-semibold text-[11px]">
+                    Already have an account with {tenant.name}?
+                  </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setLoginModalOpen(true)}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 text-white px-3.5 py-2 text-xs font-bold hover:bg-slate-800 transition min-h-[40px] shrink-0"
+                  className="text-[#702D7B] font-extrabold hover:underline text-[11px] shrink-0"
                 >
-                  <LogIn className="h-3.5 w-3.5 text-[#FFA800]" />
-                  <span>Log In Here</span>
+                  Log In Here
                 </button>
               </div>
             )}
 
-            {/* 1. SERVICE SELECTION SHOWCASE */}
+            {/* 1. SERVICE SELECTION */}
             <div className="space-y-2">
               <label className="font-bold text-slate-800 flex items-center justify-between">
                 <span className="flex items-center gap-1.5 text-sm">
@@ -518,7 +598,6 @@ export default function BookQueuePage({
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        {/* Service Thumbnail */}
                         {s.imageUrl ? (
                           <img
                             src={s.imageUrl}
@@ -542,8 +621,8 @@ export default function BookQueuePage({
                           </div>
                           <p className="text-[11px] text-slate-500 truncate">{s.description}</p>
                           <div className="flex items-center gap-3 text-[10px] text-slate-400">
-                            <span>📍 {s.station || 'Counter 1'}</span>
-                            <span>⏱️ ~{s.minutes} mins</span>
+                            <span>📍 {s.station || 'Station 1'}</span>
+                            <span>⏱️ ~{s.minutes} mins slot</span>
                           </div>
                         </div>
                       </div>
@@ -551,9 +630,7 @@ export default function BookQueuePage({
                       <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                         <div
                           className={`h-5 w-5 rounded-full border flex items-center justify-center shrink-0 ${
-                            isSelected
-                              ? 'border-[#FFA800] bg-[#FFA800]'
-                              : 'border-slate-300 bg-white'
+                            isSelected ? 'border-[#FFA800] bg-[#FFA800]' : 'border-slate-300 bg-white'
                           }`}
                         >
                           {isSelected && <Check className="h-3 w-3 text-[#291E29]" />}
@@ -569,23 +646,16 @@ export default function BookQueuePage({
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
               <label className="font-bold text-slate-800 flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 text-blue-600" /> 2. Choose Calendar Date
+                  <Calendar className="h-4 w-4 text-blue-600" /> 2. Choose Appointment Date
                 </span>
-                <span className="text-[11px] text-slate-400">Next 14 days active</span>
+                <span className="text-[11px] text-slate-400">Available slots</span>
               </label>
 
-              {/* Quick Preset Date Buttons */}
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { label: 'Today', date: todayStr },
-                  {
-                    label: 'Tomorrow',
-                    date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-                  },
-                  {
-                    label: 'Day After',
-                    date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-                  },
+                  { label: 'Tomorrow', date: new Date(Date.now() + 86400000).toISOString().split('T')[0] },
+                  { label: 'Day After', date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0] },
                 ].map((item) => (
                   <button
                     key={item.label}
@@ -602,9 +672,8 @@ export default function BookQueuePage({
                 ))}
               </div>
 
-              {/* Specific Date Picker Input */}
               <div className="flex items-center gap-2 pt-1">
-                <span className="text-[11px] font-semibold text-slate-500">Custom Date:</span>
+                <span className="text-[11px] font-semibold text-slate-500">Pick Custom Date:</span>
                 <input
                   type="date"
                   min={todayStr}
@@ -619,12 +688,11 @@ export default function BookQueuePage({
             <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-3">
               <label className="font-bold text-slate-800 flex items-center justify-between text-xs">
                 <span className="flex items-center gap-1.5">
-                  <Sun className="h-4 w-4 text-amber-500" /> 3. Select Time of Day
+                  <Sun className="h-4 w-4 text-amber-500" /> 3. Select Appointment Window
                 </span>
-                <span className="text-[11px] text-slate-400">Guaranteed Window</span>
+                <span className="text-[11px] text-slate-400">Est. {activeService?.minutes || 30} mins</span>
               </label>
 
-              {/* Period Switcher: Morning, Afternoon, Evening */}
               <div className="grid grid-cols-3 gap-2">
                 {(
                   [
@@ -656,10 +724,9 @@ export default function BookQueuePage({
                 })}
               </div>
 
-              {/* Specific Time Slot Pill Grid */}
               <div>
                 <span className="text-[10px] font-bold text-slate-400 block mb-1.5">
-                  Available {timeOfDaySlot} Arrival Windows:
+                  Available {timeOfDaySlot} Slots:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {timeSlotsByPeriod[timeOfDaySlot].map((time) => {
@@ -683,62 +750,74 @@ export default function BookQueuePage({
               </div>
             </div>
 
-            {/* 4. CUSTOMER STYLE / REFERENCE PHOTO UPLOAD */}
+            {/* 4. ATTACH SPECIFICATION / DOCUMENT / STYLE PHOTO */}
             <div className="rounded-2xl border border-purple-200 bg-purple-50/60 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="font-bold text-purple-900 flex items-center gap-1.5 text-xs">
-                  <Camera className="h-4 w-4 text-purple-600" /> 4. Style Lookbook / Reference Photo
+                  <Camera className="h-4 w-4 text-purple-600" /> 4. Reference Document / Style Image
                 </label>
                 <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
-                  Optional photo or notes
+                  Optional Attachment
                 </span>
               </div>
               <p className="text-[11px] text-purple-800 leading-relaxed">
-                Share a style photo, repair details, or design idea so your {tenant.branding?.serviceUnitName?.toLowerCase() || 'specialist'} can prepare.
+                Attach an inspiration photo, order brief, or reference document so {tenant.name} has your specifications ready.
               </p>
 
-              {referencePhoto ? (
+              {referencePhoto || attachedDocumentName ? (
                 <div className="flex items-center gap-3 bg-white p-2.5 rounded-xl border border-purple-200">
-                  <img
-                    src={referencePhoto}
-                    alt="Upload reference"
-                    className="h-16 w-16 rounded-lg object-cover border border-purple-100"
-                  />
+                  {referencePhoto ? (
+                    <img
+                      src={referencePhoto}
+                      alt="Upload reference"
+                      className="h-14 w-14 rounded-lg object-cover border border-purple-100"
+                    />
+                  ) : (
+                    <FileText className="h-10 w-10 text-purple-600" />
+                  )}
                   <div className="flex-1 min-w-0">
                     <span className="font-bold text-xs text-slate-800 block truncate">
-                      📸 Reference Photo Attached
+                      {attachedDocumentName || '📸 File Attached'}
                     </span>
                     <span className="text-[10px] text-emerald-600 font-semibold block">
-                      Ready for arrival pre-clearance
+                      Attached to appointment profile
                     </span>
                   </div>
                   <button
                     type="button"
-                    onClick={() => setReferencePhoto(null)}
+                    onClick={() => {
+                      setReferencePhoto(null);
+                      setAttachedDocumentName(null);
+                      setVerificationDocument(null);
+                    }}
                     className="p-2 text-slate-400 hover:text-rose-600 rounded-lg"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               ) : (
-                <label className="cursor-pointer flex items-center justify-center gap-2 rounded-xl bg-white border border-dashed border-purple-300 py-3 px-4 text-xs font-bold text-purple-900 hover:bg-purple-100/50 transition">
-                  <Upload className="h-4 w-4 text-purple-600" />
-                  <span>Upload Lookbook / Inspiration Photo</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="cursor-pointer flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-dashed border-purple-300 text-center hover:bg-purple-100/50 transition">
+                    <Upload className="h-4 w-4 text-purple-600 mb-1" />
+                    <span className="text-[11px] font-bold text-purple-900">Upload Image</span>
+                    <span className="text-[9px] text-slate-400">Photo / Lookbook</span>
+                    <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                  </label>
+
+                  <label className="cursor-pointer flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-dashed border-purple-300 text-center hover:bg-purple-100/50 transition">
+                    <FileText className="h-4 w-4 text-purple-600 mb-1" />
+                    <span className="text-[11px] font-bold text-purple-900">Upload Document</span>
+                    <span className="text-[9px] text-slate-400">PDF / Specifications</span>
+                    <input type="file" accept=".pdf,.doc,.docx,image/*" onChange={handleDocumentUpload} className="hidden" />
+                  </label>
+                </div>
               )}
             </div>
 
-            {/* 5. CUSTOMER CONTACT DETAILS */}
-            {activeService?.requiresVerificationDocument && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4"><label htmlFor="verification-document" className="block text-sm font-semibold text-amber-950">Verification document required</label><p className="mt-1 text-xs text-amber-900">Select the document requested by this business before booking. Secure document transfer is not yet available in this preview.</p><input id="verification-document" type="file" required accept="image/*,.pdf" onChange={e => setVerificationDocument(e.target.files?.[0] || null)} className="mt-3 block w-full text-sm" /></div>}
-            <div className="space-y-3 pt-2 border-t border-slate-100">
+            {/* 5. BASIC CUSTOMER DETAILS + SOCIAL HANDLE */}
+            <div className="space-y-3.5 pt-2 border-t border-slate-100">
               <label className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
-                <User className="h-4 w-4 text-[#FFA800]" /> 5. Customer Contact Information
+                <User className="h-4 w-4 text-[#FFA800]" /> 5. Your Details &amp; Social Priority
               </label>
 
               <div>
@@ -749,31 +828,79 @@ export default function BookQueuePage({
                   placeholder="e.g. Chinelo Adeleke"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] min-h-[44px]"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B] min-h-[44px]"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 text-[11px]">Mobile Phone Number *</label>
+                <label className="font-bold text-slate-700 text-[11px]">WhatsApp / Mobile Phone *</label>
                 <input
                   type="tel"
                   required
                   placeholder="e.g. +234 802 345 6789"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] min-h-[44px]"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B] min-h-[44px]"
                 />
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 text-[11px]">Email Address (Optional)</label>
+                <label className="font-bold text-slate-700 text-[11px]">Email Address (For Appointment Pass)</label>
                 <input
                   type="email"
-                  placeholder="For digital confirmation pass"
+                  placeholder="name@example.com"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-base sm:text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FFA800] min-h-[44px]"
+                  className="mt-1 w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B] min-h-[44px]"
                 />
+              </div>
+
+              {/* Social Media Handle Input for VIP Priority */}
+              <div className="rounded-2xl bg-amber-50/70 border border-amber-200 p-3.5 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-amber-950 text-[11px] flex items-center gap-1.5">
+                    <span>👑 Social Media Username (Priority Tracking)</span>
+                  </label>
+                  <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded-full">
+                    VIP Tracking
+                  </span>
+                </div>
+                <p className="text-[10px] text-amber-900 leading-tight">
+                  Enter your social handle on at least one platform so {tenant.name} recognizes you with a gold crown 👑 and prioritized response whenever you DM or comment.
+                </p>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={socialPlatform}
+                    onChange={(e: any) => setSocialPlatform(e.target.value)}
+                    className="rounded-xl border border-amber-300 bg-white p-2.5 text-xs font-bold text-slate-700 focus:outline-none"
+                  >
+                    <option value="instagram">Instagram</option>
+                    <option value="x">X (Twitter)</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="whatsapp">WhatsApp</option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="@your_username"
+                    value={socialHandle}
+                    onChange={(e) => setSocialHandle(e.target.value)}
+                    className="flex-1 rounded-xl border border-amber-300 bg-white p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+                  />
+                </div>
+              </div>
+
+              {/* NDPA 2023 Consent Checkbox */}
+              <div className="pt-2 flex items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  id="ndpa-consent"
+                  checked={ndpaConsent}
+                  onChange={(e) => setNdpaConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded text-[#702D7B] focus:ring-[#702D7B]"
+                />
+                <label htmlFor="ndpa-consent" className="text-[11px] text-slate-600 leading-snug">
+                  I consent to {tenant.name} and Luna securely processing my contact and social details for appointment scheduling, in compliance with the <strong>Nigeria Data Protection Act 2023 (NDPA)</strong>.
+                </label>
               </div>
             </div>
 
@@ -782,16 +909,82 @@ export default function BookQueuePage({
               <button
                 type="submit"
                 disabled={loading}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#291E29] py-3.5 px-4 text-xs sm:text-sm font-extrabold text-[#FFF6E9] shadow-lg hover:bg-[#341539] active:scale-95 transition-all text-center min-h-[48px]"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#291E29] py-4 px-4 text-xs sm:text-sm font-extrabold text-[#FFF6E9] shadow-lg hover:bg-[#341539] active:scale-95 transition-all text-center min-h-[48px]"
               >
-                <span>Confirm Service Booking &amp; Issue Ticket</span>
+                <span>Book Appointment Window</span>
                 <ArrowRight className="h-4 w-4 text-[#FFA800]" />
               </button>
             </div>
           </form>
         )}
 
-        {/* Auth Modal for Existing Customers */}
+        {/* ========================================================= */}
+        {/* SEAMLESS ACCOUNT CREATION / PASSWORD MODAL                */}
+        {/* ========================================================= */}
+        {passwordModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl bg-[#702D7B]/10 text-[#702D7B] flex items-center justify-center font-bold">
+                    <Lock className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900">
+                      {isExistingUserPasswordPrompt ? 'Confirm Your Booking' : 'Save Your Appointment Account'}
+                    </h3>
+                    <p className="text-[10px] text-slate-500">
+                      {isExistingUserPasswordPrompt ? 'Enter your password to link booking' : 'Choose a password to secure your pass'}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setPasswordModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+
+              <div className="rounded-2xl bg-purple-50/70 border border-purple-200 p-3.5 text-xs text-purple-950 space-y-1.5 leading-relaxed">
+                <p className="font-bold">Why create a password?</p>
+                <p className="text-[11px] text-purple-800">
+                  Creating your password allows you to view your appointment in <strong>My Bookings</strong>, receive automated 30-min arrival alerts, easily reschedule if your plans change, and revisit {tenant.name} without re-entering your details!
+                </p>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    {isExistingUserPasswordPrompt ? 'Account Password' : 'Create New Password'}
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Enter at least 6 characters"
+                    value={customerPassword}
+                    onChange={(e) => setCustomerPassword(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPasswordModalOpen(false)}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={finalizeBooking}
+                  className="rounded-xl bg-[#702D7B] hover:bg-[#52215A] px-5 py-2.5 text-xs font-extrabold text-white shadow-md transition active:scale-95"
+                >
+                  Save Account &amp; Issue Pass →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Existing Auth Modal */}
         <CustomerAuthModal
           isOpen={loginModalOpen}
           onClose={() => setLoginModalOpen(false)}

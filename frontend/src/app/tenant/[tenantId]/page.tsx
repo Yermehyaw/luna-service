@@ -211,7 +211,7 @@ export default function TenantCustomerPage({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Phone: <span className="font-mono text-slate-700 font-semibold">{user.phone || 'SMS Linked'}</span> · Choose any service below to auto-fill your booking details.
+                      Phone: <span className="font-mono text-slate-700 font-semibold">{user.phone || 'PWA Linked'}</span> · Choose any service below to auto-fill your booking details.
                     </p>
                   </div>
                 </div>
@@ -228,7 +228,7 @@ export default function TenantCustomerPage({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Log in when requesting a service to get instant SMS queue alerts, skip lobby waiting, and save your tickets.
+                      Log in when requesting a service to get instant 30-min PWA arrival alerts, skip lobby waiting, and manage your appointments.
                     </p>
                   </div>
                 </div>
@@ -615,7 +615,7 @@ export default function TenantCustomerPage({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Phone: <span className="font-mono text-slate-700 font-semibold">{user.phone || 'SMS Linked'}</span> · Choose any service below to auto-fill booking details.
+                      Phone: <span className="font-mono text-slate-700 font-semibold">{user.phone || 'PWA Linked'}</span> · Choose any service below to auto-fill booking details.
                     </p>
                   </div>
                 </div>
@@ -632,7 +632,7 @@ export default function TenantCustomerPage({
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Log in when booking a service to get instant SMS queue alerts, bypass lobby queues, and track your history.
+                      Log in when booking a service to get instant 30-min PWA arrival alerts, bypass lobby queues, and track your history.
                     </p>
                   </div>
                 </div>

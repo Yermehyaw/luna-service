@@ -32,6 +32,7 @@ import {
   Check,
   MessageSquare,
   House,
+  Bell,
 } from 'lucide-react';
 
 export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,41 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
   const [isSlim, setIsSlim] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [switchAccountOpen, setSwitchAccountOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [businessAlerts, setBusinessAlerts] = useState([
+    {
+      id: 'b-alert-1',
+      title: 'Customer Slot Confirmed',
+      message: 'Amara Kalu confirmed her 10:00 AM appointment via PWA notification.',
+      time: '5m ago',
+      type: 'confirmation',
+      unread: true,
+    },
+    {
+      id: 'b-alert-2',
+      title: 'Automated 30-Min Alert Sent',
+      message: '30-minute reminder delivered to Tunde Bakare for upcoming 10:45 AM slot.',
+      time: '14m ago',
+      type: 'pwa_sent',
+      unread: true,
+    },
+    {
+      id: 'b-alert-3',
+      title: 'Reschedule Request',
+      message: 'Fatima Al-Hassan requested moving appointment from 11:30 AM to 02:00 PM.',
+      time: '28m ago',
+      type: 'reschedule',
+      unread: true,
+    },
+    {
+      id: 'b-alert-4',
+      title: 'New Booking via Bio Link',
+      message: 'Chiamaka Eze booked "Hydration Spa & Styling" from Instagram bio.',
+      time: '1h ago',
+      type: 'booking',
+      unread: false,
+    },
+  ]);
   const [currentTab, setCurrentTab] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,7 +120,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
     adminOnly?: boolean;
   }[] = [
     { name: 'Home', href: `${basePath}/dashboard`, icon: House },
-    { name: 'Ops Console', href: `${basePath}/ops-console`, icon: LayoutDashboard, privilege: 'ops_console' },
+    { name: 'Operations', href: `${basePath}/ops-console`, icon: LayoutDashboard, privilege: 'ops_console' },
     { name: 'Social Studio', href: `${basePath}/social-studio`, icon: MessageSquare, privilege: 'social_studio' },
     { name: 'Customers', href: `${basePath}/customers`, icon: Users, privilege: 'customer_directory' },
     { name: 'Branches', href: `${basePath}/branches`, icon: GitBranch, privilege: 'manage_branches' },
@@ -99,7 +135,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
   // Primary items for mobile bottom bar
   const bottomBarItems = [
     { name: 'Home', href: `${basePath}/dashboard`, icon: House },
-    { name: 'Ops', href: `${basePath}/ops-console`, icon: LayoutDashboard },
+    { name: 'Operations', href: `${basePath}/ops-console`, icon: LayoutDashboard },
     { name: 'Social', href: `${basePath}/social-studio`, icon: MessageSquare },
     { name: 'Services', href: `${basePath}/services`, icon: Briefcase },
     isOwner
@@ -195,6 +231,19 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
             </div>
           </button>
 
+          {/* Notifications Bell Icon Button */}
+          <button
+            type="button"
+            onClick={() => setAlertsOpen(true)}
+            className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-[#341539] hover:bg-[#52215A] text-[#FFA800] transition active:scale-95 shadow-sm shrink-0"
+            title="Operations & Customer Alerts"
+          >
+            <Bell className="h-4 w-4" />
+            {businessAlerts.some((a) => a.unread) && (
+              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-rose-500 animate-pulse ring-2 ring-[#291E29]" />
+            )}
+          </button>
+
           <Link
             href={`/tenant/${tenant.slug}`}
             target="_blank"
@@ -205,6 +254,69 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       </header>
+
+      {/* Business Alerts & Notifications Slide-Over Drawer */}
+      {alertsOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" onClick={() => setAlertsOpen(false)} />
+          <div className="relative w-full max-w-sm bg-white text-slate-800 p-5 flex flex-col shadow-2xl z-10 animate-in slide-in-from-right duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-xl bg-[#291E29] text-[#FFA800] flex items-center justify-center">
+                  <Bell className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Operations Alerts</h3>
+                  <p className="text-[10px] text-slate-500">Live booking &amp; customer updates</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAlertsOpen(false)}
+                className="rounded-lg p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="py-2 flex items-center justify-between text-[11px] text-slate-500 border-b border-slate-50">
+              <span>{businessAlerts.filter((a) => a.unread).length} unread updates</span>
+              <button
+                type="button"
+                onClick={() => setBusinessAlerts((prev) => prev.map((a) => ({ ...a, unread: false })))}
+                className="text-[#702D7B] font-bold hover:underline"
+              >
+                Mark all as read
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-2.5 py-3">
+              {businessAlerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className={`p-3 rounded-2xl border transition-all ${
+                    alert.unread
+                      ? 'bg-purple-50/60 border-purple-200/80'
+                      : 'bg-white border-slate-100 text-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-extrabold text-slate-900">{alert.title}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0">{alert.time}</span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1 leading-relaxed">{alert.message}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 text-center">
+              <p className="text-[10px] text-slate-400">
+                PWA notifications are pushed directly to customers 30 min before appointments.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Body with Collapsible Sidebar and Main Content */}
       <div className="flex-1 flex flex-row overflow-hidden relative">
