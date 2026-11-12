@@ -397,3 +397,35 @@ async def test_router_checkout_booking_split():
     assert res.status == "PENDING"
     assert res.checkout_url is not None
     assert "paystack.com" in res.checkout_url
+
+
+@pytest.mark.asyncio
+async def test_router_checkout_by_subdomain_slug():
+    """Ensure frontend passing slug e.g. 'kemis-lounge' resolves business and executes checkout."""
+    from app.payments.router import initialize_checkout
+
+    biz = Business(
+        name="Kemi Hair Lounge",
+        subdomain="kemis-lounge",
+        tier="free",
+        social_credits=50,
+    )
+    db = MockAsyncDbSession(biz)
+    paypal = PaypalAdapter()
+    paystack = PaystackAdapter()
+
+    req = CheckoutInitRequest(
+        tenant_id="kemis-lounge",
+        amount=15000.0,
+        currency="NGN",
+        transaction_type="booking_split",
+        customer_email="amara@client.ng",
+        metadata={"in_conversation": True, "description": "VIP Bridal Hair Deposit"},
+    )
+
+    res = await initialize_checkout(req, db=db, paypal=paypal, paystack=paystack)
+    assert res.success is True
+    assert res.provider == "PAYSTACK"
+    assert res.status == "PENDING"
+    assert res.checkout_url is not None
+

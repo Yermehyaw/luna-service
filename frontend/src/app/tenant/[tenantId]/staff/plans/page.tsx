@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { TenantStaffLayout } from '../../../../../components/layouts/TenantStaffLayout';
 import { useTenant } from '../../../../../lib/tenant-context';
 import type { TenantPlan } from '../../../../../types/tenant';
-import { Check, Sparkles, CreditCard, ShieldCheck, Zap, ArrowRight } from 'lucide-react';
+import { Check, Sparkles, CreditCard, ShieldCheck, Zap, ArrowRight, Tag, Loader2 } from 'lucide-react';
+import { apiClient } from '../../../../../lib/api-client';
 
 interface PlanDefinition {
   id: TenantPlan;
@@ -104,32 +105,90 @@ export default function PlansPage() {
   const [paygModalOpen, setPaygModalOpen] = useState(false);
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [billingNotice, setBillingNotice] = useState<string | null>(null);
+  const [discountCode, setDiscountCode] = useState('');
+  const [isProcessingCheckout, setIsProcessingCheckout] = useState(false);
 
-  // Pay-As-You-Go Credit Purchase
-  const handleBuyPaygCredits = () => {
+  // Pay-As-You-Go Credit Purchase via API
+  const handleBuyPaygCredits = async () => {
+    setIsProcessingCheckout(true);
+    const targetSlug = tenant?.slug || tenant?.id || 'demo';
     try {
+      const res = await apiClient.post<any>('/api/payments/checkout', {
+        tenant_id: targetSlug,
+        amount: 1000.0,
+        currency: 'NGN',
+        transaction_type: 'credits_topup',
+        discount_code: discountCode.trim() || undefined,
+        customer_email: tenant?.ownerEmail || 'owner@withluna.tech',
+        metadata: {
+          social_credits_purchased: 100,
+        },
+      });
+
       const month = new Date().toISOString().slice(0, 7);
-      const current = Number(localStorage.getItem(`luna_credits_${tenant.slug}_${month}`) ?? 50);
-      const updated = current + 100;
-      localStorage.setItem(`luna_credits_${tenant.slug}_${month}`, String(updated));
-      setBillingNotice('Successfully purchased 100 Social Credits for ₦1,000! Your new balance is updated.');
+      const current = Number(localStorage.getItem(`luna_credits_${targetSlug}_${month}`) ?? 50);
+      localStorage.setItem(`luna_credits_${targetSlug}_${month}`, String(current + 100));
+
+      if (res.status === 'DISCOUNTED' || res.discount_applied) {
+        setBillingNotice('⚡ Free 100 Social Credits granted via promotional discount code (BETA100)!');
+      } else if (res.checkout_url) {
+        setBillingNotice(`Payment session opened (${res.provider}). Complete checkout to confirm credits.`);
+        window.open(res.checkout_url, '_blank');
+      } else {
+        setBillingNotice('Successfully purchased 100 Social Credits for ₦1,000! Your balance is updated.');
+      }
       setPaygModalOpen(false);
     } catch {
+      const month = new Date().toISOString().slice(0, 7);
+      const current = Number(localStorage.getItem(`luna_credits_${targetSlug}_${month}`) ?? 50);
+      localStorage.setItem(`luna_credits_${targetSlug}_${month}`, String(current + 100));
       setBillingNotice('Credits updated for this session.');
       setPaygModalOpen(false);
+    } finally {
+      setIsProcessingCheckout(false);
     }
   };
 
-  // Start 7-Day Free Trial for Growth Plan
-  const handleStartGrowthTrial = () => {
+  // Start 7-Day Free Trial for Growth Plan via API
+  const handleStartGrowthTrial = async () => {
+    setIsProcessingCheckout(true);
+    const targetSlug = tenant?.slug || tenant?.id || 'demo';
     try {
-      localStorage.setItem(`luna_inbox_trial_${tenant.slug}`, String(Date.now()));
+      const res = await apiClient.post<any>('/api/payments/checkout', {
+        tenant_id: targetSlug,
+        amount: 22000.0,
+        currency: 'NGN',
+        transaction_type: 'subscription',
+        discount_code: discountCode.trim() || undefined,
+        customer_email: tenant?.ownerEmail || 'owner@withluna.tech',
+        metadata: {
+          plan_name: 'Growth Tier',
+          trial_days: 7,
+          requested_by: tenant?.ownerName || 'Staff',
+        },
+      });
+
+      localStorage.setItem(`luna_inbox_trial_${targetSlug}`, String(Date.now()));
       const month = new Date().toISOString().slice(0, 7);
-      localStorage.setItem(`luna_credits_${tenant.slug}_${month}`, '50');
-      setBillingNotice('Your 7-day free trial on the Growth plan is active! 50 Social Credits are ready to use in your Unified Inbox.');
+      localStorage.setItem(`luna_credits_${targetSlug}_${month}`, '100');
+
+      if (res.status === 'DISCOUNTED' || res.discount_applied) {
+        if (tenant) setTenant({ ...tenant, plan: 'growth' });
+        setBillingNotice('🎉 100% Beta Launch Waiver (BETA100) applied! Your Growth Plan has been activated with 100 Social Credits.');
+      } else if (res.checkout_url) {
+        setBillingNotice(`Checkout session initialized (${res.provider}). Complete to confirm trial.`);
+        window.open(res.checkout_url, '_blank');
+      } else {
+        if (tenant) setTenant({ ...tenant, plan: 'growth' });
+        setBillingNotice('Your 7-day free trial on the Growth plan is active! 50 Social Credits are ready in your Unified Inbox.');
+      }
       setCardModalOpen(false);
     } catch {
+      if (tenant) setTenant({ ...tenant, plan: 'growth' });
+      setBillingNotice('Your 7-day free trial on the Growth plan is active for this session.');
       setCardModalOpen(false);
+    } finally {
+      setIsProcessingCheckout(false);
     }
   };
 
@@ -304,22 +363,42 @@ export default function PlansPage() {
                     <input type="password" maxLength={4} placeholder="123" className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-[#702D7B]" />
                   </div>
                 </div>
+
+                <div className="pt-1">
+                  <label className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
+                    <span>Discount / Beta Code</span>
+                    <span className="text-[10px] text-purple-700 font-extrabold">Have a code? Try BETA100</span>
+                  </label>
+                  <div className="relative">
+                    <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="e.g. BETA100"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="pt-2 flex items-center justify-between gap-3">
                 <button
                   type="button"
                   onClick={() => setCardModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  disabled={isProcessingCheckout}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleStartGrowthTrial}
-                  className="rounded-xl bg-[#702D7B] hover:bg-[#52215A] px-5 py-2 text-xs font-extrabold text-white shadow-md"
+                  disabled={isProcessingCheckout}
+                  className="flex items-center gap-2 rounded-xl bg-[#702D7B] hover:bg-[#52215A] px-5 py-2 text-xs font-extrabold text-white shadow-md disabled:opacity-50"
                 >
-                  Activate 7-Day Free Trial
+                  {isProcessingCheckout && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{discountCode === 'BETA100' ? 'Claim 100% Free Waiver' : 'Activate 7-Day Free Trial'}</span>
                 </button>
               </div>
             </div>
@@ -354,7 +433,30 @@ export default function PlansPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-500">Price:</span>
-                  <span className="font-extrabold text-slate-900">₦1,000 (~$0.75 USD)</span>
+                  <span className="font-extrabold text-slate-900">
+                    {discountCode === 'BETA100' ? (
+                      <span className="text-emerald-700">₦0 (100% Beta Waiver)</span>
+                    ) : (
+                      '₦1,000 (~$0.75 USD)'
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="flex items-center justify-between text-[11px] font-bold text-slate-700 mb-1">
+                  <span>Discount / Promo Code</span>
+                  <span className="text-[10px] text-purple-700 font-extrabold">Try BETA100</span>
+                </label>
+                <div className="relative">
+                  <Tag className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="e.g. BETA100"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-8 pr-3 py-2 text-xs font-mono font-bold uppercase tracking-wider text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+                  />
                 </div>
               </div>
 
@@ -362,16 +464,19 @@ export default function PlansPage() {
                 <button
                   type="button"
                   onClick={() => setPaygModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  disabled={isProcessingCheckout}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleBuyPaygCredits}
-                  className="rounded-xl bg-[#291E29] hover:bg-[#341539] px-5 py-2 text-xs font-extrabold text-[#FFA800] shadow-md"
+                  disabled={isProcessingCheckout}
+                  className="flex items-center gap-2 rounded-xl bg-[#291E29] hover:bg-[#341539] px-5 py-2 text-xs font-extrabold text-[#FFA800] shadow-md disabled:opacity-50"
                 >
-                  Pay ₦1,000 &amp; Add Credits
+                  {isProcessingCheckout && <Loader2 className="h-3.5 w-3.5 animate-spin text-[#FFA800]" />}
+                  <span>{discountCode === 'BETA100' ? 'Claim Free Credits' : 'Pay ₦1,000 & Add Credits'}</span>
                 </button>
               </div>
             </div>

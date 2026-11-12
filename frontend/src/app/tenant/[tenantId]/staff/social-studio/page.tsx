@@ -7,6 +7,7 @@ import { useTenant } from '../../../../../lib/tenant-context';
 import { useAuth } from '../../../../../lib/auth';
 import { generateAiContent } from '../../../../../lib/ai-service';
 import { getTenantServices } from '../../../../../mock/services';
+import { apiClient } from '../../../../../lib/api-client';
 import {
   MessageSquare,
   Search,
@@ -43,9 +44,10 @@ import {
   ArrowLeft,
   Copy,
   Lock,
+  CreditCard,
+  Loader2,
   Zap,
   Globe,
-  CreditCard,
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
@@ -146,9 +148,13 @@ export default function SocialStudioPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // State: "Pay in the Conversation" / Send Booking Ticket Modal
+  // State: "Pay in the Conversation" / Send Booking Ticket & Payment Link Modal
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [selectedTicketServiceId, setSelectedTicketServiceId] = useState('');
+  const [payInConvMode, setPayInConvMode] = useState<'direct_payment' | 'pass'>('direct_payment');
+  const [paymentRequestAmount, setPaymentRequestAmount] = useState('15000');
+  const [paymentRequestService, setPaymentRequestService] = useState('VIP Bridal Package Deposit');
+  const [isGeneratingPaymentLink, setIsGeneratingPaymentLink] = useState(false);
 
   // State: Connected Platform Accounts
   const [connectAccountModalOpen, setConnectAccountModalOpen] = useState(false);
@@ -607,6 +613,43 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate booking 
       );
     } finally {
       setIsGeneratingAi(false);
+    }
+  };
+
+  // "Pay in the Conversation" / Generate Secure Split Payment Link
+  const handleSendPaymentRequestInConversation = async () => {
+    if (!activeConversation) return;
+    setIsGeneratingPaymentLink(true);
+    const amountNum = parseFloat(paymentRequestAmount.replace(/[^0-9.]/g, '')) || 5000;
+    const targetSlug = tenant?.slug || tenant?.id || 'demo';
+    const cleanHandle = activeConversation.authorHandle.replace(/^@/, '');
+
+    try {
+      const res = await apiClient.post<any>('/api/payments/checkout', {
+        tenant_id: targetSlug,
+        amount: amountNum,
+        currency: 'NGN',
+        transaction_type: 'booking_split',
+        customer_email: `${cleanHandle}@customer.withluna.tech`,
+        metadata: {
+          in_conversation: true,
+          conversation_id: activeConversation.id,
+          author_handle: activeConversation.authorHandle,
+          service_description: paymentRequestService.trim() || 'Custom Order Deposit',
+        },
+      });
+
+      const checkoutUrl = res.checkout_url || `https://${targetSlug}.withluna.tech/book-queue`;
+      const paymentMsg = `💳 Payment Request from ${tenant.name}\n\nService: ${paymentRequestService.trim() || 'Custom Order'}\nAmount: ₦${amountNum.toLocaleString()}\n\n👉 Tap here to complete secure checkout via Paystack / Card: ${checkoutUrl}`;
+      setReplyText(paymentMsg);
+      setTicketModalOpen(false);
+    } catch {
+      const fallbackUrl = `https://${targetSlug}.withluna.tech/book-queue`;
+      const paymentMsg = `💳 Payment Request from ${tenant.name}\n\nService: ${paymentRequestService.trim() || 'Custom Order'}\nAmount: ₦${amountNum.toLocaleString()}\n\n👉 Tap here to complete secure checkout via Paystack / Card: ${fallbackUrl}`;
+      setReplyText(paymentMsg);
+      setTicketModalOpen(false);
+    } finally {
+      setIsGeneratingPaymentLink(false);
     }
   };
 
@@ -1739,61 +1782,137 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate booking 
           </div>
         )}
 
-        {/* "PAY IN THE CONVERSATION" / SEND BOOKING TICKET MODAL */}
+        {/* "PAY IN THE CONVERSATION" / SEND PAYMENT LINK & BOOKING TICKET MODAL */}
         {ticketModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
             <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 rounded-xl bg-purple-100 text-[#702D7B] flex items-center justify-center font-bold">
-                    🎟️
+                    💳
                   </div>
                   <div>
-                    <h3 className="text-sm font-extrabold text-slate-900">Send Booking Pass in Chat</h3>
-                    <p className="text-[10px] text-slate-500">Auto-prefills service and client&apos;s social handle</p>
+                    <h3 className="text-sm font-extrabold text-slate-900">Pay in the Conversation</h3>
+                    <p className="text-[10px] text-slate-500">Send an instant payment request or booking pass to {activeConversation?.authorHandle}</p>
                   </div>
                 </div>
                 <button onClick={() => setTicketModalOpen(false)} className="text-slate-400 hover:text-slate-600">✕</button>
               </div>
 
-              <div className="space-y-3 text-xs">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Select Service to Dispatch</label>
-                  <select
-                    value={selectedTicketServiceId}
-                    onChange={(e) => setSelectedTicketServiceId(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-bold focus:outline-none"
-                  >
-                    <option value="">All Services Menu (Client Chooses)</option>
-                    {tenantServices.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({s.price || 'Standard'} · {s.minutes} mins)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 leading-relaxed">
-                  💡 <strong>How it works:</strong> The customer receives an interactive link. When they click, they land on {tenant.name}&apos;s customer booking page with this service selected and their handle (<strong className="text-slate-900">{activeConversation?.authorHandle}</strong>) pre-populated!
-                </div>
-              </div>
-
-              <div className="pt-2 flex items-center justify-between gap-3">
+              {/* Mode Switcher */}
+              <div className="grid grid-cols-2 gap-1 rounded-2xl bg-slate-100 p-1 text-xs font-extrabold">
                 <button
                   type="button"
-                  onClick={() => setTicketModalOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600"
+                  onClick={() => setPayInConvMode('direct_payment')}
+                  className={`rounded-xl py-2 transition ${
+                    payInConvMode === 'direct_payment'
+                      ? 'bg-white text-[#702D7B] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Cancel
+                  Direct Payment Link
                 </button>
                 <button
                   type="button"
-                  onClick={handleSendBookingTicketInConversation}
-                  className="rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFA800] px-5 py-2 text-xs font-extrabold shadow-md"
+                  onClick={() => setPayInConvMode('pass')}
+                  className={`rounded-xl py-2 transition ${
+                    payInConvMode === 'pass'
+                      ? 'bg-white text-[#702D7B] shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
                 >
-                  Insert Pass Link into Reply
+                  Booking Pass Link
                 </button>
               </div>
+
+              {payInConvMode === 'direct_payment' ? (
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Service / Custom Order Description</label>
+                    <input
+                      type="text"
+                      value={paymentRequestService}
+                      onChange={(e) => setPaymentRequestService(e.target.value)}
+                      placeholder="e.g. VIP Bridal Package Deposit"
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Amount to Request (₦ NGN)</label>
+                    <input
+                      type="number"
+                      value={paymentRequestAmount}
+                      onChange={(e) => setPaymentRequestAmount(e.target.value)}
+                      placeholder="15000"
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#702D7B]"
+                    />
+                  </div>
+
+                  <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3 text-[11px] text-emerald-950 leading-relaxed">
+                    💰 <strong>Paystack Split Settlement:</strong> When {activeConversation?.authorHandle} pays, <strong>95%</strong> settles directly into your bank account, and 5% covers platform processing.
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setTicketModalOpen(false)}
+                      disabled={isGeneratingPaymentLink}
+                      className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendPaymentRequestInConversation}
+                      disabled={isGeneratingPaymentLink}
+                      className="flex items-center gap-2 rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFA800] px-5 py-2 text-xs font-extrabold shadow-md transition active:scale-95 disabled:opacity-50"
+                    >
+                      {isGeneratingPaymentLink ? <Loader2 className="h-3.5 w-3.5 animate-spin text-[#FFA800]" /> : <CreditCard className="h-3.5 w-3.5" />}
+                      <span>Generate &amp; Insert Payment Link</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Select Service to Dispatch</label>
+                    <select
+                      value={selectedTicketServiceId}
+                      onChange={(e) => setSelectedTicketServiceId(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 font-bold focus:outline-none"
+                    >
+                      <option value="">All Services Menu (Client Chooses)</option>
+                      {tenantServices.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} ({s.price || 'Standard'} · {s.minutes} mins)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3 text-[11px] text-amber-900 leading-relaxed">
+                    💡 <strong>How it works:</strong> The customer receives an interactive link. When they click, they land on {tenant.name}&apos;s customer booking page with this service selected and their handle (<strong className="text-slate-900">{activeConversation?.authorHandle}</strong>) pre-populated!
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setTicketModalOpen(false)}
+                      className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendBookingTicketInConversation}
+                      className="rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFA800] px-5 py-2 text-xs font-extrabold shadow-md"
+                    >
+                      Insert Pass Link into Reply
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -12,7 +12,7 @@ from datetime import datetime
 import logging
 import uuid
 from typing import Any
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -163,9 +163,12 @@ async def fulfill_discount_checkout(
     meta["customer_email"] = customer_email
 
     # 1. Update business entitlement
-    stmt = select(Business).where(Business.id == tenant_id)
+    stmt = select(Business).where(
+        or_(Business.id == tenant_id, Business.subdomain == tenant_id)
+    )
     res = await db.execute(stmt)
     business = res.scalar_one_or_none()
+    target_tenant_id = str(business.id) if business else tenant_id
     if business:
         if transaction_type == "subscription":
             business.tier = "pro"
@@ -178,7 +181,7 @@ async def fulfill_discount_checkout(
     # 2. Record Transaction in ledger
     ref = f"disc_{uuid.uuid4().hex[:14]}"
     txn = Transaction(
-        tenant_id=tenant_id,
+        tenant_id=target_tenant_id,
         amount=amount,
         currency=currency,
         status=TransactionStatus.DISCOUNTED.value,
@@ -270,7 +273,9 @@ async def fulfill_successful_transaction(
 
     # Apply Entitlements
     t_type = txn.transaction_type
-    biz_stmt = select(Business).where(Business.id == txn.tenant_id)
+    biz_stmt = select(Business).where(
+        or_(Business.id == txn.tenant_id, Business.subdomain == txn.tenant_id)
+    )
     biz_res = await db.execute(biz_stmt)
     business = biz_res.scalar_one_or_none()
 
