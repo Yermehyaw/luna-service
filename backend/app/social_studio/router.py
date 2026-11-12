@@ -892,10 +892,24 @@ async def sync_inbox(
 async def social_inbox_ws(
     websocket: WebSocket,
     business_id: str,
+    token: str | None = Query(default=None),
 ) -> None:
     """Live WebSocket feed for Social Studio inbox auto-updates."""
+    from app.core.security import decode_jwt_token
     from app.realtime import manager
     from app.realtime.channels import social_inbox_channel
+
+    if token:
+        try:
+            payload = decode_jwt_token(token)
+            caller_tenant = payload.get("tenantId") or payload.get("tenant_id")
+            role = payload.get("role", "customer")
+            if role != "super_admin" and caller_tenant and caller_tenant != business_id:
+                await websocket.close(code=1008, reason="isolation violation")
+                return
+        except Exception:
+            await websocket.close(code=1008, reason="invalid auth token")
+            return
 
     await websocket.accept()
     channel = social_inbox_channel(business_id)

@@ -62,6 +62,22 @@ export type ChannelPlatform =
   | 'tiktok'
   | 'whatsapp';
 
+const AVAILABLE_PLATFORMS: {
+  id: ChannelPlatform;
+  name: string;
+  icon: string;
+  bg: string;
+  text: string;
+  border: string;
+}[] = [
+  { id: 'instagram', name: 'Instagram', icon: '📸', bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-300' },
+  { id: 'x', name: 'X / Twitter', icon: '𝕏', bg: 'bg-slate-100', text: 'text-slate-900', border: 'border-slate-300' },
+  { id: 'tiktok', name: 'TikTok', icon: '🎵', bg: 'bg-cyan-50', text: 'text-cyan-800', border: 'border-cyan-300' },
+  { id: 'whatsapp', name: 'WhatsApp', icon: '💬', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-300' },
+  { id: 'facebook', name: 'Facebook', icon: '👥', bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-300' },
+  { id: 'linkedin', name: 'LinkedIn', icon: '💼', bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-300' },
+];
+
 export type SentimentType = 'negative' | 'neutral' | 'positive';
 export type ConversationStatus = 'open' | 'urgent' | 'resolved';
 export type ConversationKind = 'all' | 'dm' | 'comment' | 'mention';
@@ -159,6 +175,119 @@ export default function SocialStudioPage() {
   const [postMediaName, setPostMediaName] = useState('');
   const [postMediaUrl, setPostMediaUrl] = useState('');
   const [postSaving, setPostSaving] = useState(false);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
+  const [dayModalOpen, setDayModalOpen] = useState(false);
+
+  const handleOpenDateModal = (dateStr: string) => {
+    setSelectedCalendarDate(dateStr);
+    setPostDate(dateStr);
+    setEditingPostId(null);
+    setPostText('');
+    setPostHandles(['instagram', 'whatsapp']);
+    setPostTime('10:00');
+    setPostMediaUrl('');
+    setPostMediaName('');
+    setDayModalOpen(true);
+  };
+
+  const handleEditScheduledPost = (post: ScheduledSocialPost) => {
+    setEditingPostId(post.id);
+    setPostText(post.text);
+    setPostHandles(post.handles.length > 0 ? post.handles : ['instagram']);
+    setPostDate(post.scheduledAt.split('T')[0] || selectedCalendarDate);
+    setPostTime(post.scheduledAt.split('T')[1] || '10:00');
+    setPostMediaUrl(post.mediaUrl || '');
+    setPostMediaName(post.mediaName || '');
+  };
+
+  const handleSaveScheduledPost = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!postText.trim()) {
+      alert('Please enter a caption or message for the post.');
+      return;
+    }
+    if (postHandles.length === 0) {
+      alert('Please choose at least one social media platform.');
+      return;
+    }
+
+    const targetDate = postDate || selectedCalendarDate || new Date().toISOString().slice(0, 10);
+    const targetScheduledAt = `${targetDate}T${postTime || '10:00'}`;
+
+    let updated: ScheduledSocialPost[];
+    if (editingPostId) {
+      updated = scheduledPosts.map((p) =>
+        p.id === editingPostId
+          ? {
+              ...p,
+              text: postText.trim(),
+              handles: postHandles,
+              scheduledAt: targetScheduledAt,
+              mediaUrl: postMediaUrl,
+              mediaName: postMediaName,
+            }
+          : p
+      );
+      setActionNotice('Scheduled post updated successfully.');
+    } else {
+      const newPost: ScheduledSocialPost = {
+        id: `post_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+        text: postText.trim(),
+        handles: postHandles,
+        scheduledAt: targetScheduledAt,
+        mediaUrl: postMediaUrl,
+        mediaName: postMediaName,
+        status: 'scheduled',
+      };
+      updated = [...scheduledPosts, newPost];
+      setActionNotice(`Reminder scheduled for ${targetDate} at ${postTime}!`);
+    }
+
+    setScheduledPosts(updated);
+    try {
+      localStorage.setItem(`luna_scheduled_posts_${tenant.slug}`, JSON.stringify(updated));
+    } catch {}
+
+    setEditingPostId(null);
+    setPostText('');
+    setPostMediaUrl('');
+    setPostMediaName('');
+    setTimeout(() => setActionNotice(null), 3000);
+  };
+
+  const handleDeleteScheduledPost = (postId: string) => {
+    if (!confirm('Are you sure you want to delete this scheduled post?')) return;
+    const updated = scheduledPosts.filter((p) => p.id !== postId);
+    setScheduledPosts(updated);
+    try {
+      localStorage.setItem(`luna_scheduled_posts_${tenant.slug}`, JSON.stringify(updated));
+    } catch {}
+    if (editingPostId === postId) {
+      setEditingPostId(null);
+      setPostText('');
+      setPostMediaUrl('');
+      setPostMediaName('');
+    }
+    setActionNotice('Post removed from calendar.');
+    setTimeout(() => setActionNotice(null), 2500);
+  };
+
+  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPostMediaName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPostMediaUrl(String(reader.result));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const togglePlatformHandle = (platId: string) => {
+    setPostHandles((prev) =>
+      prev.includes(platId) ? prev.filter((p) => p !== platId) : [...prev, platId]
+    );
+  };
 
   // Conversation Threads with Loyalty VIPs and Mentions Policy Restrictions
   const [conversations, setConversations] = useState<SocialConversation[]>([
@@ -345,7 +474,45 @@ export default function SocialStudioPage() {
       setTrialStarted(Boolean(trial && Date.now() - Number(trial) < 7 * 86400000));
       const month = new Date().toISOString().slice(0, 7);
       setCredits(Number(localStorage.getItem(`luna_credits_${tenant.slug}_${month}`) ?? 50));
-      setScheduledPosts(JSON.parse(localStorage.getItem(`luna_scheduled_posts_${tenant.slug}`) || '[]'));
+      const existing = JSON.parse(localStorage.getItem(`luna_scheduled_posts_${tenant.slug}`) || '[]');
+      if (existing.length === 0) {
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = String(today.getMonth() + 1).padStart(2, '0');
+        const seedPosts: ScheduledSocialPost[] = [
+          {
+            id: 'seed-01',
+            text: `✨ Weekend styling chairs are filling fast! Skip the line and reserve your exact slot from our bio link: withluna.tech/@${tenant.slug}`,
+            mediaName: 'weekend-special.jpg',
+            mediaUrl: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=500&auto=format&fit=crop&q=60',
+            handles: ['instagram', 'whatsapp'],
+            scheduledAt: `${y}-${m}-15T11:00`,
+            status: 'scheduled',
+          },
+          {
+            id: 'seed-02',
+            text: `Did you know our PWA alerts you 30 mins before your appointment? Zero waiting room delays. 👑`,
+            mediaName: '',
+            mediaUrl: '',
+            handles: ['instagram', 'tiktok', 'x'],
+            scheduledAt: `${y}-${m}-18T15:30`,
+            status: 'scheduled',
+          },
+          {
+            id: 'seed-03',
+            text: `Drop your Instagram or TikTok handle when booking to get gold crown VIP priority across all appointments! 🌟`,
+            mediaName: '',
+            mediaUrl: '',
+            handles: ['instagram', 'whatsapp', 'facebook'],
+            scheduledAt: `${y}-${m}-22T10:00`,
+            status: 'scheduled',
+          },
+        ];
+        setScheduledPosts(seedPosts);
+        localStorage.setItem(`luna_scheduled_posts_${tenant.slug}`, JSON.stringify(seedPosts));
+      } else {
+        setScheduledPosts(existing);
+      }
     } catch {}
   }, [tenant.slug]);
 
@@ -518,6 +685,56 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate booking 
         return <span className="text-[10px] font-black text-emerald-600 leading-none">WA</span>;
     }
   };
+
+  // Calendar grid calculations
+  const calYear = calendarMonth.getFullYear();
+  const calMonth = calendarMonth.getMonth();
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
+  ];
+  const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  const firstDayIndex = (new Date(calYear, calMonth, 1).getDay() + 6) % 7;
+  const daysInCurrentMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrevMonth = new Date(calYear, calMonth, 0).getDate();
+
+  const prevMonthCells = Array.from({ length: firstDayIndex }, (_, i) => {
+    const day = daysInPrevMonth - firstDayIndex + 1 + i;
+    const prevMonthIdx = calMonth === 0 ? 12 : calMonth;
+    const prevYear = calMonth === 0 ? calYear - 1 : calYear;
+    return {
+      day,
+      isCurrentMonth: false,
+      dateStr: `${prevYear}-${String(prevMonthIdx).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+    };
+  });
+
+  const currentMonthCells = Array.from({ length: daysInCurrentMonth }, (_, i) => {
+    const day = i + 1;
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return {
+      day,
+      isCurrentMonth: true,
+      dateStr,
+    };
+  });
+
+  const totalCellsSoFar = prevMonthCells.length + currentMonthCells.length;
+  const nextMonthCount = totalCellsSoFar % 7 === 0 ? 0 : 7 - (totalCellsSoFar % 7);
+  const nextMonthCells = Array.from({ length: nextMonthCount }, (_, i) => {
+    const day = i + 1;
+    const nextMonthIdx = calMonth + 2 > 12 ? 1 : calMonth + 2;
+    const nextYear = calMonth + 2 > 12 ? calYear + 1 : calYear;
+    return {
+      day,
+      isCurrentMonth: false,
+      dateStr: `${nextYear}-${String(nextMonthIdx).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+    };
+  });
+
+  const allCalendarCells = [...prevMonthCells, ...currentMonthCells, ...nextMonthCells];
+  const postsOnSelectedDate = scheduledPosts.filter((p) => p.scheduledAt.startsWith(selectedCalendarDate));
 
   return (
     <TenantStaffLayout>

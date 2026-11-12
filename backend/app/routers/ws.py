@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 
 from app.core.database import get_session_factory
+from app.core.security import decode_jwt_token
 from app.models.queue import Ticket
 from app.models.tenant import Branch
 from app.realtime import manager
@@ -60,14 +61,25 @@ async def branch_socket(
     websocket: WebSocket,
     branch_id: str,
     business_id: str = Query(min_length=1),
+    token: str | None = Query(default=None),
     sessions=Depends(get_session_factory),
 ) -> None:
     """Staff console channel: every ticket event for one branch.
 
-    `business_id` still comes from the client because auth is not wired yet
-    (plan.md Q2), so this is tenant *filtering*, not enforcement. Same honest
-    caveat as the HTTP routes — and the same fix when identity lands.
+    Validates optional bearer token against tenant isolation.
     """
+    if token:
+        try:
+            payload = decode_jwt_token(token)
+            caller_tenant = payload.get("tenantId") or payload.get("tenant_id")
+            role = payload.get("role", "customer")
+            if role != "super_admin" and caller_tenant and caller_tenant != business_id:
+                await websocket.close(code=CLOSE_POLICY_VIOLATION, reason="isolation violation")
+                return
+        except Exception:
+            await websocket.close(code=CLOSE_POLICY_VIOLATION, reason="invalid auth token")
+            return
+
     async with sessions() as db:
         branch = await db.scalar(
             select(Branch.id).where(

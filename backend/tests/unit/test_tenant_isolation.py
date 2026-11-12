@@ -197,3 +197,23 @@ async def test_ai_feedback_tenant_isolation(mock_db):
         )
         assert res_export.status_code == 403
         assert "Business owner privileges required" in res_export.json()["detail"]
+
+
+def test_social_studio_websocket_isolation():
+    from starlette.testclient import TestClient
+    from starlette.websockets import WebSocketDisconnect
+
+    sync_client = TestClient(app)
+
+    # 1. Mismatched tenant token must be rejected with code 1008
+    other_tenant_token = create_token("tenant_admin", "other-salon")
+    with pytest.raises(WebSocketDisconnect) as exc_info:
+        with sync_client.websocket_connect(f"/ws/social/kemis-lounge?token={other_tenant_token}"):
+            pass
+    assert exc_info.value.code == 1008
+
+    # 2. Matching tenant token should connect cleanly
+    valid_token = create_token("tenant_admin", "kemis-lounge")
+    with sync_client.websocket_connect(f"/ws/social/kemis-lounge?token={valid_token}") as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "connected"
