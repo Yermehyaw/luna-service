@@ -6,10 +6,12 @@ pydantic
 pydantic-settings
 redis
 
-# AI - local classification (Social Studio sentiment + intent, trends)
+# AI - local classification (Social Studio sentiment + intent, trends) & external clients
 transformers
+httpx
 scikit-learn
-torch
+pandas
+numpy
 
 # AI - hosted generation (suggested replies, content ideas). Optional: an empty
 # OPENAI_API_KEY runs the app on the local models only, see app/core/config.py.

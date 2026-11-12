@@ -44,6 +44,14 @@ class Settings(BaseSettings):
     # Bounded SDK-level retries for transient network/5xx errors, with backoff.
     OPENAI_MAX_RETRIES: int = 2
 
+    # HuggingFace-hosted classifier VM (DistilBERT sentiment + BART intent)
+    LUNA_CLASSIFIER_URL: str = ""
+
+    # HuggingFace Inference Providers (OpenAI-compatible) for generation
+    LUNA_MODEL_URL: str = "https://router.huggingface.co/v1"
+    LUNA_MODEL_API_KEY: str = ""
+    LUNA_MODEL_NAME: str = "Qwen/Qwen2.5-7B-Instruct"
+
     # --- AI training feedback ---
     # Feedback rows are transient training material, not customer records; they are
     # purged after this window. Exports strip PII again on the way out.
