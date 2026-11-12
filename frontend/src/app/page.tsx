@@ -2,838 +2,360 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import {
-  ArrowRight,
-  Ticket,
-  FileCheck2,
-  Building2,
-  Network,
-  Megaphone,
-  Clock,
-  Sparkles,
-  CheckCircle2,
-  Users,
-  ShieldCheck,
-  Radio,
-  ExternalLink,
-  ChevronRight,
-  Zap,
-  Globe,
-  Palette,
-  Bot,
-  Laptop,
-  Menu,
-  X,
-  Trophy,
-} from 'lucide-react';
+import { ArrowRight, Check } from 'lucide-react';
 import { LunaLogo } from '../components/shared/LunaMark';
 
-const STATS = [
-  { value: 'Free', label: 'to get started' },
-  { value: '10', label: 'social posts each month' },
-  { value: '2', label: 'social profiles on Free' },
-  { value: 'withluna.tech', label: 'your business address' },
-];
+// Swap SIGN_UP to WAITLIST everywhere if self-service sign-up is not open yet.
+const SIGN_UP = '/register';
+const WAITLIST = 'https://bit.ly/LunaWaitlist';
+const EXAMPLE = '/tenant/kemis-lounge';
 
-const MODULES = [
+const BTN = 'inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-bold transition';
+const PRIMARY = `${BTN} bg-[#FFA800] text-[#291E29] hover:bg-[#FFB11A]`;
+const GHOST = `${BTN} border border-[#291E29]/25 text-[#291E29] hover:bg-[#291E29]/5`;
+const WRAP = 'mx-auto max-w-6xl px-5';
+
+const OUTCOMES = [
   {
-    id: 'queue',
-    icon: Ticket,
-    title: 'Appointments & Walk-ins',
-    tag: 'Customer Arrival',
-    desc: 'Customers book a visit or join the line from their phone. Your team can see who is next and keep visits moving.',
-    points: ['Online appointments', 'Live waiting list', 'Add walk-in visitors'],
-    href: '/tenant/acme-bank/book-queue',
-    cta: 'Try Customer Booking',
-    accentColor: '#FFA800',
+    title: 'Be seen, week after week',
+    body: 'Social Studio suggests post ideas, keeps a calendar and reminds you when a post is due, so your business stays visible without a full-time social media manager.',
   },
   {
-    id: 'ops',
-    icon: Users,
-    title: 'Front Desk',
-    tag: 'Staff & Counter',
-    desc: 'Staff welcome visitors, call the next person, track waiting times, and mark missed appointments.',
-    points: ['See who is waiting', 'Call the next customer', 'Choose a service desk'],
-    href: '/tenant/acme-bank/staff/ops-console',
-    cta: 'Open Staff Console',
-    accentColor: '#BA68D7',
+    title: 'Be booked and paid',
+    body: 'Customers choose a service, pick a time and pay securely on your page. They receive a ticket they can share and follow.',
   },
   {
-    id: 'leaderboard',
-    icon: Trophy,
-    title: 'Business Performance',
-    tag: 'Live Rankings',
-    desc: 'See how quickly your team serves customers and how customers rate their visits.',
-    points: ['Branch performance', 'Waiting time tracking', 'Customer feedback'],
-    href: '/leaderboard',
-    cta: 'View Business Leaderboard',
-    accentColor: '#FFA800',
-  },
-  {
-    id: 'social',
-    icon: Megaphone,
-    title: 'Social Studio',
-    tag: 'Posts & messages',
-    desc: 'Plan social posts, keep up with customer messages, and share updates with your audience.',
-    points: ['Plan posts on a calendar', 'Reply to customer messages', 'Keep track of shared updates'],
-    href: '/tenant/kemis-lounge/staff/social-studio',
-    cta: 'Open Social Studio',
-    accentColor: '#0057B8',
+    title: 'Keep your customers',
+    body: 'Every booking adds to a customer list that belongs to you, with each person’s visits and payments beside their name.',
   },
 ];
 
-const THEMES_PREVIEW = [
-  { name: 'Luna Classic', primary: '#291E29', accent: '#FFA800', bg: '#FFF6E9' },
-  { name: 'Emerald Hospital', primary: '#12A05A', accent: '#17B568', bg: '#F3FBF6' },
-  { name: 'Royal Banking', primary: '#0057B8', accent: '#00A3E0', bg: '#F4F8FC' },
-  { name: 'Solar Telecom', primary: '#FF8A00', accent: '#F45B16', bg: '#FFF8F0' },
-  { name: 'Midnight Luxe', primary: '#0F172A', accent: '#38BDF8', bg: '#F8FAFC' },
-  { name: 'Rose Quartz', primary: '#9D174D', accent: '#F43F5E', bg: '#FFF1F2' },
-  { name: 'Slate Modern', primary: '#334155', accent: '#64748B', bg: '#F1F5F9' },
-  { name: 'Sunset Crimson', primary: '#991B1B', accent: '#EF4444', bg: '#FEF2F2' },
+const STEPS = [
+  { title: 'Claim your page', body: 'Add your business name, colours, logo and services.' },
+  { title: 'Share your link', body: 'Put it in your Instagram bio, WhatsApp status and posts.' },
+  { title: 'Customers book and pay', body: 'They receive a ticket, and you see who is next.' },
+  { title: 'Stay visible', body: 'Plan posts, answer messages and review your bookings.' },
 ];
 
-const TENANTS = [
+const PLANS = [
   {
-    name: "Kemi's Hair & Beauty Lounge",
-    slug: 'kemis-lounge',
-    industry: 'Hair Salon, Nails & Spa',
-    desc: 'Book a salon visit, choose a service, and see when it’s your turn.',
-    badge: 'Small Business · Salon',
-    scale: 'sme',
-    color: '#831843',
-    icon: '💇',
+    name: 'Free',
+    price: '₦0',
+    note: 'for as long as you like',
+    items: [
+      'Your page at yourbusiness.withluna.tech',
+      'Online booking and live queue tickets',
+      'Ticket sharing on any platform',
+      'Content ideas and a post calendar with reminders',
+      'Analytics on your social accounts',
+    ],
+    cta: 'Claim your free page',
+    href: SIGN_UP,
+    featured: false,
   },
   {
-    name: 'QuickFix AutoCare Garage',
-    slug: 'quickfix-auto',
-    industry: 'Auto Repair & Oil Lube Bays',
-    desc: 'Book a repair visit and share what’s wrong with your vehicle before you arrive.',
-    badge: 'Small Business · Auto',
-    scale: 'sme',
-    color: '#1E293B',
-    icon: '🚗',
+    name: 'Growth',
+    price: '₦22,000',
+    note: 'a month, VAT and card fees included',
+    items: [
+      'Everything in Free',
+      'Social Studio inbox for all your connected accounts',
+      'Suggested replies you review before sending',
+      'Reply and AI credits, with top-ups when you need more',
+      '7-day free trial',
+    ],
+    cta: 'Start your free trial',
+    href: SIGN_UP,
+    featured: true,
   },
   {
-    name: 'The Daily Grind Cafe & Bakery',
-    slug: 'daily-grind',
-    industry: 'Specialty Coffee & Bakery',
-    desc: 'Express pickup window for fresh sourdough batches, breakfast orders, and custom cake consultations.',
-    badge: 'Small Business · Cafe',
-    scale: 'sme',
-    color: '#3C2A21',
-    icon: '🥐',
+    name: 'Pro',
+    price: 'Coming soon',
+    note: 'for businesses with several branches',
+    items: ['Everything in Growth', 'Tools for branches to work together'],
+    cta: 'Join the waitlist',
+    href: WAITLIST,
+    featured: false,
   },
   {
-    name: 'Apex Boutique Dental & Vision',
-    slug: 'apex-dental',
-    industry: 'Private Dental & Optical Studio',
-    desc: 'Book a consultation, share insurance details, and spend less time waiting.',
-    badge: 'Small Business · Clinic',
-    scale: 'sme',
-    color: '#0F766E',
-    icon: '🦷',
-  },
-  {
-    name: 'Acme Bank',
-    slug: 'acme-bank',
-    industry: 'Retail & Business Banking',
-    desc: 'Priority teller windows, timed cash deposit intake, and foreign exchange queues.',
-    badge: 'Enterprise · Banking',
-    scale: 'enterprise',
-    color: '#0057B8',
-    icon: '🏦',
-  },
-  {
-    name: 'City General Hospital',
-    slug: 'city-hospital',
-    industry: 'Healthcare',
-    desc: 'Book a visit, share needed details, and find the right care team.',
-    badge: 'Enterprise · Hospital',
-    scale: 'enterprise',
-    color: '#12A05A',
-    icon: '🏥',
-  },
-  {
-    name: 'Luna Mobile & Fiber',
-    slug: 'luna-telecom',
-    industry: 'Telecom & High-Speed Internet',
-    desc: 'Express SIM replacement, biometric re-registration, and device pickup appointments.',
-    badge: 'Enterprise · Telecom',
-    scale: 'enterprise',
-    color: '#FF8A00',
-    icon: '📱',
+    name: 'Enterprise',
+    price: 'Talk to us',
+    note: 'for large organisations',
+    items: ['Set up around how you already work', 'Direct support from our team'],
+    cta: 'Get in touch',
+    href: WAITLIST,
+    featured: false,
   },
 ];
+
+const FAQ = [
+  ['Is Luna really free?', 'Yes. Your booking and queue page, ticket sharing, content ideas, post calendar with reminders and analytics are free. Growth adds the Social Studio inbox, suggested replies and reply credits, with a 7-day free trial.'],
+  ['Does Luna post for me?', 'Luna drafts ideas and reminds you when a post is due, then hands it to your phone so you publish it in the app. Replies are suggested for you to review. Nothing is sent without you.'],
+  ['Which platforms can I connect?', 'Facebook Pages, Instagram, Threads, X, TikTok, LinkedIn and WhatsApp. What each connection allows depends on that platform’s rules, and we are onboarding businesses in small groups at first.'],
+  ['What do I need to start the Growth trial?', 'A card. You are not charged during the 7 days. At the end of the trial the plan bills ₦22,000 a month.'],
+  ['Who owns my customer list?', 'You do. Every booking adds the customer’s details and visits to your list. Luna is built to follow the Nigeria Data Protection Act 2023.'],
+  ['Can I use Luna for more than one branch?', 'Tools for multi-branch teams are coming next. Join the waitlist and tell us how many branches you run.'],
+];
+
+const FOR = ['Salons and barbers', 'Caterers', 'Tutors and training centres', 'Photographers', 'Event planners', 'Clinics', 'Fitness studios'];
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'queue' | 'ops' | 'leaderboard' | 'social'>('queue');
-  const [tenantFilter, setTenantFilter] = useState<'all' | 'sme' | 'enterprise'>('all');
-  const [claimedName, setClaimedName] = useState('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const currentModule = MODULES.find((m) => m.id === activeTab) || MODULES[0];
-  const filteredTenants = TENANTS.filter((t) => (tenantFilter === 'all' ? true : t.scale === tenantFilter));
+  const [name, setName] = useState('');
+  const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30);
 
   return (
-    <div className="min-h-screen bg-[#f7f6f2] text-[#291E29] selection:bg-[#ead9f1] selection:text-[#291E29] font-sans overflow-x-hidden">
-      {/* 1. TOP ANNOUNCEMENT TICKER */}
-      <div className="bg-[#291E29] text-[#FFF6E9] py-2 px-4 text-xs font-medium text-center flex items-center justify-center gap-2 flex-wrap border-b border-[#341539]">
-        <span className="flex h-2 w-2 rounded-full bg-[#FFA800] animate-pulse shrink-0" />
-        <span>
-          <strong>One home for your business:</strong> Manage appointments, customers, and social posts with Luna.
-        </span>
-        <Link href="/register" className="underline font-bold text-[#FFA800] hover:text-white ml-1">
-          Start for free &rarr;
-        </Link>
-      </div>
-
-      {/* 2. NAVBAR */}
-      <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-[#f7f6f2]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 group">
-              <LunaLogo size={34} variant="dark" showTagline />
-            </Link>
-
-            <nav className="hidden md:flex items-center gap-6 text-xs font-bold text-[#291E29]/80">
-              <a href="#features" className="hover:text-[#291E29] transition-colors">
-                What you can do
-              </a>
-              <a href="#tenants" className="hover:text-[#291E29] transition-colors">
-                Examples
-              </a>
-            </nav>
-          </div>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/login"
-              className="hidden sm:inline-flex px-4 py-2 text-xs font-bold text-[#291E29] hover:bg-[#291E29]/5 rounded-xl transition"
-            >
-              Sign In
-            </Link>
-            <Link
-              href="/register"
-              className="flex items-center gap-1.5 rounded-xl bg-[#291E29] px-4 py-2.5 text-xs font-extrabold text-white shadow-md transition hover:-translate-y-0.5 hover:bg-[#4a264e] sm:px-5"
-            >
-              <span>Start free</span>
-              <ArrowRight className="h-3.5 w-3.5 text-[#FFA800]" />
-            </Link>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden flex h-10 w-10 items-center justify-center rounded-xl bg-black/5 text-[#291E29] hover:bg-black/10 active:scale-95 transition"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+    <div className="min-h-screen bg-[#FFF6E9] font-primary text-[#291E29] antialiased">
+      <header className="sticky top-0 z-50 border-b border-[#291E29]/10 bg-[#FFF6E9]/90 backdrop-blur">
+        <div className={`${WRAP} flex h-16 items-center justify-between`}>
+          <Link href="/" aria-label="Luna home">
+            <LunaLogo size={32} variant="dark" />
+          </Link>
+          <nav className="hidden items-center gap-8 text-sm font-semibold md:flex">
+            <a href="#product" className="hover:opacity-70">Product</a>
+            <a href="#how" className="hover:opacity-70">How it works</a>
+            <a href="#pricing" className="hover:opacity-70">Pricing</a>
+            <a href="#faq" className="hover:opacity-70">FAQ</a>
+          </nav>
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="hidden text-sm font-semibold hover:opacity-70 sm:block">Sign in</Link>
+            <Link href={SIGN_UP} className={`${PRIMARY} !px-5 !py-2`}>Claim your free page</Link>
           </div>
         </div>
       </header>
 
-      {/* Mobile Slide-Over Drawer Navigation */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden flex">
-          <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <div className="relative w-4/5 max-w-xs bg-[#291E29] text-[#FFF6E9] p-6 flex flex-col shadow-2xl z-10 animate-in slide-in-from-left duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-[#341539]">
-              <LunaLogo variant="light" size={28} />
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(false)}
-                className="rounded-lg p-1.5 text-white/70 hover:text-white hover:bg-white/10"
-                aria-label="Close menu"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <nav className="mt-6 flex-1 space-y-2 text-sm font-bold">
-              <a
-                href="#features"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
-              >
-                Solutions &amp; Modules
-              </a>
-              <a
-                href="#tenants"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2.5 rounded-xl text-white/80 hover:bg-[#341539] hover:text-[#FFA800]"
-              >
-                Examples
-              </a>
-            </nav>
-
-            <div className="pt-4 border-t border-[#341539] mt-auto space-y-2">
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block text-center py-2.5 rounded-xl text-xs font-bold text-white hover:bg-white/10"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/register"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#FFA800] text-xs font-extrabold text-[#291E29] shadow-md"
-              >
-                <span>Start free</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. HERO SECTION */}
-      <section className="relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_rgba(186,104,215,0.14),_transparent_38%)] pt-12 pb-16 lg:pt-20 lg:pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-14">
-            {/* Left Column: Hero Text */}
-            <div className="space-y-6 lg:col-span-6">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white border border-[#291E29]/10 px-4 py-1.5 text-xs font-semibold text-[#291E29]/80 shadow-sm">
-                <Sparkles className="h-3.5 w-3.5 text-[#FFA800]" />
-                <span>Appointments, customer care, and social tools</span>
-              </div>
-
-              <h1 className="max-w-2xl font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-[#291E29] sm:text-6xl">
-                Give every customer visit{' '}
-                <span className="text-[#702D7B]">a better start.</span>
-              </h1>
-
-              <p className="max-w-xl text-base leading-relaxed text-[#291E29]/75 sm:text-lg">
-                Let customers book, help your team stay organized, and keep up with social messages from one simple workspace.
-              </p>
-
-              {/* Subdomain Quick Claim Input */}
-              <div className="flex max-w-xl flex-col gap-2 rounded-2xl border border-[#291E29]/10 bg-white p-2 shadow-lg sm:flex-row sm:p-2.5">
-                <div className="flex-1 flex items-center px-3 py-2.5 bg-slate-50 rounded-xl text-base sm:text-xs font-mono min-h-[44px]">
-                  <span className="text-slate-400 select-none">https://</span>
-                  <input
-                    type="text"
-                    placeholder="your-business"
-                    value={claimedName}
-                    onChange={(e) => setClaimedName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                    className="bg-transparent font-bold text-[#291E29] focus:outline-none w-full px-1 text-base sm:text-xs"
-                  />
-                  <span className="text-slate-400 select-none font-semibold">.withluna.tech</span>
-                </div>
-                <Link
-                  href={`/register?subdomain=${encodeURIComponent(claimedName || 'mybusiness')}`}
-                  className="rounded-xl bg-[#291E29] px-6 py-3 text-xs font-extrabold text-[#FFF6E9] hover:bg-[#341539] transition flex items-center justify-center gap-2 shadow-md shrink-0 min-h-[44px]"
-                >
-                  <Globe className="h-4 w-4 text-[#FFA800]" />
-                  <span>Start with this address</span>
-                </Link>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <Link
-                  href="/tenant/kemis-lounge"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#291E29] px-5 py-3 text-xs font-extrabold text-[#FFF6E9] shadow-md hover:bg-[#341539] transition"
-                >
-                  <Ticket className="h-4 w-4 text-[#FFA800]" />
-                  <span>View customer page</span>
-                </Link>
-                <Link
-                  href="/tenant/kemis-lounge/staff/dashboard"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#291E29]/20 bg-white px-5 py-3 text-xs font-bold text-[#291E29] shadow-xs hover:bg-slate-50 transition"
-                >
-                  <Laptop className="h-4 w-4 text-[#BA68D7]" />
-                  <span>Preview business home</span>
-                </Link>
-              </div>
-
-              {/* Stat badges */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-5 border-t border-[#291E29]/10 pt-5 sm:grid-cols-4">
-                {STATS.map((s, idx) => (
-                  <div key={idx} className="space-y-0.5">
-                    <div className="break-words font-display text-xl font-extrabold text-[#291E29] sm:text-2xl">
-                      {s.value}
-                    </div>
-                    <div className="text-[11px] text-[#291E29]/65 font-medium">{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right Column: Interactive App Preview Card */}
-            <div className="lg:col-span-6">
-              <div className="relative space-y-5 overflow-hidden rounded-[28px] border border-[#291E29]/10 bg-[#291E29] p-5 text-[#FFF6E9] shadow-2xl sm:p-7">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#FFA800]/10 rounded-full blur-3xl pointer-events-none" />
-
-                {/* Card Header */}
-                <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-3 w-3 rounded-full bg-emerald-400 animate-ping" />
-                    <div>
-                      <h4 className="font-extrabold text-sm text-white">Kemi&apos;s Hair &amp; Beauty Lounge</h4>
-                      <p className="text-[11px] text-[#FFF6E9]/60 font-mono">kemis-lounge.withluna.tech</p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-[#FFA800] text-[#291E29] text-[10px] font-extrabold px-2.5 py-0.5 uppercase">
-                    Sample preview
-                  </span>
-                </div>
-
-                {/* Live Counter Display */}
-                <div className="rounded-2xl bg-white/5 border border-white/10 p-4 space-y-3">
-                  <div className="flex justify-between items-center text-xs">
-                    <span className="text-[#FFA800] font-bold flex items-center gap-1.5">
-                      <Radio className="h-3.5 w-3.5" /> Next customer
-                    </span>
-                    <span className="text-white/60 font-mono text-[10px]">Just Now</span>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <span className="font-mono text-3xl font-extrabold text-[#FFA800] bg-black/40 px-3 py-1.5 rounded-xl border border-white/10">
-                      KE-024
-                    </span>
-                    <div>
-                      <div className="font-bold text-white text-sm">Funke Adeleke</div>
-                      <div className="text-[11px] text-[#FFF6E9]/70">Gel manicure · 10:10</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Live Waiting Queue List */}
-                <div className="space-y-2">
-                  <div className="text-xs font-bold text-white/70 flex justify-between">
-                    <span>Today&apos;s appointments</span>
-                    <span className="text-[#FFA800]">2 next</span>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-xl bg-white/5 p-3 text-xs border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-1 rounded-lg">
-                        KE-025
-                      </span>
-                      <span>Fatima Bello</span>
-                    </div>
-                    <span className="text-[11px] text-white/60">11:50</span>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-xl bg-white/5 p-3 text-xs border border-white/5">
-                    <div className="flex items-center gap-3">
-                      <span className="font-mono font-bold text-slate-300 bg-white/10 px-2 py-1 rounded-lg">
-                        KE-023
-                      </span>
-                      <span>Mariam Yusuf</span>
-                    </div>
-                    <span className="text-[11px] text-white/60">13:20</span>
-                  </div>
-                </div>
-
-                {/* Quick Action Links inside Hero Preview */}
-                <div className="pt-2 flex gap-3">
-                  <Link
-                    href="/tenant/kemis-lounge/book-queue"
-                    className="flex-1 rounded-xl bg-[#FFA800] py-2.5 text-xs font-extrabold text-[#291E29] text-center shadow-md hover:bg-[#ffb31a] transition"
-                  >
-                    Book a visit
-                  </Link>
-                  <Link
-                    href="/tenant/kemis-lounge/track"
-                    className="flex-1 rounded-xl bg-white/10 py-2.5 text-xs font-bold text-white text-center hover:bg-white/15 transition border border-white/10"
-                  >
-                    Track your place
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 4. PLATFORM MODULES / SOLUTIONS */}
-      <section id="features" className="border-y border-[#291E29]/10 bg-white py-20">
-        <div className="mx-auto max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-2xl space-y-3 text-center">
-            <span className="rounded-full bg-[#f3eaf5] px-3.5 py-1 text-xs font-bold text-[#702D7B]">A simpler workday</span>
-            <h2 className="font-display text-3xl font-bold text-[#291E29] sm:text-4xl">
-              The tools behind a great customer visit.
-            </h2>
-            <p className="text-sm text-[#291E29]/70">
-              Help customers book, support them while they wait, and stay in touch.
+      {/* Hero */}
+      <section className="relative overflow-hidden pb-20 pt-14 lg:pt-20">
+        <div className="pointer-events-none absolute -right-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-[#D8AAE0]/30 blur-3xl" />
+        <div className={`${WRAP} relative grid items-center gap-14 lg:grid-cols-[1.1fr_0.9fr]`}>
+          <div>
+            <h1 className="font-title text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
+              Get booked, stay visible and answer customers faster.
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#291E29]/75">
+              Luna gives your business a free page where customers book, pay and follow their place in the queue. Social Studio helps you plan posts and handle customer messages from one place.
             </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {MODULES.map((m) => {
-              const Icon = m.icon;
-              return (
-                <div
-                  key={m.id}
-                  className="group flex flex-col justify-between rounded-2xl border border-[#291E29]/10 bg-[#fcfbf8] p-5 transition hover:border-[#bba9bf] hover:bg-white"
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div
-                        className="rounded-xl p-2.5 text-white"
-                        style={{ backgroundColor: m.accentColor }}
-                      >
-                        <Icon className="h-6 w-6" />
-                      </div>
-                      <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-slate-200 text-[#291E29]">
-                        {m.tag}
-                      </span>
-                    </div>
-
-                    <h3 className="font-display text-base font-bold text-[#291E29]">{m.title}</h3>
-                    <p className="text-sm leading-6 text-[#291E29]/75">{m.desc}</p>
-
-                    <ul className="space-y-2 pt-2 border-t border-[#291E29]/10 text-xs">
-                      {m.points.map((pt, i) => (
-                        <li key={i} className="flex items-center gap-2 text-xs text-[#291E29]/80">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                          <span>{pt}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="pt-6">
-                    <Link
-                      href={m.href}
-                      className="w-full flex items-center justify-between rounded-xl bg-[#291E29] px-4 py-2.5 text-xs font-bold text-[#FFF6E9] hover:bg-[#341539] transition group-hover:scale-[1.02]"
-                    >
-                      <span>{m.cta}</span>
-                      <ArrowRight className="h-3.5 w-3.5 text-[#FFA800]" />
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* 5. FREE SUBDOMAINS & 8 THEMES SHOWCASE */}
-      <section id="subdomains" className="py-20 bg-[#FFF6E9]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            {/* Subdomain Feature Info */}
-            <div className="space-y-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#291E29] bg-[#FFA800] px-3.5 py-1 rounded-full">
-                Zero Setup Cost
-              </span>
-              <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-[#291E29] leading-tight">
-                Every business gets a free branded domain:{' '}
-                <span className="text-[#BA68D7]">yourname.withluna.tech</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-[#291E29]/75 leading-relaxed">
-                When you create an account, you instantly claim your own dedicated subdomain. Your customers visit your clean URL to book appointments and track arrival times, while your staff manage queues on private operations consoles.
-              </p>
-
-              <div className="space-y-3 text-xs">
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-[#291E29]/10">
-                  <Globe className="h-5 w-5 text-[#FFA800] shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-bold text-[#291E29]">Your own business page</h4>
-                    <p className="text-slate-500 text-[11px]">Your business page is ready to share as soon as setup is complete.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3.5 rounded-2xl bg-white border border-[#291E29]/10">
-                  <Palette className="h-5 w-5 text-[#BA68D7] shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="font-bold text-[#291E29]">8 Free Curated Themes + AI Styler</h4>
-                    <p className="text-slate-500 text-[11px]">Switch between 8 palettes instantly or chat with AI to generate a custom look for your brand.</p>
-                  </div>
-                </div>
+            <div className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row">
+              <div className="flex flex-1 items-center rounded-full border border-[#291E29]/20 bg-white pl-5 pr-3 text-sm">
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="yourbusiness"
+                  aria-label="Your business name"
+                  className="min-w-0 flex-1 bg-transparent py-3 font-semibold outline-none placeholder:font-normal"
+                />
+                <span className="text-[#291E29]/50">.withluna.tech</span>
               </div>
-
-              <div className="pt-2">
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#291E29] px-6 py-3 text-xs font-extrabold text-[#FFF6E9] hover:bg-[#341539] transition shadow-md"
-                >
-                  <span>Claim Your Free Subdomain</span>
-                  <ArrowRight className="h-4 w-4 text-[#FFA800]" />
-                </Link>
-              </div>
+              <Link href={`${SIGN_UP}?subdomain=${encodeURIComponent(slug || 'mybusiness')}`} className={PRIMARY}>
+                Claim your free page <ArrowRight size={16} />
+              </Link>
             </div>
+            <p className="mt-4 text-sm text-[#291E29]/60">
+              Free to start. Built in Nigeria, and now onboarding our first businesses in Benin City.
+            </p>
+            <Link href={EXAMPLE} className="mt-3 inline-flex items-center gap-1 text-sm font-bold underline underline-offset-4">
+              See an example booking page <ArrowRight size={14} />
+            </Link>
+          </div>
 
-            {/* 8 Themes Grid Preview */}
-            <div id="themes" className="rounded-3xl border border-[#291E29]/15 bg-white p-6 sm:p-8 shadow-xl space-y-6">
-              <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+          <div className="relative mx-auto w-full max-w-md" aria-label="Illustration of a booking ticket and a suggested reply">
+            <div className="rounded-3xl border border-[#291E29]/10 bg-white p-6 shadow-xl shadow-[#291E29]/10">
+              <p className="text-xs text-[#291E29]/50">Kemi’s Hair &amp; Beauty Lounge</p>
+              <p className="mt-1 font-title text-xl font-bold">Braids, Saturday at 10:30</p>
+              <div className="mt-5 flex items-center justify-between rounded-2xl bg-[#FFE5B3]/60 px-4 py-3">
                 <div>
-                  <h3 className="font-bold text-base text-[#291E29] flex items-center gap-2">
-                    <Palette className="h-4 w-4 text-[#FFA800]" /> 8 Free Theme Presets
-                  </h3>
-                  <p className="text-slate-400 text-[11px]">One-click theme switching in Settings</p>
+                  <p className="text-xs text-[#291E29]/60">Your ticket</p>
+                  <p className="text-lg font-bold">B-014</p>
                 </div>
-                <span className="text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 px-3 py-1">
-                  100% Free
-                </span>
+                <p className="text-sm font-semibold">You are 3rd in line</p>
               </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {THEMES_PREVIEW.map((t, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl border border-slate-200 p-3 space-y-2 hover:border-[#FFA800] transition cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-4 w-4 rounded-full border border-black/10" style={{ backgroundColor: t.primary }} />
-                      <div className="h-4 w-4 rounded-full border border-black/10" style={{ backgroundColor: t.accent }} />
-                      <div className="h-4 w-4 rounded-full border border-black/10" style={{ backgroundColor: t.bg }} />
-                    </div>
-                    <div>
-                      <div className="font-bold text-[11px] text-slate-800 group-hover:text-[#291E29]">
-                        {t.name}
-                      </div>
-                      <div className="text-[9px] text-slate-400 font-mono">{t.primary}</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span className="inline-flex items-center gap-1.5 font-semibold"><Check size={15} /> Paid securely</span>
+                <span className="font-semibold underline underline-offset-4">Share ticket</span>
               </div>
-
-              <div className="rounded-2xl bg-slate-50 p-4 border border-slate-100 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <Palette className="h-4 w-4 text-[#BA68D7]" />
-                  <span className="font-semibold text-slate-700">Need a custom look?</span>
+            </div>
+            <div className="-mt-4 ml-8 rounded-3xl bg-[#291E29] p-6 text-[#FFF6E9] shadow-xl">
+              <p className="text-xs text-[#FFF6E9]/60">Message from a customer</p>
+              <p className="mt-1 text-sm">“Do you have a slot on Saturday morning?”</p>
+              <div className="mt-4 rounded-2xl bg-white/10 p-4 text-sm">
+                <p className="text-xs text-[#FFF6E9]/60">Suggested reply</p>
+                <p className="mt-1">Yes, we have 10:30 and 11:30. You can book here: kemis-lounge.withluna.tech</p>
+                <div className="mt-3 flex gap-2 text-xs font-bold">
+                  <span className="rounded-full border border-white/30 px-3 py-1">Edit</span>
+                  <span className="rounded-full bg-[#FFA800] px-3 py-1 text-[#291E29]">Send</span>
                 </div>
-                <span className="text-[11px] text-slate-500">
-                  Choose from <strong>8 free themes</strong> or fine-tune colors in settings
-                </span>
               </div>
+              <p className="mt-3 text-xs text-[#FFF6E9]/60">You review every reply before it is sent.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 6. LIVE TENANTS PORTAL DIRECTORY */}
-      <section id="tenants" className="py-20 bg-white border-t border-[#291E29]/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          
-          {/* SME vs Enterprise Capability Showcase */}
-          <div className="rounded-3xl border border-[#291E29]/15 bg-gradient-to-br from-white to-[#FFF6E9] p-6 sm:p-10 shadow-sm space-y-6">
-            <div className="text-center max-w-2xl mx-auto space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#FFA800] bg-[#291E29] px-3.5 py-1 rounded-full">
-                SMEs &amp; Enterprises Side-by-Side
-              </span>
-              <h3 className="font-display text-2xl sm:text-3xl font-extrabold text-[#291E29]">
-                How Luna Adapts to Your Business Size
-              </h3>
-              <p className="text-xs text-[#291E29]/70">
-                No complex setup. Run a single-counter salon chair queue on your phone, or manage 50 hospital consultation desks.
-              </p>
-            </div>
+      {/* Who it is for */}
+      <section className="border-y border-[#291E29]/10 bg-white py-6">
+        <div className={`${WRAP} flex flex-wrap items-center gap-x-3 gap-y-2 text-sm`}>
+          <span className="font-bold">Made for</span>
+          {FOR.map((f) => (
+            <span key={f} className="rounded-full bg-[#FFE5B3]/60 px-3 py-1 font-semibold">{f}</span>
+          ))}
+        </div>
+      </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-              {/* SME Card */}
-              <div className="rounded-2xl border border-pink-200 bg-pink-50/50 p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl p-2 rounded-xl bg-white shadow-xs">🏪</span>
-                  <div>
-                    <h4 className="font-bold text-base text-slate-900">For Small Businesses &amp; Local Shops</h4>
-                    <p className="text-[11px] text-slate-500">Salons, barbers, auto repair, cafes, bakeries &amp; boutiques</p>
-                  </div>
-                </div>
-                <ul className="space-y-2 text-xs text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Zero Hardware Required:</strong> Run your entire queue and call customers right from your smartphone or tablet.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Get ready before the visit:</strong> Customers can share style photos or describe a repair before they arrive.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Business page:</strong> Share your branded link (`yoursalon.withluna.tech`) on Instagram, WhatsApp, or Google Maps.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span><strong>Solo Mode:</strong> 1-tap call &amp; serve interface tailored for solo stylists, mechanics, and baristas.</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Enterprise Card */}
-              <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-6 space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl p-2 rounded-xl bg-white shadow-xs">🏛️</span>
-                  <div>
-                    <h4 className="font-bold text-base text-slate-900">For larger teams</h4>
-                    <p className="text-[11px] text-slate-500">Commercial banks, general hospitals, telecoms &amp; civic centers</p>
-                  </div>
-                </div>
-                <ul className="space-y-2 text-xs text-slate-700">
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>All locations in one place:</strong> See what is happening at each of your branches.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Business targets:</strong> See when service times need attention and keep customers informed.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Move visits between teams:</strong> Send each customer to the right person or service desk.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
-                    <span><strong>Check documents before visits:</strong> Ask customers to share needed documents when they book.</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#BA68D7] bg-[#291E29] px-3.5 py-1 rounded-full">
-              Live Interactive Demos
-            </span>
-            <h2 className="font-display text-3xl font-extrabold text-[#291E29]">
-              Explore sample business tenants
-            </h2>
-            <p className="text-xs text-[#291E29]/70">
-              Test customer booking, document &amp; photo clearance, and staff ops consoles on pre-configured SME &amp; enterprise portals.
-            </p>
-
-            {/* Filter Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setTenantFilter('all')}
-                className={`rounded-full px-4 py-2 text-xs font-bold transition min-h-[40px] ${
-                  tenantFilter === 'all'
-                    ? 'bg-[#291E29] text-[#FFF6E9] shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                All Demos ({TENANTS.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setTenantFilter('sme')}
-                className={`rounded-full px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 min-h-[40px] ${
-                  tenantFilter === 'sme'
-                    ? 'bg-[#831843] text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <span>🏪 Small Businesses &amp; SMEs ({TENANTS.filter((t) => t.scale === 'sme').length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setTenantFilter('enterprise')}
-                className={`rounded-full px-4 py-2 text-xs font-bold transition flex items-center gap-1.5 min-h-[40px] ${
-                  tenantFilter === 'enterprise'
-                    ? 'bg-[#0057B8] text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                <span>🏛️ Enterprises &amp; Institutions ({TENANTS.filter((t) => t.scale === 'enterprise').length})</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTenants.map((tenant) => (
-              <div
-                key={tenant.slug}
-                className="rounded-3xl border border-[#291E29]/15 bg-[#FFF6E9]/50 p-6 flex flex-col justify-between shadow-sm hover:shadow-lg transition space-y-6"
-              >
-                <div className="space-y-4">
-                  <div className="flex justify-between items-start">
-                    <span className="rounded-full bg-white border border-[#291E29]/10 px-3 py-1 text-[11px] font-bold text-[#291E29] flex items-center gap-1">
-                      <span>{tenant.icon}</span>
-                      <span>{tenant.badge}</span>
-                    </span>
-                    <span className="text-xs font-mono text-slate-400">{tenant.slug}.withluna.tech</span>
-                  </div>
-
-                  <div>
-                    <h3 className="font-display text-xl font-bold text-[#291E29]">{tenant.name}</h3>
-                    <p className="text-[11px] font-semibold text-[#BA68D7] mt-0.5">{tenant.industry}</p>
-                  </div>
-
-                  <p className="text-xs text-[#291E29]/70 leading-relaxed">{tenant.desc}</p>
-                </div>
-
-                <div className="space-y-2 pt-4 border-t border-[#291E29]/10 text-xs">
-                  <Link
-                    href={`/tenant/${tenant.slug}`}
-                    className="w-full flex items-center justify-between rounded-xl bg-[#291E29] px-4 py-2.5 font-bold text-[#FFF6E9] hover:bg-[#341539] transition min-h-[44px]"
-                  >
-                    <span>View Customer Portal</span>
-                    <ExternalLink className="h-3.5 w-3.5 text-[#FFA800]" />
-                  </Link>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      href={`/tenant/${tenant.slug}/book-queue`}
-                      className="rounded-xl border border-[#291E29]/20 bg-white py-2 text-center text-[11px] font-bold text-[#291E29] hover:bg-slate-50 transition min-h-[40px] flex items-center justify-center"
-                    >
-                      Book Ticket
-                    </Link>
-                    <Link
-                      href={`/tenant/${tenant.slug}/staff/ops-console`}
-                      className="rounded-xl border border-[#291E29]/20 bg-white py-2 text-center text-[11px] font-bold text-[#291E29] hover:bg-slate-50 transition min-h-[40px] flex items-center justify-center"
-                    >
-                      Staff Console
-                    </Link>
-                  </div>
-                </div>
+      {/* Outcomes */}
+      <section className="py-20">
+        <div className={WRAP}>
+          <h2 className="max-w-2xl font-title text-3xl font-bold sm:text-4xl">
+            Three jobs Luna takes off your hands.
+          </h2>
+          <div className="mt-12 grid gap-10 md:grid-cols-3">
+            {OUTCOMES.map((o) => (
+              <div key={o.title} className="border-t-2 border-[#291E29] pt-5">
+                <h3 className="text-lg font-bold">{o.title}</h3>
+                <p className="mt-3 leading-relaxed text-[#291E29]/75">{o.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 7. FOOTER */}
-      <footer className="bg-[#291E29] text-[#FFF6E9] py-14 border-t border-[#341539]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div className="space-y-4 md:col-span-2">
-              <LunaLogo size={36} variant="light" showTagline />
-              <p className="text-xs text-[#FFF6E9]/65 max-w-sm leading-relaxed">
-                Luna brings your customer conversations, social publishing, and everyday service into one workspace.
-              </p>
-              <div className="flex flex-wrap gap-3 text-xs text-[#FFF6E9]/75" aria-label="Luna social channels">
-                {['Instagram', 'X', 'LinkedIn', 'TikTok'].map(channel => <span key={channel} className="rounded-md border border-white/20 px-3 py-1.5" title="Profile link coming soon">{channel}</span>)}
-              </div>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <h4 className="font-bold text-[#FFA800] uppercase tracking-wider text-[11px]">Solutions</h4>
-              <ul className="space-y-2 text-[#FFF6E9]/75">
-                <li><Link href="/tenant/acme-bank" className="hover:text-white">Banking & Financial</Link></li>
-                <li><Link href="/tenant/city-hospital" className="hover:text-white">Healthcare & Clinics</Link></li>
-                <li><Link href="/tenant/luna-telecom" className="hover:text-white">Telecom & Flagships</Link></li>
-                <li><Link href="/tenant/acme-bank/staff/ops-console" className="hover:text-white">Front desk</Link></li>
-              </ul>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <h4 className="font-bold text-[#FFA800] uppercase tracking-wider text-[11px]">Platform</h4>
-              <ul className="space-y-2 text-[#FFF6E9]/75">
-                <li><Link href="/register" className="hover:text-white">Start free</Link></li>
-                <li><Link href="/login" className="hover:text-white">Sign in</Link></li>
-                <li><Link href="/tenant/acme-bank/staff/settings" className="hover:text-white">Business page design</Link></li>
-                <li><Link href="/tenant/kemis-lounge/staff/social-studio" className="hover:text-white">Social Studio</Link></li>
-              </ul>
-            </div>
+      {/* Product */}
+      <section id="product" className="bg-white py-20">
+        <div className={`${WRAP} grid gap-14 lg:grid-cols-2`}>
+          <div>
+            <h2 className="font-title text-3xl font-bold">Your booking page</h2>
+            <p className="mt-3 max-w-md text-[#291E29]/75">A page of your own that customers can open from any link, with your colours and logo.</p>
+            <ul className="mt-6 space-y-3">
+              {[
+                'Your own address, yourbusiness.withluna.tech',
+                'Customers choose a service and a time',
+                'Secure online payment when they book',
+                'A live ticket they can follow and share on any platform',
+                'A customer list that grows with every booking',
+              ].map((t) => (
+                <li key={t} className="flex gap-3"><Check size={18} className="mt-1 shrink-0" />{t}</li>
+              ))}
+            </ul>
           </div>
-
-          <div className="pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between text-xs text-[#FFF6E9]/50 gap-4">
-            <div>&copy; {new Date().getFullYear()} Luna Platform. All rights reserved.</div>
-            <div className="flex gap-4">
-              <span>Beyond the Expected</span>
-              <span>&middot;</span>
-              <span>withluna.tech</span>
-            </div>
+          <div>
+            <h2 className="font-title text-3xl font-bold">Social Studio</h2>
+            <p className="mt-3 max-w-md text-[#291E29]/75">One place to plan your posts and keep up with the people who message you.</p>
+            <ul className="mt-6 space-y-3">
+              {[
+                'Content ideas written for your kind of business',
+                'A post calendar that reminds you when to publish',
+                'One inbox for Facebook, Instagram, Threads, X, TikTok, LinkedIn and WhatsApp',
+                'Suggested replies that you review and send',
+                'Analytics on what your audience responds to',
+              ].map((t) => (
+                <li key={t} className="flex gap-3"><Check size={18} className="mt-1 shrink-0" />{t}</li>
+              ))}
+            </ul>
+            <p className="mt-5 text-sm text-[#291E29]/60">The inbox is part of Growth, with a 7-day free trial.</p>
           </div>
         </div>
+        <div className={`${WRAP} mt-14`}>
+          <div className="rounded-2xl border border-dashed border-[#291E29]/30 px-6 py-5 text-sm">
+            <span className="font-bold">Coming next: </span>
+            tools for branches to work together, document checks before a visit, and a dashboard that shows how your whole business is doing.
+          </div>
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section id="how" className="py-20">
+        <div className={WRAP}>
+          <h2 className="font-title text-3xl font-bold sm:text-4xl">How it works</h2>
+          <ol className="mt-12 grid gap-8 md:grid-cols-4">
+            {STEPS.map((s, i) => (
+              <li key={s.title}>
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#291E29] text-sm font-bold text-[#FFF6E9]">{i + 1}</span>
+                <h3 className="mt-4 font-bold">{s.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-[#291E29]/75">{s.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="bg-[#291E29] py-20 text-[#FFF6E9]">
+        <div className={WRAP}>
+          <h2 className="font-title text-3xl font-bold sm:text-4xl">Start free. Pay when it earns its place.</h2>
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {PLANS.map((p) => (
+              <div
+                key={p.name}
+                className={`flex flex-col rounded-2xl p-6 ${p.featured ? 'bg-[#FFF6E9] text-[#291E29]' : 'border border-white/15 bg-white/5'}`}
+              >
+                <h3 className="font-bold">{p.name}</h3>
+                <p className="mt-3 font-title text-3xl font-bold">{p.price}</p>
+                <p className={`mt-1 text-sm ${p.featured ? 'text-[#291E29]/60' : 'text-[#FFF6E9]/60'}`}>{p.note}</p>
+                <ul className="mt-5 flex-1 space-y-2 text-sm">
+                  {p.items.map((t) => (
+                    <li key={t} className="flex gap-2"><Check size={16} className="mt-0.5 shrink-0" />{t}</li>
+                  ))}
+                </ul>
+                <Link
+                  href={p.href}
+                  className={`mt-6 ${p.featured ? PRIMARY : `${BTN} border border-white/30 hover:bg-white/10`}`}
+                >
+                  {p.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+          <p className="mt-6 text-sm text-[#FFF6E9]/60">A card is needed to start the Growth trial. Prices are in naira.</p>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" className="py-20">
+        <div className="mx-auto max-w-3xl px-5">
+          <h2 className="font-title text-3xl font-bold sm:text-4xl">Questions, answered</h2>
+          <div className="mt-10 divide-y divide-[#291E29]/15 border-y border-[#291E29]/15">
+            {FAQ.map(([q, a]) => (
+              <details key={q} className="group py-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between font-bold">
+                  {q}
+                  <span className="ml-4 text-xl transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 leading-relaxed text-[#291E29]/75">{a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Closing call to action */}
+      <section className="bg-[#52215A] py-20 text-center text-[#FFF6E9]">
+        <div className="mx-auto max-w-2xl px-5">
+          <h2 className="font-title text-3xl font-bold sm:text-4xl">Your business can do more. Make it happen with Luna.</h2>
+          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href={SIGN_UP} className={PRIMARY}>Claim your free page <ArrowRight size={16} /></Link>
+            <a href={WAITLIST} className={`${BTN} border border-white/30 hover:bg-white/10`}>Join the waitlist</a>
+          </div>
+        </div>
+      </section>
+
+      <footer className="bg-[#291E29] py-12 text-sm text-[#FFF6E9]/70">
+        <div className={`${WRAP} flex flex-col gap-8 md:flex-row md:justify-between`}>
+          <div>
+            <LunaLogo size={32} variant="light" showTagline />
+            <p className="mt-4 max-w-xs">Customer service for the digital economy.</p>
+          </div>
+          <div className="flex gap-12">
+            <ul className="space-y-2">
+              <li><a href="#product" className="hover:text-white">Product</a></li>
+              <li><a href="#pricing" className="hover:text-white">Pricing</a></li>
+              <li><a href="#faq" className="hover:text-white">FAQ</a></li>
+            </ul>
+            <ul className="space-y-2">
+              <li><Link href={SIGN_UP} className="hover:text-white">Claim your free page</Link></li>
+              <li><Link href="/login" className="hover:text-white">Sign in</Link></li>
+              <li><a href={WAITLIST} className="hover:text-white">Join the waitlist</a></li>
+            </ul>
+          </div>
+        </div>
+        <p className={`${WRAP} mt-10 text-xs text-[#FFF6E9]/50`}>© 2026 Luna. Beyond the Expected. withluna.tech</p>
       </footer>
     </div>
   );

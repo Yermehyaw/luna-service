@@ -4,6 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import (
+    AuthenticatedUser,
+    enforce_tenant_isolation,
+    get_optional_current_user,
+)
 from app.models.queue import Service
 from app.realtime import broker
 from app.realtime import events
@@ -33,7 +38,14 @@ DbSession = Annotated[AsyncSession, Depends(get_db)]
 @router.post(
     "/tickets", response_model=TicketResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_ticket(payload: TicketCreate, db: DbSession) -> TicketResponse:
+async def create_ticket(
+    payload: TicketCreate,
+    db: DbSession,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
+) -> TicketResponse:
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+
     try:
         ticket = await queue_service.create_ticket(
             db,
@@ -76,7 +88,11 @@ async def list_tickets(
     active_only: bool = False,
     limit: PageLimit = 50,
     offset: PageOffset = 0,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> TicketListResponse:
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+
     tickets, total = await queue_service.list_tickets(
         db,
         business_id=business_id,
@@ -97,8 +113,14 @@ async def list_tickets(
 
 @router.get("/tickets/{ticket_number}", response_model=TicketResponse)
 async def get_ticket(
-    ticket_number: str, db: DbSession, business_id: str = Query(min_length=1)
+    ticket_number: str,
+    db: DbSession,
+    business_id: str = Query(min_length=1),
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> TicketResponse:
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+
     try:
         ticket = await queue_service.get_ticket(
             db, business_id=business_id, ticket_number=ticket_number
@@ -118,7 +140,16 @@ async def update_ticket_status(
     payload: TicketStatusUpdate,
     db: DbSession,
     business_id: str = Query(min_length=1),
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> TicketResponse:
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required to update ticket status",
+            )
+
     try:
         # Read before transitioning. transition_ticket mutates the same session,
         # and this session's identity map hands back the very same object, so

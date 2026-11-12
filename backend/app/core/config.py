@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     CLERK_PEM_PUBLIC_KEY: str = ""
     CLERK_ISSUER: str = ""
 
+    # --- Authentication (Better-Auth JWT Verification) ---
+    BETTER_AUTH_SECRET: str = (
+        "luna_secret_auth_key_2026_super_secure_multi_tenant"
+    )
+    BETTER_AUTH_ALGORITHM: str = "HS256"
+
     # --- AI ---
     # Which AI backend to use. "auto" means: use OpenAI when a key is configured,
     # otherwise fall back to the local HuggingFace models, otherwise degrade to no
