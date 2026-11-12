@@ -47,6 +47,11 @@ import {
   Globe,
   CreditCard,
   ShieldAlert,
+  ChevronLeft,
+  ChevronRight,
+  Trash2,
+  Edit3,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 export type ChannelPlatform =
