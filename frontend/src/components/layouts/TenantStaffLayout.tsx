@@ -178,7 +178,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href={`${basePath}/dashboard`} className="flex items-center gap-2 shrink-0">
+          <Link href="/" title="Go to Luna Home" className="flex items-center gap-2 shrink-0 hover:opacity-85 transition">
             {tenant.branding?.logoUrl ? (
               <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-white p-1 shadow-sm">
                 <img src={tenant.branding.logoUrl} alt={`${tenant.name} logo`} className="h-full w-full object-contain" />
@@ -370,6 +370,26 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 >
                   Switch
                 </button>
+              </div>
+
+              {/* Animated Upgrade Button in Mobile Drawer */}
+              <div className="mt-3">
+                <Link
+                  href={`${basePath}/plans`}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="group relative flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-[#FFA800] via-[#FFD269] to-[#FFA800] text-[#291E29] font-black text-xs shadow-md shadow-[#FFA800]/25 transition-all active:scale-95 overflow-hidden"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-[#291E29] text-[#FFA800] shrink-0">
+                      <Sparkles className="h-3 w-3 animate-spin" style={{ animationDuration: '6s' }} />
+                    </div>
+                    <span>Upgrade to Growth</span>
+                  </div>
+                  <span className="text-[10px] bg-[#291E29]/15 px-2 py-0.5 rounded-md uppercase tracking-wider font-extrabold flex items-center gap-1">
+                    <span>Trial</span>
+                    <ArrowRight className="h-2.5 w-2.5" />
+                  </span>
+                </Link>
               </div>
 
               <nav className="mt-4 flex-1 space-y-1.5 text-xs font-semibold overflow-y-auto">
