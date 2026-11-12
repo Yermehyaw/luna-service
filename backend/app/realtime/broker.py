@@ -96,10 +96,16 @@ class QueueBroker:
 
     async def _connect(self) -> bool:
         try:
+            ssl_kwargs = {}
+            if self._redis_url.startswith("rediss://"):
+                # Upstash Redis uses TLS; ssl_cert_reqs=None prevents verification failures in minimal container images
+                ssl_kwargs["ssl_cert_reqs"] = None
+
             client = aioredis.from_url(
                 self._redis_url,
                 decode_responses=True,
                 socket_connect_timeout=CONNECT_TIMEOUT_SECONDS,
+                **ssl_kwargs,
             )
             await client.ping()
         except Exception as error:

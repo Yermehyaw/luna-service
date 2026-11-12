@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - PLATFORM_DOMAIN=${PLATFORM_DOMAIN:-withluna.tech}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    expose:
+      - "8000"
+    environment:
+      - ENVIRONMENT=production
+      - PORT=8000
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-luna_user}:${POSTGRES_PASSWORD:-luna_secure_pass}@postgres:5432/${POSTGRES_DB:-luna_db}
+      - REDIS_URL=redis://redis:6379
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-luna_secret_auth_key_2026_super_secure_multi_tenant}
+      - LUNA_MODAL_API_URL=${LUNA_MODAL_API_URL}
+      - CORS_ORIGINS=https://${PLATFORM_DOMAIN:-withluna.tech},https://app.${PLATFORM_DOMAIN:-withluna.tech}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-luna_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-luna_secure_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-luna_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-luna_user} -d ${POSTGRES_DB:-luna_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+volumes:
+  caddy_data:
+  caddy_config:
+  postgres_data:
+  redis_data:

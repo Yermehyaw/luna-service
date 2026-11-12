@@ -37,3 +37,25 @@ def test_is_production_recognises_production_and_prod():
 def test_is_production_false_for_development_and_test():
     assert Settings(ENVIRONMENT="development").is_production is False
     assert Settings(ENVIRONMENT="test").is_production is False
+
+
+def test_modal_api_url_auto_configures_classifier_and_model_endpoints():
+    settings = Settings(
+        LUNA_MODAL_API_URL="https://myorg--luna-ai-api.modal.run"
+    )
+    assert settings.LUNA_CLASSIFIER_URL == "https://myorg--luna-ai-api.modal.run"
+    assert settings.LUNA_MODEL_URL == "https://myorg--luna-ai-api.modal.run/v1"
+    assert settings.LUNA_MODEL_NAME == "Qwen/Qwen2.5-3B-Instruct"
+
+
+def test_modal_api_url_preserves_explicit_custom_overrides():
+    settings = Settings(
+        LUNA_MODAL_API_URL="https://myorg--luna-ai-api.modal.run",
+        LUNA_CLASSIFIER_URL="https://custom-classifier.example.com",
+        LUNA_MODEL_URL="https://custom-model.example.com/v1",
+        LUNA_MODEL_NAME="custom-model",
+    )
+    assert settings.LUNA_CLASSIFIER_URL == "https://custom-classifier.example.com"
+    assert settings.LUNA_MODEL_URL == "https://custom-model.example.com/v1"
+    assert settings.LUNA_MODEL_NAME == "custom-model"
+

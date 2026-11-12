@@ -1,0 +1,33 @@
+# Koyeb deployment configuration for Luna API (FastAPI backend)
+# Deploy via Koyeb CLI: koyeb service create --app luna --git github.com/<user>/luna-service --git-workdir backend --ports 8000:http --routes /:8000
+# Or import directly in the Koyeb Web Console.
+
+name: luna
+services:
+  - name: api
+    type: web
+    git:
+      branch: main
+      workdir: backend
+    build:
+      dockerfile: Dockerfile
+    instance_type: nano
+    regions:
+      - fra
+    ports:
+      - port: 8000
+        path: /
+    routes:
+      - path: /
+        port: 8000
+    health_checks:
+      - http:
+          path: /health
+          port: 8000
+        interval: 30
+        timeout: 5
+    env:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8000"

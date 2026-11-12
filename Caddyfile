@@ -1,0 +1,11 @@
+# Caddy reverse-proxy configuration for Luna on Oracle Cloud VM
+# Automatic HTTPS via Let's Encrypt with WebSocket support for queue and social studio real-time feeds
+
+api.{$PLATFORM_DOMAIN:withluna.tech} {
+    reverse_proxy api:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+}

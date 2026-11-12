@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -53,7 +53,10 @@ class Settings(BaseSettings):
     # HuggingFace-hosted classifier VM (DistilBERT sentiment + BART intent)
     LUNA_CLASSIFIER_URL: str = ""
 
-    # HuggingFace Inference Providers (OpenAI-compatible) for generation
+    # Modal-hosted unified AI endpoint (sentiment + intent + Qwen completions)
+    LUNA_MODAL_API_URL: str = ""
+
+    # HuggingFace Inference Providers (OpenAI-compatible) or Modal /v1 for generation
     LUNA_MODEL_URL: str = "https://router.huggingface.co/v1"
     LUNA_MODEL_API_KEY: str = ""
     LUNA_MODEL_NAME: str = "Qwen/Qwen2.5-7B-Instruct"
@@ -102,6 +105,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://withluna.tech",
+        "https://app.withluna.tech",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -110,6 +115,18 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [origin.strip() for origin in value.split(",") if origin.strip()]
         return value
+
+    @model_validator(mode="after")
+    def _apply_modal_defaults(self):
+        if self.LUNA_MODAL_API_URL:
+            modal_base = self.LUNA_MODAL_API_URL.rstrip("/")
+            if not self.LUNA_CLASSIFIER_URL:
+                self.LUNA_CLASSIFIER_URL = modal_base
+            if not self.LUNA_MODEL_URL or self.LUNA_MODEL_URL == "https://router.huggingface.co/v1":
+                self.LUNA_MODEL_URL = f"{modal_base}/v1"
+            if not self.LUNA_MODEL_NAME or self.LUNA_MODEL_NAME == "Qwen/Qwen2.5-7B-Instruct":
+                self.LUNA_MODEL_NAME = "Qwen/Qwen2.5-3B-Instruct"
+        return self
 
     @property
     def is_production(self) -> bool:
