@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check } from 'lucide-react';
 import { Nav, Footer, CtaBand, Reveal, PRIMARY, SIGN_UP, WRAP } from '@/components/Chrome';
+import { useAuth } from '@/lib/auth';
 
 const FOR = ['Salons and barbers', 'Caterers', 'Tutors and training centres', 'Photographers', 'Event planners', 'Clinics', 'Fitness studios'];
 const OUTCOMES = [
@@ -14,6 +15,7 @@ const OUTCOMES = [
 const STEPS = ['Claim your page', 'Share your link', 'Customers book and pay', 'Stay visible'];
 
 export default function Home() {
+  const { user } = useAuth();
   const [name, setName] = useState('');
   const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 30);
   return (
@@ -30,13 +32,34 @@ export default function Home() {
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-[#FFF6E9]/80">
                 Luna gives your business a free page where customers book, pay and follow their place in the queue. Social Studio helps you plan posts and handle customer messages from one place.
               </p>
-              <div className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row">
-                <div className="flex flex-1 items-center rounded-full bg-white pl-5 pr-3 text-sm text-[#291E29]">
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="yourbusiness" aria-label="Your business name" className="min-w-0 flex-1 bg-transparent py-3 font-semibold outline-none placeholder:font-normal" />
-                  <span className="text-[#291E29]/50">.withluna.tech</span>
+              {user ? (
+                <div className="mt-8 flex flex-col sm:flex-row items-center gap-3">
+                  <Link
+                    href={
+                      user.role === 'customer'
+                        ? `/tenant/${user.tenantId || 'kemis-lounge'}/track`
+                        : `/tenant/${user.tenantId || 'kemis-lounge'}/staff/ops-console`
+                    }
+                    className={PRIMARY}
+                  >
+                    Go to your Dashboard <ArrowRight size={16} />
+                  </Link>
+                  <Link
+                    href={`/tenant/${user.tenantId || 'kemis-lounge'}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-white/30 px-5 py-3 text-sm font-bold text-white hover:bg-white/10 transition"
+                  >
+                    <span>View Storefront Portal</span>
+                  </Link>
                 </div>
-                <Link href={`${SIGN_UP}?subdomain=${encodeURIComponent(slug || 'mybusiness')}`} className={PRIMARY}>Claim your free page <ArrowRight size={16} /></Link>
-              </div>
+              ) : (
+                <div className="mt-8 flex max-w-xl flex-col gap-3 sm:flex-row">
+                  <div className="flex flex-1 items-center rounded-full bg-white pl-5 pr-3 text-sm text-[#291E29]">
+                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="yourbusiness" aria-label="Your business name" className="min-w-0 flex-1 bg-transparent py-3 font-semibold outline-none placeholder:font-normal" />
+                    <span className="text-[#291E29]/50">.withluna.tech</span>
+                  </div>
+                  <Link href={`${SIGN_UP}?subdomain=${encodeURIComponent(slug || 'mybusiness')}`} className={PRIMARY}>Claim your free page <ArrowRight size={16} /></Link>
+                </div>
+              )}
               <p className="mt-4 text-sm text-[#FFF6E9]/60">Free to start. Built in Nigeria, and now onboarding our first businesses in Benin City.</p>
               <Link href="/tenant/kemis-lounge" className="mt-3 inline-flex items-center gap-1 text-sm font-bold underline underline-offset-4">See an example booking page <ArrowRight size={14} /></Link>
             </div>

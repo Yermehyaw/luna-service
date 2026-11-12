@@ -492,32 +492,57 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
 
           {/* User Account Role Card inside Sidebar */}
           {!isSlim ? (
-            <div className="mt-3 w-full p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className="h-8 w-8 rounded-xl flex items-center justify-center text-white text-xs font-extrabold shrink-0"
-                  style={{ backgroundColor: user?.avatarColor || (isOwner ? '#831843' : '#D97706') }}
+            <>
+              <div className="mt-3 w-full p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className="h-8 w-8 rounded-xl flex items-center justify-center text-white text-xs font-extrabold shrink-0"
+                    style={{ backgroundColor: user?.avatarColor || (isOwner ? '#831843' : '#D97706') }}
+                  >
+                    {isOwner ? '👑' : '👔'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-extrabold text-white truncate">{user?.name || 'Active User'}</p>
+                    <p className="text-[10px] text-[#FFA800] font-bold truncate">
+                      {isOwner ? 'Business Owner' : user?.designation || 'Staff Member'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSwitchAccountOpen(true)}
+                  className="p-1.5 rounded-lg bg-white/10 hover:bg-[#FFA800] hover:text-[#291E29] transition text-white"
+                  title="Switch Account / Role"
                 >
-                  {isOwner ? '👑' : '👔'}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-extrabold text-white truncate">{user?.name || 'Active User'}</p>
-                  <p className="text-[10px] text-[#FFA800] font-bold truncate">
-                    {isOwner ? 'Business Owner' : user?.designation || 'Staff Member'}
-                  </p>
-                </div>
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setSwitchAccountOpen(true)}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-[#FFA800] hover:text-[#291E29] transition text-white"
-                title="Switch Account / Role"
-              >
-                <ArrowRightLeft className="h-3.5 w-3.5" />
-              </button>
-            </div>
+
+              {/* Animated Upgrade Button below profile switcher */}
+              <div className="mt-2.5 w-full">
+                <Link
+                  href={`${basePath}/plans`}
+                  className="group relative flex items-center justify-between w-full px-3 py-2 rounded-xl bg-gradient-to-r from-[#FFA800] via-[#FFD269] to-[#FFA800] text-[#291E29] font-black text-xs shadow-md shadow-[#FFA800]/25 hover:shadow-lg hover:shadow-[#FFA800]/40 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] overflow-hidden"
+                >
+                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none" />
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-lg bg-[#291E29] text-[#FFA800] shrink-0 shadow-xs">
+                      <Sparkles className="h-3 w-3 animate-spin" style={{ animationDuration: '6s' }} />
+                    </div>
+                    <div className="text-left leading-tight">
+                      <span className="block font-black tracking-tight">Upgrade</span>
+                      <span className="block text-[9px] font-bold text-[#291E29]/75">7-Day Free Trial</span>
+                    </div>
+                  </div>
+                  <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-[#291E29]/15 px-2 py-0.5 rounded-md shrink-0">
+                    <span>Growth</span>
+                    <ArrowRight className="h-2.5 w-2.5 group-hover:translate-x-0.5 transition-transform" />
+                  </span>
+                </Link>
+              </div>
+            </>
           ) : (
-            <div className="mt-3 w-full flex justify-center">
+            <div className="mt-3 w-full flex flex-col items-center gap-2">
               <button
                 type="button"
                 onClick={() => setSwitchAccountOpen(true)}
@@ -530,6 +555,23 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                   <span>{user?.name} ({isOwner ? 'Owner' : 'Staff'})</span>
                 </div>
               </button>
+
+              {/* Slim Animated Upgrade Pill */}
+              <Link
+                href={`${basePath}/plans`}
+                className="group relative h-9 w-9 rounded-xl bg-gradient-to-br from-[#FFA800] to-[#FFB11A] text-[#291E29] flex items-center justify-center shadow-md shadow-[#FFA800]/30 hover:scale-105 active:scale-95 transition-all"
+                title="Upgrade Plan (Growth 7-Day Trial)"
+                aria-label="Upgrade Plan"
+              >
+                <Sparkles className="h-4 w-4 animate-spin" style={{ animationDuration: '6s' }} />
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
+                </span>
+                <div className="absolute left-full ml-3 px-2.5 py-1 bg-[#291E29] text-[#FFA800] text-xs font-black rounded-lg shadow-2xl border border-white/15 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  Upgrade Plan · 7-Day Free Trial
+                </div>
+              </Link>
             </div>
           )}
 

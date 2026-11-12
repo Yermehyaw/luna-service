@@ -161,3 +161,39 @@ async def test_payments_tenant_isolation(mock_db):
         )
         assert res_subaccount.status_code == 403
         assert "Business owner privileges required" in res_subaccount.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_ai_feedback_tenant_isolation(mock_db):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Other tenant cannot read AI feedback telemetry
+        other_tenant_token = create_token("tenant_admin", "other-salon")
+        res_feedback = await client.get(
+            "/api/ai/feedback?business_id=kemis-lounge",
+            headers={"Authorization": f"Bearer {other_tenant_token}"},
+        )
+        assert res_feedback.status_code == 403
+        assert "Multi-tenant isolation violation" in res_feedback.json()["detail"]
+
+        # 2. Customer cannot read AI feedback
+        customer_token = create_token("customer", "kemis-lounge")
+        res_cust_feedback = await client.get(
+            "/api/ai/feedback?business_id=kemis-lounge",
+            headers={"Authorization": f"Bearer {customer_token}"},
+        )
+        assert res_cust_feedback.status_code == 403
+        assert "Staff privileges required" in res_cust_feedback.json()["detail"]
+
+        # 3. Staff cannot export AI training dataset (Owner/admin only)
+        staff_token = create_token("staff", "kemis-lounge")
+        res_export = await client.post(
+            "/api/ai/training/export",
+            json={
+                "business_id": "kemis-lounge",
+                "kind": "reply_pairs",
+            },
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+        assert res_export.status_code == 403
+        assert "Business owner privileges required" in res_export.json()["detail"]

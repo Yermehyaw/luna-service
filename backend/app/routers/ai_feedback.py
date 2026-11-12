@@ -5,6 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.security import (
+    AuthenticatedUser,
+    enforce_tenant_isolation,
+    get_optional_current_user,
+)
 from app.models.ai_feedback import DatasetKind
 from app.schemas.ai_feedback import (
     DatasetExportRequest,
@@ -23,7 +28,14 @@ DbSession = Annotated[AsyncSession, Depends(get_db)]
 @router.post(
     "/feedback", response_model=FeedbackResponse, status_code=status.HTTP_201_CREATED
 )
-async def create_feedback(payload: FeedbackCreate, db: DbSession) -> FeedbackResponse:
+async def create_feedback(
+    payload: FeedbackCreate,
+    db: DbSession,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
+) -> FeedbackResponse:
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+
     feedback = await ai_feedback.record_feedback(
         db,
         business_id=payload.business_id,
@@ -47,7 +59,16 @@ async def read_feedback(
     business_id: str = Query(min_length=1),
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> list[FeedbackResponse]:
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required to read feedback telemetry",
+            )
+
     rows = await ai_feedback.list_feedback(
         db, business_id=business_id, limit=limit, offset=offset
     )
@@ -69,8 +90,18 @@ async def purge_feedback(db: DbSession) -> PurgeResponse:
     status_code=status.HTTP_201_CREATED,
 )
 async def export_training_dataset(
-    payload: DatasetExportRequest, db: DbSession
+    payload: DatasetExportRequest,
+    db: DbSession,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> DatasetResponse:
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+        if not current_user.is_tenant_admin:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Business owner privileges required to export training datasets",
+            )
+
     try:
         dataset = await training_data.export_dataset(
             db,

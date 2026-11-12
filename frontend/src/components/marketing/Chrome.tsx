@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronDown, LayoutDashboard, LogOut, User as UserIcon, Store } from 'lucide-react';
 import { LunaLogo } from '@/components/shared/LunaMark';
+import { useAuth } from '@/lib/auth';
 
 // Swap SIGN_UP for WAITLIST if self-service sign-up is not open yet.
 export const SIGN_UP = '/register';
@@ -41,6 +42,26 @@ export function Reveal({ children, className = '', delay = 0 }: { children: Reac
 }
 
 export function Nav() {
+  const { user, logout } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const tenantSlug = user?.tenantId || 'kemis-lounge';
+  const dashboardHref =
+    user?.role === 'customer'
+      ? `/tenant/${tenantSlug}/track`
+      : `/tenant/${tenantSlug}/staff/ops-console`;
+
   return (
     <header className="sticky top-0 z-50 border-b border-[#291E29]/10 bg-[#FFF6E9]/85 backdrop-blur-xl">
       <style>{CSS}</style>
@@ -51,9 +72,89 @@ export function Nav() {
           <Link href="/how-it-works" className="hover:opacity-60">How it works</Link>
           <Link href="/pricing" className="hover:opacity-60">Pricing</Link>
         </nav>
-        <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden text-sm font-semibold hover:opacity-60 sm:block">Sign in</Link>
-          <Link href={SIGN_UP} className={`${PRIMARY} !px-5 !py-2`}>Claim your free page</Link>
+        <div className="flex items-center gap-3">
+          {user ? (
+            <div className="relative flex items-center gap-2" ref={menuRef}>
+              <Link
+                href={dashboardHref}
+                className={`${PRIMARY} !px-4 !py-2 text-xs font-black shadow-sm`}
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span>Dashboard</span>
+              </Link>
+
+              {/* Profile Avatar Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setMenuOpen(!menuOpen)}
+                className="flex items-center gap-2 rounded-full border border-[#291E29]/20 bg-white/80 py-1.5 pl-2 pr-3 text-xs font-bold transition hover:bg-white active:scale-95 shadow-xs"
+                aria-label="User Profile and Dashboard Menu"
+              >
+                <span
+                  className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-black text-white shadow-xs"
+                  style={{ backgroundColor: user.avatarColor || '#291E29' }}
+                >
+                  {user.role === 'tenant_admin' || user.role === 'super_admin' ? '👑' : user.name?.[0]?.toUpperCase() || 'U'}
+                </span>
+                <span className="hidden font-extrabold sm:inline max-w-[100px] truncate">{user.name}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-[#291E29]/60 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Dropdown Card */}
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-[#291E29]/15 bg-white p-3 text-[#291E29] shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="border-b border-[#291E29]/10 pb-2.5 mb-2 px-1">
+                    <p className="text-xs font-black truncate">{user.name}</p>
+                    <p className="text-[11px] text-[#291E29]/60 truncate">{user.email}</p>
+                    <span className="mt-1 inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#FFE5B3] text-[#291E29]">
+                      {user.role === 'tenant_admin'
+                        ? '👑 Business Owner'
+                        : user.role === 'staff'
+                        ? 'Staff Specialist'
+                        : 'Customer'}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Link
+                      href={dashboardHref}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl bg-[#291E29] text-[#FFA800] text-xs font-bold hover:bg-[#341539] transition"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </Link>
+
+                    <Link
+                      href={`/tenant/${tenantSlug}`}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs font-semibold hover:bg-[#291E29]/5 transition"
+                    >
+                      <Store className="h-4 w-4 text-[#291E29]/70" />
+                      <span>Storefront Portal</span>
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        logout();
+                      }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <Link href="/login" className="hidden text-sm font-semibold hover:opacity-60 sm:block">Sign in</Link>
+              <Link href={SIGN_UP} className={`${PRIMARY} !px-5 !py-2`}>Claim your free page</Link>
+            </>
+          )}
         </div>
       </div>
     </header>
