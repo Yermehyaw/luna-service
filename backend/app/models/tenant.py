@@ -9,7 +9,7 @@ from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
     from app.models.customer import Customer
-    from app.models.payment import Payment
+    from app.models.payment import Payment, Transaction
     from app.models.queue import Service, Ticket
     from app.models.social import SocialAccount
 
@@ -41,6 +41,18 @@ class Business(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     interactions_used_this_month: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+    paystack_subaccount_code: Mapped[str | None] = mapped_column(
+        String(64), nullable=True
+    )
+    payout_bank_name: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    )
+    payout_account_number: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )
+    payout_account_holder: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
 
     branches: Mapped[list[Branch]] = relationship(
         back_populates="business", cascade="all, delete-orphan", passive_deletes=True
@@ -55,6 +67,9 @@ class Business(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         back_populates="business", cascade="all, delete-orphan", passive_deletes=True
     )
     payments: Mapped[list[Payment]] = relationship(
+        back_populates="business", cascade="all, delete-orphan", passive_deletes=True
+    )
+    transactions: Mapped[list[Transaction]] = relationship(
         back_populates="business", cascade="all, delete-orphan", passive_deletes=True
     )
     social_accounts: Mapped[list[SocialAccount]] = relationship(

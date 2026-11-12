@@ -6,7 +6,13 @@ from app.models.ai_feedback import (
 )
 from app.models.base import Base, TimestampMixin, UUIDPrimaryKeyMixin, new_id
 from app.models.customer import Customer
-from app.models.payment import Payment, PaymentStatus
+from app.models.payment import (
+    GatewayProvider,
+    Payment,
+    PaymentStatus,
+    Transaction,
+    TransactionStatus,
+)
 from app.models.queue import (
     ACTIVE_STATUSES,
     ALLOWED_TRANSITIONS,
@@ -41,6 +47,7 @@ __all__ = [
     "Customer",
     "DatasetKind",
     "FeedbackOutcome",
+    "GatewayProvider",
     "Intent",
     "Payment",
     "PaymentStatus",
@@ -57,6 +64,8 @@ __all__ = [
     "Ticket",
     "TicketStatus",
     "TimestampMixin",
+    "Transaction",
+    "TransactionStatus",
     "UUIDPrimaryKeyMixin",
     "new_id",
 ]

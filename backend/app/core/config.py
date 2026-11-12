@@ -66,6 +66,23 @@ class Settings(BaseSettings):
     SOCIAL_CREDITS_TRIAL_DEFAULT: int = 50
     SOCIAL_PUBLISHING_MODE: str = "REMINDER"
 
+    # --- Payments Engine (PayPal B2B & Paystack B2B2C Split) ---
+    PAYPAL_CLIENT_ID: str = ""
+    PAYPAL_CLIENT_SECRET: str = ""
+    PAYPAL_BASE_URL: str = "https://api-m.sandbox.paypal.com"
+    PAYPAL_WEBHOOK_ID: str = ""
+    PAYPAL_CURRENCY: str = "USD"
+
+    PAYSTACK_SECRET_KEY: str = ""
+    PAYSTACK_PUBLIC_KEY: str = ""
+    PAYSTACK_BASE_URL: str = "https://api.paystack.co"
+    PAYSTACK_WEBHOOK_SECRET: str = ""
+    PAYSTACK_CURRENCY: str = "NGN"
+
+    # Micro-margin deducted by Luna on B2B2C customer bookings
+    LUNA_PLATFORM_MARGIN_PERCENT: float = 1.0  # 1%
+    LUNA_PLATFORM_MARGIN_FIXED_KOBO: int = 10000  # ₦100 fixed platform profit
+
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [
