@@ -73,6 +73,16 @@ class Intent(str, enum.Enum):
         return [m.value for m in cls]
 
 
+class QueryType(str, enum.Enum):
+    DM = "dm"
+    COMMENT = "comment"
+    MENTION = "mention"
+
+    @classmethod
+    def values(cls) -> list[str]:
+        return [m.value for m in cls]
+
+
 class SocialAccount(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     """One handle on one platform. A business owns many of these."""
 
@@ -123,6 +133,7 @@ class SocialPost(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     author_id: Mapped[str | None] = mapped_column(String(36), index=True)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    media_url: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=PostStatus.DRAFT.value, index=True
     )
@@ -189,7 +200,12 @@ class SocialQuery(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         index=True,
     )
     author_handle: Mapped[str] = mapped_column(String(255), nullable=False)
+    query_type: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="dm", server_default="dm", index=True
+    )
+    post_id: Mapped[str | None] = mapped_column(String(255))
     body: Mapped[str] = mapped_column(Text, nullable=False)
+    media_url: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         String(32), nullable=False, default=QueryStatus.OPEN.value, index=True
     )
@@ -214,11 +230,16 @@ class SocialQuery(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             "status",
             "sentiment",
         ),
+        Index(
+            "ix_social_queries_business_type",
+            "business_id",
+            "query_type",
+        ),
     )
 
 
 class ContentCredit(UUIDPrimaryKeyMixin, TimestampMixin, Base):
-    """Daily idea-generation credits. Basic tier gets a free daily allowance."""
+    """Idea-generation credits. Free tier gets a free allowance."""
 
     __tablename__ = "content_credits"
 

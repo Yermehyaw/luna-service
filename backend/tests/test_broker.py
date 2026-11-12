@@ -36,10 +36,10 @@ class FakePubSub:
         self._entries = entries
         self.pattern = None
 
-    async def psubscribe(self, pattern: str) -> None:
-        self.pattern = pattern
+    async def psubscribe(self, *patterns: str) -> None:
+        self.pattern = patterns[0] if patterns else None
 
-    async def punsubscribe(self, pattern: str) -> None:
+    async def punsubscribe(self, *patterns: str) -> None:
         pass
 
     async def aclose(self) -> None:

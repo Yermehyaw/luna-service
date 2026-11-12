@@ -6,7 +6,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import dispose_engine
 from app.core.health import HealthStatus, check_database
-from app.routers import queue, ws
+from app.payments import router as payments_router
+from app.routers import ai_feedback, queue, ws
+from app.social_studio import router as social_router
+from app.social_studio.router import social_inbox_ws
 from app.realtime import broker, manager
 
 
@@ -38,6 +41,12 @@ app.add_middleware(
 
 app.include_router(queue.router)
 app.include_router(ws.router)
+app.include_router(ai_feedback.router)
+app.include_router(social_router)
+app.include_router(payments_router)
+
+# Root-level WebSocket alias for social studio inbox updates
+app.add_api_websocket_route("/ws/social/{business_id}", social_inbox_ws)
 
 
 @app.get("/", tags=["Meta"])

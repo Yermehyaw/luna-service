@@ -1,0 +1,135 @@
+---
+title: SocialAPI
+description: Read and answer comments, DMs, mentions, and reviews, publish posts, and automate replies across social platforms with one REST API and MCP server.
+---
+
+SocialAPI is a REST API and MCP server for the social accounts you connect. One set of endpoints reads and answers comments, direct messages (DMs), mentions, and reviews, publishes and schedules posts, and runs Automations that reply for you. Developers call the REST API with an API key, and AI agents use the MCP server, whose tools cover the inbox, publishing, Automations, and accounts.
+
+SocialAPI's own approved apps connect most platforms, so you register no app with Meta, TikTok, or Google. X uses your own X developer app, Telegram uses your bot token, and Bluesky uses an app password. See [Platform apps](/guides/platform-credentials). Plans and prices are in [Plans and usage](/guides/plans).
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Get an API key, connect an account, read, reply, and publish.
+  </Card>
+  <Card title="Core concepts" icon="diagram-project" href="/guides/concepts">
+    Brand, account, post, interaction, and capability.
+  </Card>
+  <Card title="Use cases" icon="lightbulb" href="/guides/use-cases">
+    Five common ways to use the API.
+  </Card>
+  <Card title="Supported platforms" icon="grid-2" href="/platforms/overview">
+    What each platform supports.
+  </Card>
+  <Card title="AI agents" icon="wand-magic-sparkles" href="/integrations/overview">
+    Connect Claude, ChatGPT, Cursor, and more.
+  </Card>
+  <Card title="API reference" icon="terminal" href="/api-reference/introduction">
+    Every endpoint, request, and response.
+  </Card>
+</CardGroup>
+
+## Supported platforms
+
+Each platform page lists what that platform supports. [Supported platforms](/platforms/overview) compares them feature by feature.
+
+| Platform | Slug | Connects through | Status |
+|---|---|---|---|
+| [Instagram](/platforms/instagram) | `instagram` | SocialAPI's app | Available |
+| [Facebook](/platforms/facebook) | `facebook` | SocialAPI's app | Available |
+| [Threads](/platforms/threads) | `threads` | SocialAPI's app | Available. Profile discovery is in beta |
+| [Google Business Profile](/platforms/google) | `google` | SocialAPI's app | Available |
+| [TikTok](/platforms/tiktok) | `tiktok` | SocialAPI's app | Available |
+| [LinkedIn](/platforms/linkedin) | `linkedin` | SocialAPI's app | Available |
+| [X / Twitter](/platforms/twitter) | `twitter` | Your own X app | Available |
+| [YouTube](/platforms/youtube) | `youtube` | SocialAPI's app | Available |
+| [Pinterest](/platforms/pinterest) | `pinterest` | SocialAPI's app | Available |
+| [Zalo](/platforms/zalo) | `zalo` | SocialAPI's app | Available |
+| [WhatsApp](/platforms/whatsapp) | `whatsapp` | SocialAPI's app | Available |
+| [Telegram](/platforms/telegram) | `telegram` | Your bot token | Available |
+| [Bluesky](/platforms/bluesky) | `bluesky` | Your app password | Available |
+| [App Store Connect](/platforms/app-store-connect) | `app_store_connect` | Your App Store Connect API key | Available |
+| [Trustpilot](/platforms/trustpilot) | `trustpilot` | Not connectable | Not available |
+
+## Inbox
+
+The inbox reads and answers comments, DMs, reviews, and mentions through `/v1/inbox`. This request replies to a comment. A public reply costs 1 interaction credit.
+
+```bash
+curl -X POST https://api.social-api.ai/v1/inbox/comments/17895695668004550 \
+  -H "Authorization: Bearer $SOCAPI_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+    "comment_id": "sapi_cmt_GXRM4BNTW7KFYSD3HAEV6QJZ2CLP9U1I",
+    "text": "Thank you, Jane!"
+  }'
+```
+
+See [Unified inbox](/guides/inbox).
+
+## Automations
+
+An Automation answers Instagram and Facebook comments and DMs that match keywords, with no code running on your side. This request sends a private reply with a link to anyone who comments "link".
+
+```bash
+curl -X POST https://api.social-api.ai/v1/automations \
+  -H "Authorization: Bearer $SOCAPI_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J",
+    "name": "Send the link",
+    "trigger": "comment",
+    "steps": [{
+      "key": "start",
+      "filters": [{ "type": "keyword", "keyword": { "keywords": ["link"], "match": "contains" } }],
+      "actions": [{ "type": "private_reply", "private_reply": { "texts": ["Here is the link: https://example.com"] } }]
+    }]
+  }'
+```
+
+See [Automations](/guides/automations).
+
+## Publish
+
+One request publishes a post to one or more connected accounts. Set `publish_now` to publish at once, or `scheduled_at` to publish later. Without either, the request saves a draft.
+
+```bash
+curl -X POST https://api.social-api.ai/v1/posts \
+  -H "Authorization: Bearer $SOCAPI_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "Hello from SocialAPI!",
+    "media": [{ "source_type": "url", "source": "https://cdn.example.com/launch.jpg" }],
+    "platform_data": { "instagram": { "content_type": "feed" } },
+    "publish_now": true,
+    "targets": [{ "account_id": "acc_01HZ9X3Q4R5M6N7P8V2K0W1J" }]
+  }'
+```
+
+See [Publishing](/guides/publishing), [Scheduling](/guides/scheduling), and [Media](/guides/media).
+
+## Webhooks
+
+SocialAPI sends new comments, DMs, reviews, and post results to your server as signed webhook events. This request registers an endpoint.
+
+```bash
+curl -X POST https://api.social-api.ai/v1/webhooks \
+  -H "Authorization: Bearer $SOCAPI_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://app.example.com/webhooks/socapi",
+    "events": ["comment.received", "dm.received"]
+  }'
+```
+
+See [Webhooks](/guides/webhooks) and [Webhook events](/guides/webhook-events).
+
+## AI agents
+
+The MCP server at `https://api.social-api.ai/mcp` gives AI clients tools for the inbox, publishing, Automations, and accounts: see [MCP tools](/integrations/tools). This command adds it to Claude Code.
+
+```bash
+claude mcp add socialapi --transport http https://api.social-api.ai/mcp
+```
+
+See [MCP server](/integrations/overview) for every supported client.

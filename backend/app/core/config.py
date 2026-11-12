@@ -44,6 +44,45 @@ class Settings(BaseSettings):
     # Bounded SDK-level retries for transient network/5xx errors, with backoff.
     OPENAI_MAX_RETRIES: int = 2
 
+    # --- AI training feedback ---
+    # Feedback rows are transient training material, not customer records; they are
+    # purged after this window. Exports strip PII again on the way out.
+    AI_FEEDBACK_RETENTION_DAYS: int = 180
+    # Distillation only keeps teacher labels we trust; below this the row is noise.
+    AI_DISTILL_MIN_CONFIDENCE: float = 0.85
+    AI_TRAINING_EXPORT_DIR: str = "training_exports"
+
+    # --- Social Studio (Hexagonal Ports & Adapters) ---
+    DEFAULT_SOCIAL_PROVIDER: str = "socialapi"
+    ZERNIO_API_KEY: str = ""
+    ZERNIO_BASE_URL: str = "https://zernio.com/api"
+    SOCIALAPI_AI_KEY: str = ""
+    SOCIALAPI_BASE_URL: str = "https://api.social-api.ai/v1"
+    POSTPROXY_API_KEY: str = ""
+    POSTPROXY_BASE_URL: str = "https://api.postproxy.dev"
+    PLANVORTEX_API_KEY: str = ""
+    PLANVORTEX_BASE_URL: str = "https://api.planvortex.com/v1"
+    FCM_SERVER_KEY: str = ""
+    SOCIAL_CREDITS_TRIAL_DEFAULT: int = 50
+    SOCIAL_PUBLISHING_MODE: str = "REMINDER"
+
+    # --- Payments Engine (PayPal B2B & Paystack B2B2C Split) ---
+    PAYPAL_CLIENT_ID: str = ""
+    PAYPAL_CLIENT_SECRET: str = ""
+    PAYPAL_BASE_URL: str = "https://api-m.sandbox.paypal.com"
+    PAYPAL_WEBHOOK_ID: str = ""
+    PAYPAL_CURRENCY: str = "USD"
+
+    PAYSTACK_SECRET_KEY: str = ""
+    PAYSTACK_PUBLIC_KEY: str = ""
+    PAYSTACK_BASE_URL: str = "https://api.paystack.co"
+    PAYSTACK_WEBHOOK_SECRET: str = ""
+    PAYSTACK_CURRENCY: str = "NGN"
+
+    # Micro-margin deducted by Luna on B2B2C customer bookings
+    LUNA_PLATFORM_MARGIN_PERCENT: float = 1.0  # 1%
+    LUNA_PLATFORM_MARGIN_FIXED_KOBO: int = 10000  # ₦100 fixed platform profit
+
     # NoDecode stops pydantic-settings JSON-parsing the raw string first, which
     # fails on "http://a,http://b" before the validator runs.
     CORS_ORIGINS: Annotated[list[str], NoDecode] = [

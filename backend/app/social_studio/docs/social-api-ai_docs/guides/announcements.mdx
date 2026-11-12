@@ -1,0 +1,82 @@
+---
+title: "Announcements"
+description: "Read SocialAPI maintenance windows, incidents, product updates, and breaking changes through the API, and mark each one as seen."
+---
+
+Announcements are service notices that SocialAPI publishes: scheduled maintenance, incidents, product updates, and breaking changes. Every SocialAPI account receives the same announcements, and there is nothing to subscribe to.
+
+Poll `GET /v1/announcements` from your own app and show new notices to your team, so they hear about a maintenance window before it starts. Both endpoints cost no credits, and any valid key can call them, including a [scoped key](/guides/scoped-keys). There is no API to create, edit, or delete an announcement.
+
+## Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/v1/announcements` | List the announcements on display, newest first |
+| `POST` | `/v1/announcements/{id}/seen` | Mark an announcement as seen |
+
+## List announcements
+
+```bash
+curl https://api.social-api.ai/v1/announcements \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+Response (HTTP 200):
+
+```json
+{
+  "data": [
+    {
+      "id": "9c1e7f2a-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
+      "kind": "maintenance",
+      "title": "Scheduled maintenance",
+      "body": "We are upgrading our servers. Publishing and inbox reads will be unavailable for up to 2 hours.",
+      "link_url": "https://status.social-api.ai",
+      "link_label": "Status page",
+      "window_start": "2026-10-18T02:00:00Z",
+      "window_end": "2026-10-18T04:00:00Z",
+      "seen": false
+    }
+  ],
+  "count": 1
+}
+```
+
+An empty `data` array means there is nothing to announce.
+
+| Field | Description |
+|---|---|
+| `id` | The announcement's ID, a UUID |
+| `kind` | `maintenance`, `incident`, `product_update`, or `breaking_change` |
+| `title`, `body` | The notice's headline and text |
+| `link_url`, `link_label` | A page with more detail and the text for the link. Absent when the announcement has no link |
+| `window_start`, `window_end` | The announced downtime, in UTC. Absent when the announcement has no downtime window. Show them in the reader's time zone |
+| `seen` | `true` once your SocialAPI account marked the announcement as seen |
+
+An announcement is listed during its display period, which the API does not return. The display period is separate from `window_start` and `window_end`, which describe the announced downtime.
+
+## Mark an announcement as seen
+
+```bash
+curl -X POST https://api.social-api.ai/v1/announcements/9c1e7f2a-3b4d-4e5f-8a9b-0c1d2e3f4a5b/seen \
+  -H "Authorization: Bearer $SOCAPI_KEY"
+```
+
+Response (HTTP 200):
+
+```json
+{ "ok": true }
+```
+
+`seen` belongs to your SocialAPI account, not to a key. Marking an announcement as seen with any API key sets `seen` to `true` for every key of the account. Marking it again changes nothing and returns the same response.
+
+An ID that is not a UUID, or that matches no announcement, returns `404 resource.not_found`.
+
+No MCP tool exposes announcements.
+
+## Related
+
+- [Status page](https://status.social-api.ai) for live incident status
+- [Changelog](/changelog) for every change to the API
+- [Authentication](/guides/authentication) for the keys that call these endpoints
+- [Scoped API keys](/guides/scoped-keys) for the endpoints every key can call, whatever its scopes
