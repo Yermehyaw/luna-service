@@ -396,7 +396,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isBroadcastItem = item.name.includes('Broadcast');
-                  const isOpsItem = item.name === 'Ops Console' || item.name === 'Ops';
+                  const isOpsItem = item.name === 'Operations' || item.name === 'Ops Console' || item.name === 'Ops';
                   const isCurrentBroadcast = currentTab === 'broadcast';
                   const isActive = isBroadcastItem
                     ? pathname.includes('/ops-console') && isCurrentBroadcast
@@ -580,7 +580,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isBroadcastItem = item.name.includes('Broadcast');
-                  const isOpsItem = item.name === 'Ops Console' || item.name === 'Ops';
+                  const isOpsItem = item.name === 'Operations' || item.name === 'Ops Console' || item.name === 'Ops';
                   const isCurrentBroadcast = currentTab === 'broadcast';
                   const isActive = isBroadcastItem
                     ? pathname.includes('/ops-console') && isCurrentBroadcast
@@ -691,7 +691,7 @@ export function TenantStaffLayout({ children }: { children: React.ReactNode }) {
         {bottomBarItems.map((item) => {
           const Icon = item.icon;
           const isBroadcastItem = item.name.includes('Broadcast');
-                  const isOpsItem = item.name === 'Ops Console' || item.name === 'Ops';
+                  const isOpsItem = item.name === 'Operations' || item.name === 'Ops Console' || item.name === 'Ops';
                   const isCurrentBroadcast = currentTab === 'broadcast';
                   const isActive = isBroadcastItem
                     ? pathname.includes('/ops-console') && isCurrentBroadcast

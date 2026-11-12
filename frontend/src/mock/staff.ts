@@ -11,8 +11,8 @@ export interface PrivilegeMeta {
 export const ALL_PRIVILEGES: PrivilegeMeta[] = [
   {
     id: 'ops_console',
-    label: 'Ops Console & Live Queue',
-    shortLabel: 'Ops Console',
+    label: 'Operations & Appointments',
+    shortLabel: 'Operations',
     description: 'Call next tickets, serve waiting clients, assign chairs or bays',
     iconName: 'LayoutDashboard',
   },

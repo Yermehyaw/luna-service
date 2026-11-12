@@ -229,7 +229,7 @@ export default function TenantBrandingSettingsPage({
               href={`/tenant/${tenant?.slug || resolvedParams.tenantId}/staff/ops-console`}
               className="w-full sm:w-auto px-5 py-3 rounded-xl border border-black/15 bg-white hover:bg-slate-50 text-slate-700 text-xs font-extrabold flex items-center justify-center gap-2 min-h-[44px]"
             >
-              <span>Return to Ops Console</span>
+              <span>Return to Operations</span>
             </Link>
           </div>
         </div>
