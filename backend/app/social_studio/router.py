@@ -19,6 +19,11 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import (
+    AuthenticatedUser,
+    enforce_tenant_isolation,
+    get_optional_current_user,
+)
 from app.models.social import PostStatus, QueryStatus, SocialAccount, SocialPost, SocialQuery
 from app.realtime import broker
 from app.services.ai_feedback import record_feedback
@@ -238,8 +243,12 @@ async def get_inbox(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     provider: ISocialProvider = Depends(get_social_provider),
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> list[LunaMessage]:
     """Fetch unified inbox messages (0 Social Credits consumed - FREE)."""
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+
     return await provider.get_inbox(
         business_id=business_id,
         platform=platform,
@@ -260,12 +269,16 @@ async def list_conversations(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     db: DbSession = None,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> list[SocialConversationSummary]:
     """Fetch structured conversation threads conforming to the frontend Social Studio contract.
     
     0 Social Credits consumed (Free Inbound Read).
     Supports filtering across all, dm, comment, and mention.
     """
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+
     await _seed_demo_conversations_if_empty(db, business_id)
 
     stmt = select(SocialQuery).where(SocialQuery.business_id == business_id)
@@ -371,12 +384,20 @@ async def list_conversations(
 async def send_dm_reply(
     payload: DmReplyRequest,
     db: DbSession,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> DmReplyResult:
     """Send an outbound reply to a customer DM/comment.
     
     Consumes 1 Social Credit (SC). Raises HTTP 402 if credit balance < 1.
     Automatically captures AI feedback telemetry when AI assistance is used.
     """
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required to reply to social messages",
+            )
     # 0. Check whether target message is a mention (strictly non-replyable)
     query_check = await db.execute(
         select(SocialQuery).where(
@@ -686,8 +707,12 @@ async def handle_vendor_webhook(
 async def list_social_accounts(
     business_id: str = Query(min_length=1),
     db: DbSession = None,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> list[SocialAccountResponse]:
     """List connected social accounts for a business tenant."""
+    if current_user:
+        enforce_tenant_isolation(business_id, current_user)
+
     stmt = (
         select(SocialAccount)
         .where(SocialAccount.business_id == business_id)
@@ -714,6 +739,7 @@ async def list_social_accounts(
 async def connect_social_account(
     payload: ConnectSocialAccountRequest,
     db: DbSession,
+    current_user: Annotated[AuthenticatedUser | None, Depends(get_optional_current_user)] = None,
 ) -> SocialAccountResponse:
     """Connect a social account for a tenant.
     
@@ -721,6 +747,13 @@ async def connect_social_account(
     Free and Basic plans support at most 1 connected account per platform.
     Connecting multiple accounts on the same platform requires Pro or Enterprise tier.
     """
+    if current_user:
+        enforce_tenant_isolation(payload.business_id, current_user)
+        if not current_user.is_staff:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: Staff privileges required to connect social accounts",
+            )
     business = await credit_manager.get_tenant_business(db, payload.business_id)
     tier = (getattr(business, "tier", "free") or "free").lower()
     platform_clean = payload.platform.lower().strip()

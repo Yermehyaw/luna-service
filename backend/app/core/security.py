@@ -43,7 +43,14 @@ class AuthenticatedUser(BaseModel):
 
 
 def decode_jwt_token(token: str) -> dict:
-    """Decode and verify a Better-Auth signed JWT."""
+    """Decode and verify a Better-Auth signed JWT with strict security checks."""
+    if not token or not isinstance(token, str):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token is missing or malformed",
+            headers={"WWW-Authenticate": "Bearer error=\"invalid_token\""},
+        )
+
     # Special handle demo / testing tokens
     if token.startswith("test_token_") or token.startswith("test_token:"):
         prefix = "test_token_" if token.startswith("test_token_") else "test_token:"
@@ -65,24 +72,37 @@ def decode_jwt_token(token: str) -> dict:
         }
 
     try:
+        # Strict validation: enforce exact algorithm (prevent 'none' or algorithm confusion),
+        # verify signature, expiration, and require subject ('sub') & expiration ('exp') claims.
         payload = jwt.decode(
             token,
             settings.BETTER_AUTH_SECRET,
             algorithms=[settings.BETTER_AUTH_ALGORITHM],
-            options={"verify_exp": True},
+            options={
+                "verify_signature": True,
+                "verify_exp": True,
+                "require": ["exp", "sub"],
+            },
+            leeway=10,
         )
+        if not payload.get("sub"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token subject ('sub') claim cannot be empty",
+                headers={"WWW-Authenticate": "Bearer error=\"invalid_token\""},
+            )
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication token has expired",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": "Bearer error=\"token_expired\""},
         )
     except (jwt.InvalidTokenError, Exception) as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication credentials: {exc}",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={"WWW-Authenticate": "Bearer error=\"invalid_token\""},
         )
 
 

@@ -86,3 +86,39 @@ async def test_customer_forbidden_from_staff_ticket_transition(mock_db):
         )
         assert response.status_code == 403
         assert "Staff privileges required" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_social_studio_tenant_isolation(mock_db):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        # 1. Other tenant cannot read social accounts
+        other_tenant_token = create_token("tenant_admin", "other-salon")
+        res_accounts = await client.get(
+            "/api/social/accounts?business_id=kemis-lounge",
+            headers={"Authorization": f"Bearer {other_tenant_token}"},
+        )
+        assert res_accounts.status_code == 403
+        assert "Multi-tenant isolation violation" in res_accounts.json()["detail"]
+
+        # 2. Other tenant cannot read social inbox conversations
+        res_convos = await client.get(
+            "/api/social/conversations?business_id=kemis-lounge",
+            headers={"Authorization": f"Bearer {other_tenant_token}"},
+        )
+        assert res_convos.status_code == 403
+        assert "Multi-tenant isolation violation" in res_convos.json()["detail"]
+
+        # 3. Customer cannot reply to social messages
+        customer_token = create_token("customer", "kemis-lounge")
+        res_reply = await client.post(
+            "/api/social/reply",
+            json={
+                "business_id": "kemis-lounge",
+                "message_id": "msg_001",
+                "reply_text": "Thank you for visiting!",
+            },
+            headers={"Authorization": f"Bearer {customer_token}"},
+        )
+        assert res_reply.status_code == 403
+        assert "Staff privileges required" in res_reply.json()["detail"]
