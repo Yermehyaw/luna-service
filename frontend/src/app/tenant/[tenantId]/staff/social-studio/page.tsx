@@ -1145,31 +1145,464 @@ Keep the reply under 3 sentences. Provide a clear solution or immediate booking 
         )}
 
         {/* ========================================================= */}
-        {/* VIEW 2: REMINDER MODE CALENDAR                           */}
+        {/* VIEW 2: REMINDER MODE FULL INTERACTIVE CALENDAR          */}
         {/* ========================================================= */}
         {activeTab === 'calendar' && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm space-y-5">
+            {/* Calendar Controls & Month Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
-                <h2 className="font-extrabold text-slate-900 text-base">PWA Reminder Mode Calendar</h2>
-                <p className="text-xs text-slate-500">Plan social campaigns and receive PWA reminders to post on your phone</p>
+                <div className="flex items-center gap-2.5">
+                  <h2 className="font-black text-slate-900 text-lg">
+                    {monthNames[calMonth]} {calYear}
+                  </h2>
+                  <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-purple-100 text-[#702D7B]">
+                    {scheduledPosts.filter((p) => p.scheduledAt.startsWith(`${calYear}-${String(calMonth + 1).padStart(2, '0')}`)).length} reminders
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Click any date to schedule, edit, or delete posts across multiple platforms. PWA will alert your phone when it’s time to post.
+                </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setPostEditorOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFA800] px-4 py-2 text-xs font-bold"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Schedule New Reminder</span>
-              </button>
+
+              <div className="flex items-center gap-2">
+                {/* Month Prev/Next and Today buttons */}
+                <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth(new Date(calYear, calMonth - 1, 1))}
+                    className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition"
+                    title="Previous Month"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1))}
+                    className="px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-white rounded-lg transition"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth(new Date(calYear, calMonth + 1, 1))}
+                    className="p-1.5 rounded-lg hover:bg-white text-slate-700 transition"
+                    title="Next Month"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenDateModal(new Date().toISOString().slice(0, 10))}
+                  className="flex items-center gap-1.5 rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFA800] px-3.5 py-2 text-xs font-extrabold shadow-sm transition active:scale-95"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>New Scheduled Post</span>
+                </button>
+              </div>
             </div>
 
-            <div className="p-8 text-center rounded-2xl bg-slate-50 border border-slate-100 space-y-2">
-              <Calendar className="h-8 w-8 text-purple-600 mx-auto" />
-              <h3 className="font-extrabold text-slate-900 text-sm">Reminder Mode Operating</h3>
-              <p className="text-xs text-slate-600 max-w-md mx-auto">
-                Posts scheduled here trigger background PWA reminders on your mobile device at the exact target time.
-              </p>
+            {/* Platform Legend Bar */}
+            <div className="flex flex-wrap items-center gap-2 text-xs pb-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Platforms:</span>
+              {AVAILABLE_PLATFORMS.map((plat) => (
+                <span
+                  key={plat.id}
+                  className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg border text-[11px] font-semibold ${plat.bg} ${plat.text} ${plat.border}`}
+                >
+                  <span>{plat.icon}</span>
+                  <span>{plat.name}</span>
+                </span>
+              ))}
+            </div>
+
+            {/* 7-Day Weekday Headers */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs font-black text-slate-400 uppercase tracking-wider py-1">
+              {daysOfWeek.map((day) => (
+                <div key={day} className="py-1">
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* Monthly Day Grid */}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+              {allCalendarCells.map((cell, idx) => {
+                const dayPosts = scheduledPosts.filter((p) => p.scheduledAt.startsWith(cell.dateStr));
+                const todayStr = new Date().toISOString().slice(0, 10);
+                const isToday = cell.dateStr === todayStr;
+
+                return (
+                  <div
+                    key={`${cell.dateStr}-${idx}`}
+                    onClick={() => handleOpenDateModal(cell.dateStr)}
+                    className={`min-h-[90px] sm:min-h-[115px] p-1.5 sm:p-2 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between group ${
+                      !cell.isCurrentMonth
+                        ? 'bg-slate-50/50 border-slate-100 text-slate-300'
+                        : isToday
+                        ? 'bg-purple-50/50 border-purple-300 ring-2 ring-purple-400/30'
+                        : 'bg-white border-slate-200 hover:border-purple-300 hover:shadow-md'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`text-xs font-black rounded-lg px-1.5 py-0.5 ${
+                          isToday
+                            ? 'bg-[#702D7B] text-white shadow-xs'
+                            : cell.isCurrentMonth
+                            ? 'text-slate-800'
+                            : 'text-slate-400'
+                        }`}
+                      >
+                        {cell.day}
+                      </span>
+
+                      {/* Quick Plus Icon on Hover */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenDateModal(cell.dateStr);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md bg-purple-100 text-purple-800 hover:bg-purple-200"
+                        title={`Add post for ${cell.dateStr}`}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+
+                    {/* Scheduled Post Pills in Cell */}
+                    <div className="flex-1 space-y-1 my-1 overflow-hidden">
+                      {dayPosts.slice(0, 2).map((post) => (
+                        <div
+                          key={post.id}
+                          className="text-[10px] p-1 rounded-lg bg-slate-900 text-white font-medium truncate flex items-center gap-1 shadow-xs"
+                          title={post.text}
+                        >
+                          <span className="text-[9px] text-amber-300 shrink-0 font-bold">
+                            {post.scheduledAt.split('T')[1] || '10:00'}
+                          </span>
+                          <span className="truncate flex-1">{post.text}</span>
+                          {post.mediaUrl && <ImageIcon className="h-2.5 w-2.5 text-cyan-300 shrink-0" />}
+                        </div>
+                      ))}
+                      {dayPosts.length > 2 && (
+                        <div className="text-[9px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.2 rounded text-center">
+                          +{dayPosts.length - 2} more
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between text-[9px] text-slate-400">
+                      <span>{dayPosts.length > 0 ? `${dayPosts.length} reminder${dayPosts.length > 1 ? 's' : ''}` : ''}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* DATE & POST MANAGER MODAL */}
+        {dayModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+            <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl space-y-5 animate-in zoom-in-95 duration-150">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-2xl bg-purple-100 text-[#702D7B] flex items-center justify-center font-bold">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">
+                      Scheduled Posts for {selectedCalendarDate}
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Create, edit, or delete reminders across one or many platforms
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setDayModalOpen(false)}
+                  className="rounded-xl p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* SECTION A: Existing Posts for this date */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
+                    Existing Reminders ({postsOnSelectedDate.length})
+                  </h4>
+                  {editingPostId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPostId(null);
+                        setPostText('');
+                        setPostMediaUrl('');
+                        setPostMediaName('');
+                      }}
+                      className="text-xs font-bold text-purple-600 hover:underline"
+                    >
+                      + Switch to New Post
+                    </button>
+                  )}
+                </div>
+
+                {postsOnSelectedDate.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 p-5 text-center text-xs text-slate-500">
+                    No posts scheduled for this date yet. Create one below!
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {postsOnSelectedDate.map((post) => (
+                      <div
+                        key={post.id}
+                        className={`rounded-2xl border p-3.5 transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-3 ${
+                          editingPostId === post.id
+                            ? 'bg-purple-50/60 border-purple-300 ring-2 ring-purple-400/20'
+                            : 'bg-white border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="space-y-1.5 flex-1 min-w-0">
+                          {/* Platforms & Time */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex items-center gap-1 rounded-md bg-[#291E29] text-[#FFA800] px-2 py-0.5 text-[10px] font-black">
+                              <Clock className="h-2.5 w-2.5" />
+                              <span>{post.scheduledAt.split('T')[1] || '10:00'}</span>
+                            </span>
+
+                            {post.handles.map((h) => {
+                              const plat = AVAILABLE_PLATFORMS.find((p) => p.id === h);
+                              return (
+                                <span
+                                  key={h}
+                                  className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-bold ${
+                                    plat?.bg || 'bg-slate-100'
+                                  } ${plat?.text || 'text-slate-800'} ${plat?.border || 'border-slate-200'}`}
+                                >
+                                  <span>{plat?.icon || '📱'}</span>
+                                  <span>{plat?.name || h}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+
+                          {/* Post Text */}
+                          <p className="text-xs text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
+                            {post.text}
+                          </p>
+
+                          {/* Media preview (if attached) */}
+                          {post.mediaUrl && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <div className="relative h-12 w-12 rounded-xl overflow-hidden border border-slate-200 shrink-0 bg-slate-100">
+                                <img
+                                  src={post.mediaUrl}
+                                  alt={post.mediaName || 'Attached Media'}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+                              <span className="text-[11px] text-slate-500 truncate max-w-[200px]">
+                                {post.mediaName || 'Attached Media Asset'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Actions: Edit & Delete */}
+                        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-start">
+                          <button
+                            type="button"
+                            onClick={() => handleEditScheduledPost(post)}
+                            className="flex items-center gap-1 rounded-xl bg-purple-50 hover:bg-purple-100 text-[#702D7B] px-2.5 py-1.5 text-xs font-bold transition"
+                            title="Edit this post"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteScheduledPost(post.id)}
+                            className="flex items-center gap-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 px-2.5 py-1.5 text-xs font-bold transition"
+                            title="Delete this post"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION B: Post Composer / Editor Form */}
+              <form onSubmit={handleSaveScheduledPost} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
+                  <h4 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                    <span>{editingPostId ? '✏️ Edit Scheduled Post' : '➕ Schedule New Post'}</span>
+                  </h4>
+                  {editingPostId && (
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+                      Editing Mode
+                    </span>
+                  )}
+                </div>
+
+                {/* Target Social Platforms Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-700 block">
+                    Choose Social Platforms * (Select one or many)
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {AVAILABLE_PLATFORMS.map((plat) => {
+                      const isSelected = postHandles.includes(plat.id);
+                      return (
+                        <button
+                          key={plat.id}
+                          type="button"
+                          onClick={() => togglePlatformHandle(plat.id)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                            isSelected
+                              ? 'bg-[#291E29] text-white border-[#291E29] shadow-sm'
+                              : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <span>{plat.icon}</span>
+                          <span>{plat.name}</span>
+                          {isSelected && <Check className="h-3 w-3 text-amber-400" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Post Caption / Textarea */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-slate-700 block">
+                    Post Caption / Copy *
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={postText}
+                    onChange={(e) => setPostText(e.target.value)}
+                    placeholder="Write your post caption, promotional details, or announcement..."
+                    className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span>{postText.length} characters</span>
+                    <span>Supports emojis &amp; links</span>
+                  </div>
+                </div>
+
+                {/* Date & Time Picker */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Scheduled Date
+                    </label>
+                    <input
+                      type="date"
+                      value={postDate}
+                      onChange={(e) => setPostDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                      Reminder Time
+                    </label>
+                    <input
+                      type="time"
+                      value={postTime}
+                      onChange={(e) => setPostTime(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Attach Media Asset */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-700 block">
+                    Attach Media (Photo or Video Lookbook Asset - Optional)
+                  </label>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 cursor-pointer shrink-0">
+                      <ImageIcon className="h-4 w-4 text-purple-600" />
+                      <span>{postMediaName ? 'Change File' : 'Upload Image / Video'}</span>
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={handleMediaUpload}
+                        className="hidden"
+                      />
+                    </label>
+
+                    <input
+                      type="url"
+                      value={postMediaUrl}
+                      onChange={(e) => {
+                        setPostMediaUrl(e.target.value);
+                        setPostMediaName(e.target.value ? 'web-image.jpg' : '');
+                      }}
+                      placeholder="Or paste media URL (https://...)"
+                      className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  {postMediaUrl && (
+                    <div className="flex items-center gap-2.5 p-2 rounded-xl bg-white border border-slate-200">
+                      <div className="h-10 w-10 rounded-lg overflow-hidden border border-slate-100 shrink-0">
+                        <img src={postMediaUrl} alt="Preview" className="h-full w-full object-cover" />
+                      </div>
+                      <span className="text-xs text-slate-700 truncate flex-1 font-medium">
+                        {postMediaName || 'Media attached'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPostMediaUrl('');
+                          setPostMediaName('');
+                        }}
+                        className="text-xs font-bold text-rose-500 hover:text-rose-700 px-2 py-1"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit & Cancel Buttons */}
+                <div className="pt-2 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingPostId(null);
+                      setPostText('');
+                      setPostMediaUrl('');
+                      setPostMediaName('');
+                      setDayModalOpen(false);
+                    }}
+                    className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="rounded-xl bg-[#291E29] hover:bg-[#341539] text-[#FFA800] px-5 py-2 text-xs font-black shadow-md flex items-center gap-1.5 active:scale-95 transition"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    <span>{editingPostId ? 'Update Post' : 'Schedule Reminder'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
