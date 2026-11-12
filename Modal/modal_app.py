@@ -13,8 +13,17 @@ CANDIDATE_LABELS = [
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
-    .pip_install("torch==2.5.1", index_url="https://download.pytorch.org/whl/cpu")
-    .pip_install("transformers", "accelerate", "fastapi[standard]")
+    .apt_install("libgomp1")
+    .pip_install(
+        "torch==2.5.1",
+        index_url="https://download.pytorch.org/whl/cpu",
+    )
+    .pip_install(
+        "transformers==4.48.3",
+        "accelerate==1.2.1",
+        "fastapi[standard]",
+        extra_index_url="https://download.pytorch.org/whl/cpu",
+    )
 )
 
 app = modal.App("luna-ai", image=image)
@@ -47,19 +56,31 @@ def api():
     class TextPayload(BaseModel):
         text: str
 
+    class IntentPayload(BaseModel):
+        text: str
+        candidate_labels: list[str] | None = None
+
     @lru_cache(maxsize=1)
     def sentiment_pipeline():
-        return pipeline("sentiment-analysis", model=SENTIMENT_MODEL)
+        return pipeline(
+            "sentiment-analysis",
+            model=SENTIMENT_MODEL,
+            device="cpu",
+        )
 
     @lru_cache(maxsize=1)
     def intent_pipeline():
-        return pipeline("zero-shot-classification", model=INTENT_MODEL)
+        return pipeline(
+            "zero-shot-classification",
+            model=INTENT_MODEL,
+            device="cpu",
+        )
 
     @lru_cache(maxsize=1)
     def qwen():
         tokenizer = AutoTokenizer.from_pretrained(QWEN_MODEL)
         model = AutoModelForCausalLM.from_pretrained(
-            QWEN_MODEL, torch_dtype=torch.bfloat16
+            QWEN_MODEL, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True
         )
         model.eval()
         return tokenizer, model
@@ -69,26 +90,35 @@ def api():
         return {"status": "ok", "service": "luna-ai"}
 
     @web.get("/v1/models")
+    @web.get("/models")
     def models():
         return {
             "object": "list",
-            "data": [{"id": QWEN_MODEL, "object": "model", "owned_by": "luna"}],
+            "data": [
+                {"id": QWEN_MODEL, "object": "model", "owned_by": "luna"},
+                {"id": SENTIMENT_MODEL, "object": "model", "owned_by": "luna"},
+                {"id": INTENT_MODEL, "object": "model", "owned_by": "luna"},
+            ],
         }
 
     @web.post("/sentiment")
     def sentiment(payload: TextPayload):
-        result = sentiment_pipeline()(payload.text)[0]
+        pipe = sentiment_pipeline()
+        result = pipe(payload.text)[0]
         return {"label": result["label"], "score": round(float(result["score"]), 4)}
 
     @web.post("/intent")
-    def intent(payload: TextPayload):
-        result = intent_pipeline()(payload.text, candidate_labels=CANDIDATE_LABELS)
+    def intent(payload: IntentPayload):
+        pipe = intent_pipeline()
+        labels = payload.candidate_labels or CANDIDATE_LABELS
+        result = pipe(payload.text, candidate_labels=labels)
         return {
             "intent": result["labels"][0],
             "confidence": round(float(result["scores"][0]), 4),
         }
 
     @web.post("/v1/chat/completions")
+    @web.post("/chat/completions")
     def chat_completions(payload: dict):
         messages = payload.get("messages") or []
         max_tokens = int(payload.get("max_tokens") or 256)
@@ -132,3 +162,4 @@ def api():
         }
 
     return web
+
